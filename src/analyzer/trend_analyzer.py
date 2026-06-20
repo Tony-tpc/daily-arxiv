@@ -779,7 +779,7 @@ def main():
     
     # 加载总结数据 / Load summary data
     summaries_data = load_json('data/summaries/latest.json')
-    summaries = summaries_data.get('summaries', []) if summaries_data else None
+    summaries = summaries_data.get('summaries') or summaries_data.get('papers', []) if summaries_data else []
     
     # 创建 LLM 客户端 / Create LLM client
     llm_client = LLMClientFactory.create_client(config)

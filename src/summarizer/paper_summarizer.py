@@ -233,6 +233,7 @@ Please provide a concise English summary (120-180 words):"""
             'date': date_str,
             'count': len(papers),
             'papers': papers,
+            'summaries': papers,
             'llm_provider': self.llm_client.get_provider_name(),
             'llm_model': self.llm_client.model,
         }, latest_filepath)

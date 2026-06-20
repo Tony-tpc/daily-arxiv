@@ -168,10 +168,13 @@ def get_paper_detail(paper_id):
         # 加载总结数据
         summaries_data = load_json('data/summaries/latest.json')
         if summaries_data:
-            summaries = summaries_data.get('summaries', [])
+            summaries = summaries_data.get('summaries') or summaries_data.get('papers', [])
             # 查找对应的总结
             for summary in summaries:
                 if summary.get('paper_id') == paper_id:
+                    paper['summary'] = summary.get('summary')
+                    break
+                if summary.get('id') == paper_id:
                     paper['summary'] = summary.get('summary')
                     break
         
@@ -234,10 +237,11 @@ def get_stats():
         papers_data = load_json('data/papers/latest.json')
         summaries_data = load_json('data/summaries/latest.json')
         analysis_data = load_json('data/analysis/latest.json')
+        summaries = summaries_data.get('summaries') or summaries_data.get('papers', []) if summaries_data else []
         
         stats = {
             'papers_count': len(papers_data.get('papers', [])) if papers_data else 0,
-            'summaries_count': len(summaries_data.get('summaries', [])) if summaries_data else 0,
+            'summaries_count': len(summaries),
             'analysis_available': analysis_data is not None,
             'last_update': papers_data.get('date') if papers_data else None
         }
