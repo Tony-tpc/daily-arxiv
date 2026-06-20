@@ -3,28 +3,60 @@
 # 应用配置 / App settings
 app:
   # 部署语言 / Deployment language: zh 或 en
-  language: "en"
+  language: "zh"
 
 # arXiv 搜索配置 / arXiv search settings
 arxiv:
   # 研究领域类别（可以是多个）/ Research categories (multiple allowed)
-  # 常见类别 / Common categories: cs.AI, cs.LG, cs.CV, cs.CL, cs.NE, stat.ML
+  # 当前方向: 强化学习 + 博弈 + 虚拟电厂 / Current focus: RL + game theory + virtual power plants
   categories:
-    # - "math.NA"  # Numerical Analysis
-    - "cs.LG"  # Machine Learning
+    - "eess.SY"  # Systems and Control / Power Systems
+    - "cs.LG"    # Machine Learning / Reinforcement Learning
+    - "cs.MA"    # Multiagent Systems
+    - "cs.GT"    # Computer Science and Game Theory
+    - "cs.AI"    # Artificial Intelligence
   
-  # 关键词过滤（可选，为空则不过滤）/ Keyword filter (optional, empty means no filtering)
-  keywords:
-    - "large language model"
-    - "LLM"
-    - "transformer"
-    - "agent"
+  # 精细交叉关键词：组内 OR，组间 AND / Fine-grained intersection: OR within groups, AND across groups
+  keyword_groups:
+    - name: "virtual_power_plant_and_energy_system"
+      terms:
+        - "virtual power plant"
+        - "virtual power plants"
+        - "VPP"
+        - "distributed energy resource"
+        - "distributed energy resources"
+        - "energy management"
+        - "electricity market"
+        - "demand response"
+        - "microgrid"
+        - "power system"
+    - name: "reinforcement_learning"
+      terms:
+        - "reinforcement learning"
+        - "deep reinforcement learning"
+        - "multi-agent reinforcement learning"
+        - "MARL"
+        - "Markov decision process"
+        - "MDP"
+    - name: "game_and_market_mechanism"
+      terms:
+        - "game theory"
+        - "game-theoretic"
+        - "Stackelberg"
+        - "Nash"
+        - "auction"
+        - "bidding"
+        - "market mechanism"
+  # 兼容旧逻辑的宽泛关键词；当 keyword_groups 存在时不会使用 / Legacy broad keywords; ignored when keyword_groups is set
+  keywords: []
   
   # 每天获取的最大论文数量 / Maximum papers fetched per day
-  max_results: 10
+  max_results: 20
+  days_back: 30
+  fallback_days_back: 365
   
   # 排序方式 / Sort by: submittedDate (提交日期) 或 relevance (相关性)
-  sort_by: "submittedDate"
+  sort_by: "relevance"
   
   # 排序顺序 / Sort order: descending 或 ascending
   sort_order: "descending"

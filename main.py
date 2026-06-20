@@ -34,14 +34,17 @@ def main():
         fetcher = ArxivFetcher(config)
         
         # 尝试获取论文，如果没找到，逐步放宽条件 / Retry with broader window if no papers are found
-        papers = fetcher.fetch_papers(days_back=2)
+        arxiv_config = config.get('arxiv', {})
+        days_back = arxiv_config.get('days_back', 2)
+        fallback_days_back = arxiv_config.get('fallback_days_back', 7)
+        papers = fetcher.fetch_papers(days_back=days_back)
         
         if not papers:
             logger.warning(text(
-                "⚠️  过去2天没有找到符合条件的论文，尝试扩大到7天...",
-                "⚠️  No matching papers found in last 2 days, retrying with a 7-day window..."
+                f"⚠️  过去{days_back}天没有找到符合条件的论文，尝试扩大到{fallback_days_back}天...",
+                f"⚠️  No matching papers found in last {days_back} days, retrying with a {fallback_days_back}-day window..."
             ))
-            papers = fetcher.fetch_papers(days_back=7)
+            papers = fetcher.fetch_papers(days_back=fallback_days_back)
         
         if papers:
             fetcher.print_paper_summary(papers)
@@ -90,7 +93,7 @@ def main():
             # 加载论文总结 / Load summaries
             from src.utils import load_json
             summaries_data = load_json('data/summaries/latest.json')
-            summaries = summaries_data.get('summaries', []) if summaries_data else []
+            summaries = summaries_data.get('summaries') or summaries_data.get('papers', []) if summaries_data else []
             
             # 创建趋势分析器 / Create trend analyzer
             analyzer = TrendAnalyzer(config, llm_client)

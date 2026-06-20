@@ -30,6 +30,7 @@ class ArxivFetcher:
         # 获取配置 / Read configuration
         self.categories = self.arxiv_config.get('categories', ['cs.AI'])
         self.keywords = self.arxiv_config.get('keywords', [])
+        self.keyword_groups = self.arxiv_config.get('keyword_groups', [])
         self.max_results = self.arxiv_config.get('max_results', 20)
         self.sort_by = self.arxiv_config.get('sort_by', 'submittedDate')
         self.sort_order = self.arxiv_config.get('sort_order', 'descending')
@@ -47,8 +48,18 @@ class ArxivFetcher:
             category_parts = [f"cat:{cat}" for cat in self.categories]
             category_query = "(" + " OR ".join(category_parts) + ")"
         
+        # 精细关键词组：组内 OR，组间 AND / Fine-grained keyword groups: OR within groups, AND across groups
+        if self.keyword_groups:
+            group_queries = []
+            for group in self.keyword_groups:
+                terms = group.get('terms', []) if isinstance(group, dict) else group
+                term_queries = [f'(ti:"{term}" OR abs:"{term}")' for term in terms]
+                if term_queries:
+                    group_queries.append("(" + " OR ".join(term_queries) + ")")
+            keyword_query = "(" + " AND ".join(group_queries) + ")" if group_queries else ""
+            query = f"{category_query} AND {keyword_query}" if keyword_query else category_query
         # 如果有关键词，添加关键词过滤 / Add keyword filter if provided
-        if self.keywords:
+        elif self.keywords:
             # 构建关键词查询（在标题或摘要中搜索）/ Search in title or abstract
             keyword_parts = []
             for keyword in self.keywords:
