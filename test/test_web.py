@@ -121,6 +121,23 @@ def test_web_service(base_url='http://localhost:5000'):
         print(f"❌ 测试失败: {str(e)}")
         tests.append(False)
     
+    # 测试 7: 自适应知识抽取
+    print("\n测试 7: 自适应知识抽取 API")
+    try:
+        response = requests.get(f'{base_url}/api/knowledge')
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ 结构化知识加载成功")
+            print(f"   抽取论文数: {len(data.get('papers', []))}")
+            print(f"   Facet 数: {len(data.get('facet_schema', []))}")
+            tests.append(True)
+        else:
+            print(f"❌ 结构化知识加载失败: {response.status_code}")
+            tests.append(False)
+    except Exception as e:
+        print(f"❌ 测试失败: {str(e)}")
+        tests.append(False)
+    
     # 总结
     print("\n" + "=" * 60)
     print("📊 测试总结")

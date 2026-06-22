@@ -237,17 +237,47 @@ def get_stats():
         papers_data = load_json('data/papers/latest.json')
         summaries_data = load_json('data/summaries/latest.json')
         analysis_data = load_json('data/analysis/latest.json')
+        knowledge_data = load_json('data/knowledge/latest.json')
         summaries = summaries_data.get('summaries') or summaries_data.get('papers', []) if summaries_data else []
         
         stats = {
             'papers_count': len(papers_data.get('papers', [])) if papers_data else 0,
             'summaries_count': len(summaries),
+            'knowledge_count': len(knowledge_data.get('papers', [])) if knowledge_data else 0,
+            'knowledge_available': knowledge_data is not None,
             'analysis_available': analysis_data is not None,
             'last_update': papers_data.get('date') if papers_data else None
         }
         
         return jsonify(stats)
     
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/knowledge')
+def get_knowledge():
+    """获取自适应结构化知识抽取结果"""
+    try:
+        knowledge_data = load_json('data/knowledge/latest.json')
+        if not knowledge_data:
+            return jsonify({'error': '没有找到结构化知识数据' if language == 'zh' else 'Knowledge data not found'}), 404
+        return jsonify(knowledge_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/knowledge/papers/<paper_id>')
+def get_paper_knowledge(paper_id):
+    """获取单篇论文的结构化知识抽取结果"""
+    try:
+        knowledge_data = load_json('data/knowledge/latest.json')
+        if not knowledge_data:
+            return jsonify({'error': '没有找到结构化知识数据' if language == 'zh' else 'Knowledge data not found'}), 404
+        for paper in knowledge_data.get('papers', []):
+            if paper.get('id') == paper_id:
+                return jsonify(paper)
+        return jsonify({'error': t('error_paper_not_found')}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

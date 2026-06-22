@@ -16,6 +16,16 @@ const I18N = {
         unknown: 'Unknown',
         authorLabel: '作者',
         noAbstract: '暂无摘要',
+        problem: '研究问题',
+        method: '核心方法',
+        scenario: '应用场景',
+        constraint: '关键约束',
+        metric: '评价指标',
+        contribution: '主要贡献',
+        structuredInsight: '结构化论文洞察',
+        evidence: '展开证据句',
+        adaptiveFacets: '主题自适应标签',
+        confidence: '置信度',
         viewPdf: '查看PDF',
         viewDetail: '查看详情',
         noPapers: '暂无论文',
@@ -35,6 +45,16 @@ const I18N = {
         unknown: 'Unknown',
         authorLabel: 'Authors',
         noAbstract: 'No abstract',
+        problem: 'Problem',
+        method: 'Method',
+        scenario: 'Scenario',
+        constraint: 'Constraint',
+        metric: 'Metric',
+        contribution: 'Contribution',
+        structuredInsight: 'Structured insight',
+        evidence: 'Evidence',
+        adaptiveFacets: 'Adaptive facets',
+        confidence: 'Confidence',
         viewPdf: 'View PDF',
         viewDetail: 'View details',
         noPapers: 'No papers available',
@@ -42,6 +62,22 @@ const I18N = {
         allCategories: 'All categories',
         noData: 'No data'
     }
+};
+
+const FACET_LABELS_ZH = {
+    interaction_type: '交互类型',
+    market_structure: '市场结构',
+    objective: '优化目标',
+    decision_horizon: '决策周期',
+    solution_approach: '求解方法',
+    uncertainty_modeling: '不确定性建模',
+    scalability_aspect: '可扩展性',
+    game_type: '博弈类型',
+    method_family: '方法族',
+    application_context: '应用背景',
+    mechanism_or_process: '机制/过程',
+    constraint_or_risk: '约束/风险',
+    evaluation_signal: '评价信号'
 };
 
 function t(key) {
@@ -57,6 +93,8 @@ const state = {
     searchQuery: '',
     allPapers: [],
     allCategories: [],
+    knowledgeByPaperId: {},
+    facetSchema: [],
     currentDate: new Date(),
     theme: localStorage.getItem('theme') || 'light'
 };
@@ -253,11 +291,34 @@ async function loadAllData() {
         await Promise.all([
             loadStats(),
             loadAnalysis(),
+            loadKnowledge(),
             loadPapers(),
             loadCategories()
         ]);
     } catch (error) {
         console.error('加载数据失败:', error);
+    }
+}
+
+async function loadKnowledge() {
+    try {
+        const response = await fetch('/api/knowledge');
+        if (!response.ok) {
+            state.knowledgeByPaperId = {};
+            state.facetSchema = [];
+            return;
+        }
+
+        const knowledge = await response.json();
+        state.facetSchema = knowledge.facet_schema || [];
+        state.knowledgeByPaperId = (knowledge.papers || []).reduce((index, paper) => {
+            if (paper.id) index[paper.id] = paper.knowledge || {};
+            return index;
+        }, {});
+    } catch (error) {
+        console.warn('加载结构化知识失败:', error);
+        state.knowledgeByPaperId = {};
+        state.facetSchema = [];
     }
 }
 
@@ -397,7 +458,9 @@ function renderPapers(papers) {
         return;
     }
     
-    container.innerHTML = papers.map(paper => `
+    container.innerHTML = papers.map(paper => {
+        const knowledge = state.knowledgeByPaperId[paper.id];
+        return `
         <div class="paper-card fade-in">
             <div class="paper-header">
                 <div>
@@ -421,6 +484,7 @@ function renderPapers(papers) {
                 <strong>${t('authorLabel')}:</strong> ${paper.authors ? paper.authors.join(', ') : t('unknown')}
             </p>
             <p class="paper-abstract">${escapeHtml(paper.abstract || t('noAbstract'))}</p>
+            ${renderKnowledgePanel(knowledge)}
             <div class="paper-categories">
                 ${(paper.categories || []).map(cat => 
                     `<span class="category-badge">${escapeHtml(cat)}</span>`
@@ -437,7 +501,97 @@ function renderPapers(papers) {
                 </a>
             </div>
         </div>
+    `;
+    }).join('');
+}
+
+function renderKnowledgePanel(knowledge) {
+    if (!knowledge || !knowledge.generic) return '';
+
+    const fields = [
+        ['problem', 'fa-circle-question', true],
+        ['method', 'fa-diagram-project', true],
+        ['scenario', 'fa-location-dot', false],
+        ['constraint', 'fa-shield-halved', false],
+        ['metric', 'fa-gauge-high', false],
+        ['contribution', 'fa-lightbulb', true]
+    ];
+
+    const highlights = fields
+        .map(([field, icon, isMajor]) => renderKnowledgeField(field, knowledge.generic[field], icon, isMajor))
+        .filter(Boolean)
+        .join('');
+
+    const facets = (knowledge.adaptive_facets || [])
+        .filter(item => item.value)
+        .slice(0, 8);
+
+    const facetBadges = facets.map(item => `
+        <span class="facet-chip" title="${escapeHtml(item.evidence || '')}">
+            <span class="facet-name">${formatFacetName(item.facet)}</span>
+            <span class="facet-value">${escapeHtml(item.value)}</span>
+        </span>
     `).join('');
+
+    const evidenceRows = fields
+        .map(([field]) => renderEvidenceRow(field, knowledge.generic[field]))
+        .filter(Boolean)
+        .join('');
+
+    return `
+        <div class="knowledge-panel">
+            <div class="knowledge-panel-title">
+                <i class="fas fa-sitemap"></i>
+                <span>${t('structuredInsight')}</span>
+            </div>
+            <div class="knowledge-grid">${highlights}</div>
+            ${facetBadges ? `
+                <div class="facet-strip">
+                    <span class="facet-strip-label">${t('adaptiveFacets')}</span>
+                    ${facetBadges}
+                </div>
+            ` : ''}
+            ${evidenceRows ? `
+                <details class="knowledge-evidence">
+                    <summary>${t('evidence')}</summary>
+                    <div class="evidence-list">${evidenceRows}</div>
+                </details>
+            ` : ''}
+        </div>
+    `;
+}
+
+function renderKnowledgeField(field, item, icon, isMajor = false) {
+    if (!item || !item.value) return '';
+    const confidence = typeof item.confidence === 'number' ? Math.round(item.confidence * 100) : null;
+    return `
+        <div class="knowledge-field ${isMajor ? 'knowledge-field-major' : ''}">
+            <div class="knowledge-field-label">
+                <i class="fas ${icon}"></i>
+                <span>${t(field)}</span>
+                ${confidence !== null ? `<span class="confidence-pill">${confidence}%</span>` : ''}
+            </div>
+            <div class="knowledge-field-value">${escapeHtml(item.value)}</div>
+        </div>
+    `;
+}
+
+function renderEvidenceRow(field, item) {
+    if (!item || !item.evidence) return '';
+    return `
+        <div class="evidence-row">
+            <div class="evidence-label">${t(field)}</div>
+            <div class="evidence-text">${escapeHtml(item.evidence)}</div>
+        </div>
+    `;
+}
+
+function formatFacetName(name) {
+    if (!name) return '';
+    if (LANG === 'zh' && FACET_LABELS_ZH[name]) {
+        return FACET_LABELS_ZH[name];
+    }
+    return escapeHtml(name.replaceAll('_', ' '));
 }
 
 function renderFeaturedPapers(papers) {
