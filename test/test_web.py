@@ -138,6 +138,22 @@ def test_web_service(base_url='http://localhost:5000'):
         print(f"❌ 测试失败: {str(e)}")
         tests.append(False)
     
+    # 测试 8: 历史趋势 API
+    print("\n测试 8: 历史趋势 API")
+    try:
+        response = requests.get(f'{base_url}/api/history')
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ 历史趋势加载成功")
+            print(f"   快照数: {data.get('count')}")
+            tests.append(True)
+        else:
+            print(f"❌ 历史趋势加载失败: {response.status_code}")
+            tests.append(False)
+    except Exception as e:
+        print(f"❌ 测试失败: {str(e)}")
+        tests.append(False)
+    
     # 总结
     print("\n" + "=" * 60)
     print("📊 测试总结")

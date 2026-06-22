@@ -282,6 +282,45 @@ def get_paper_knowledge(paper_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/history')
+def get_history():
+    """获取历史趋势快照 / Get historical trend snapshots."""
+    try:
+        analysis_dir = project_root / 'data' / 'analysis'
+        knowledge_dir = project_root / 'data' / 'knowledge'
+        snapshots = {}
+
+        for path in sorted(analysis_dir.glob('analysis_*.json')):
+            data = load_json(str(path))
+            if not data:
+                continue
+            date = data.get('date') or path.stem.replace('analysis_', '')
+            snapshots.setdefault(date, {'date': date})
+            snapshots[date]['paper_count'] = data.get('paper_count', 0)
+            snapshots[date]['keywords'] = data.get('keywords', [])[:20]
+            snapshots[date]['categories'] = data.get('statistics', {}).get('category_distribution', {})
+
+        for path in sorted(knowledge_dir.glob('knowledge_*.json')):
+            data = load_json(str(path))
+            if not data:
+                continue
+            date = data.get('date') or path.stem.replace('knowledge_', '')
+            snapshots.setdefault(date, {'date': date})
+            taxonomy = data.get('taxonomy', {}).get('values', {})
+            snapshots[date]['facet_counts'] = {
+                facet: [
+                    {'value': item.get('value'), 'count': item.get('count', 0)}
+                    for item in values[:10]
+                ]
+                for facet, values in taxonomy.items()
+            }
+
+        history = sorted(snapshots.values(), key=lambda item: item.get('date', ''))
+        return jsonify({'count': len(history), 'snapshots': history})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/images/<path:filename>')
 def serve_image(filename):
     """提供图片文件"""
