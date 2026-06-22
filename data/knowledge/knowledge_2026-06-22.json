@@ -1,0 +1,1799 @@
+{
+  "date": "2026-06-22",
+  "topic": "virtual_power_plant_and_energy_system: virtual power plant, virtual power plants, VPP, distributed energy resource, distributed energy resources | reinforcement_learning: reinforcement learning, deep reinforcement learning, multi-agent reinforcement learning, MARL, Markov decision process | game_and_market_mechanism: game theory, game-theoretic, Stackelberg, Nash, auction",
+  "generic_fields": [
+    "problem",
+    "method",
+    "scenario",
+    "assumption",
+    "constraint",
+    "metric",
+    "dataset_or_benchmark",
+    "baseline",
+    "contribution",
+    "limitation"
+  ],
+  "facet_schema": [
+    {
+      "name": "interaction_type",
+      "description": "The nature of interactions among agents or between agents and the system, e.g., cooperative, competitive, or mixed.",
+      "examples": [
+        "cooperative",
+        "competitive",
+        "mixed"
+      ]
+    },
+    {
+      "name": "market_structure",
+      "description": "The type of market or trading mechanism considered, such as peer-to-peer, wholesale, auction, or bilateral.",
+      "examples": [
+        "peer-to-peer",
+        "wholesale market",
+        "auction",
+        "bilateral"
+      ]
+    },
+    {
+      "name": "objective",
+      "description": "The primary goal or objective function optimized, e.g., profit, social welfare, resilience, or carbon emission reduction.",
+      "examples": [
+        "profit maximization",
+        "social welfare",
+        "resilience",
+        "low-carbon"
+      ]
+    },
+    {
+      "name": "decision_horizon",
+      "description": "The time scale of decisions, e.g., real-time, intraday, day-ahead, or long-term investment.",
+      "examples": [
+        "real-time",
+        "intraday",
+        "day-ahead",
+        "long-term"
+      ]
+    },
+    {
+      "name": "solution_approach",
+      "description": "The algorithmic or theoretical approach used to solve the problem, e.g., MARL, Nash equilibrium, or centralized optimization.",
+      "examples": [
+        "multi-agent reinforcement learning",
+        "Nash equilibrium",
+        "centralized optimization",
+        "Stackelberg game"
+      ]
+    },
+    {
+      "name": "uncertainty_modeling",
+      "description": "How uncertainties (e.g., renewable generation, demand, prices) are represented, e.g., stochastic, robust, or deterministic.",
+      "examples": [
+        "stochastic",
+        "robust",
+        "deterministic",
+        "Markov decision process"
+      ]
+    },
+    {
+      "name": "scalability_aspect",
+      "description": "The scale or number of agents considered, and whether the approach addresses scalability challenges.",
+      "examples": [
+        "small-scale (2-5 agents)",
+        "medium-scale (10-50 agents)",
+        "large-scale (100+ agents)",
+        "not specified"
+      ]
+    }
+  ],
+  "papers": [
+    {
+      "id": "2509.08310v1",
+      "title": "Game-Theoretic Resilience Framework for Cyber-Physical Microgrids using Multi-Agent Reinforcement Learning",
+      "authors": [
+        "S Krishna Niketh",
+        "Sagar Babu Mitikiri",
+        "V Vignesh",
+        "Vedantham Lakshmi Srinivas",
+        "Mayukha Pal"
+      ],
+      "abstract": "The increasing reliance on cyber physical infrastructure in modern power systems has amplified the risk of targeted cyber attacks, necessitating robust and adaptive resilience strategies. This paper presents a mathematically rigorous game theoretic framework to evaluate and enhance microgrid resilience using a combination of quantitative resilience metrics Load Served Ratio LSR, Critical Load Resilience CLR, Topological Survivability Score TSS, and DER Resilience Score DRS. These are integrated into a unified payoff matrix using the Analytic Hierarchy Process AHP to assess attack defense interactions. The framework is formalized as a finite horizon Markov Decision Process MDP with formal convergence guarantees and computational complexity bounds. Three case studies are developed 1. static attacks analyzed via Nash equilibrium, 2. severe attacks incorporating high impact strategies, and 3. adaptive attacks using Stackelberg games, regret matching, softmax heuristics, and Multi Agent Q Learning. Rigorous theoretical analysis provides convergence proofs with explicit rates , PAC learning sample complexity bounds, and computational complexity analysis. The framework is tested on an enhanced IEEE 33bus distribution system with DERs and control switches, demonstrating the effectiveness of adaptive and strategic defenses in improving cyber physical resilience with statistically significant improvements of 18.7% 2.1% over static approaches.",
+      "categories": [
+        "eess.SY",
+        "cs.AI",
+        "cs.GT"
+      ],
+      "primary_category": "eess.SY",
+      "published": "2025-09-10T06:07:34+00:00",
+      "updated": "2025-09-10T06:07:34+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2509.08310v1",
+      "entry_url": "http://arxiv.org/abs/2509.08310v1",
+      "comment": null,
+      "journal_ref": null,
+      "doi": null,
+      "fetched_at": "2026-06-20T21:30:42.717455",
+      "summary": "这篇论文提出了一种基于博弈论的弹性框架，用于增强网络物理微电网抵御网络攻击的能力。主要创新点包括：将负载服务率、关键负载弹性、拓扑生存能力和分布式能源弹性等量化指标，通过层次分析法整合为统一收益矩阵；将攻防交互形式化为有限时域马尔可夫决策过程，并提供了收敛性证明和计算复杂度分析。论文通过三种案例（静态攻击、严重攻击和自适应攻击）验证了框架有效性，其中采用多智能体Q学习等自适应策略相比静态方法，在改进的IEEE 33节点配电系统上实现了18.7%±2.1%的统计显著弹性提升。",
+      "summarized_at": "2026-06-20T21:30:45.461608",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "Enhancing cyber-physical microgrid resilience against targeted cyber attacks",
+            "evidence": "The increasing reliance on cyber physical infrastructure in modern power systems has amplified the risk of targeted cyber attacks, necessitating robust and adaptive resilience strategies.",
+            "confidence": 0.95
+          },
+          "method": {
+            "value": "Game-theoretic framework with multi-agent reinforcement learning",
+            "evidence": "This paper presents a mathematically rigorous game theoretic framework to evaluate and enhance microgrid resilience using a combination of quantitative resilience metrics ... integrated into a unified payoff matrix using the Analytic Hierarchy Process ... formalized as a finite horizon Markov Decision Process ... Multi Agent Q Learning.",
+            "confidence": 0.95
+          },
+          "scenario": {
+            "value": "Static attacks, severe attacks, and adaptive attacks on an enhanced IEEE 33-bus distribution system",
+            "evidence": "Three case studies are developed 1. static attacks analyzed via Nash equilibrium, 2. severe attacks incorporating high impact strategies, and 3. adaptive attacks using Stackelberg games, regret matching, softmax heuristics, and Multi Agent Q Learning.",
+            "confidence": 0.95
+          },
+          "assumption": {
+            "value": "Attack-defense interactions can be modeled as a finite horizon Markov Decision Process",
+            "evidence": "The framework is formalized as a finite horizon Markov Decision Process MDP with formal convergence guarantees and computational complexity bounds.",
+            "confidence": 0.9
+          },
+          "constraint": {
+            "value": "Finite horizon and computational complexity bounds",
+            "evidence": "The framework is formalized as a finite horizon Markov Decision Process MDP with formal convergence guarantees and computational complexity bounds.",
+            "confidence": 0.85
+          },
+          "metric": {
+            "value": "Load Served Ratio (LSR), Critical Load Resilience (CLR), Topological Survivability Score (TSS), DER Resilience Score (DRS)",
+            "evidence": "quantitative resilience metrics Load Served Ratio LSR, Critical Load Resilience CLR, Topological Survivability Score TSS, and DER Resilience Score DRS.",
+            "confidence": 0.95
+          },
+          "dataset_or_benchmark": {
+            "value": "Enhanced IEEE 33-bus distribution system with DERs and control switches",
+            "evidence": "The framework is tested on an enhanced IEEE 33bus distribution system with DERs and control switches.",
+            "confidence": 0.95
+          },
+          "baseline": {
+            "value": "Static approaches (Nash equilibrium)",
+            "evidence": "demonstrating the effectiveness of adaptive and strategic defenses in improving cyber physical resilience with statistically significant improvements of 18.7% 2.1% over static approaches.",
+            "confidence": 0.9
+          },
+          "contribution": {
+            "value": "A game-theoretic resilience framework integrating multiple resilience metrics via AHP and formalized as MDP with convergence proofs and PAC learning bounds",
+            "evidence": "This paper presents a mathematically rigorous game theoretic framework to evaluate and enhance microgrid resilience using a combination of quantitative resilience metrics ... integrated into a unified payoff matrix using the Analytic Hierarchy Process ... formalized as a finite horizon Markov Decision Process MDP with formal convergence guarantees and computational complexity bounds.",
+            "confidence": 0.95
+          },
+          "limitation": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "competitive",
+            "evidence": "attack defense interactions",
+            "confidence": 0.9,
+            "facet": "interaction_type"
+          },
+          {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "market_structure"
+          },
+          {
+            "value": "resilience",
+            "evidence": "evaluate and enhance microgrid resilience",
+            "confidence": 0.95,
+            "facet": "objective"
+          },
+          {
+            "value": "finite horizon",
+            "evidence": "finite horizon Markov Decision Process",
+            "confidence": 0.9,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "multi-agent reinforcement learning",
+            "evidence": "Multi Agent Q Learning",
+            "confidence": 0.95,
+            "facet": "solution_approach"
+          },
+          {
+            "value": "Markov decision process",
+            "evidence": "formalized as a finite horizon Markov Decision Process",
+            "confidence": 0.9,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": "not specified",
+            "evidence": null,
+            "confidence": 0.5,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": [
+          {
+            "facet": "game_type",
+            "value": "Stackelberg game, Nash equilibrium, regret matching",
+            "evidence": "static attacks analyzed via Nash equilibrium ... adaptive attacks using Stackelberg games, regret matching, softmax heuristics, and Multi Agent Q Learning",
+            "reason": "The paper explicitly uses multiple game-theoretic concepts (Nash equilibrium, Stackelberg game, regret matching) which are central to the methodology but not captured by existing facets."
+          }
+        ]
+      },
+      "knowledge_extracted_at": "2026-06-22T21:57:16.224181"
+    },
+    {
+      "id": "2604.02728v1",
+      "title": "Multi-agent Reinforcement Learning-based Joint Design of Low-Carbon P2P Market and Bidding Strategy in Microgrids",
+      "authors": [
+        "Junhao Ren",
+        "Honglin Gao",
+        "Sijie Wang",
+        "Lan Zhao",
+        "Qiyu Kang",
+        "Aniq Ashan",
+        "Yajuan Sun",
+        "Gaoxi Xiao"
+      ],
+      "abstract": "The challenges of the uncertainties in renewable energy generation and the instability of the real-time market limit the effective utilization of clean energy in microgrid communities. Existing peer-to-peer (P2P) and microgrid coordination approaches typically rely on certain centralized optimization or restrictive coordination rules which are difficult to be implemented in real-life applications. To address the challenge, we propose an intraday P2P trading framework that allows self-interested microgrids to pursue their economic benefits, while allowing the market operator to maximize the social welfare, namely the low carbon emission objective, of the entire community. Specifically, the decision-making processes of the microgrids are formulated as a Decentralized Partially Observable Markov Decision Process (DEC-POMDP) and solved using a Multi-Agent Reinforcement Learning (MARL) framework. Such an approach grants each microgrid a high degree of decision-making autonomy, while a novel market clearing mechanism is introduced to provide macro-regulation, incentivizing microgrids to prioritize local renewable energy consumption and hence reduce carbon emissions. Simulation results demonstrate that the combination of the self-interested bidding strategy and the P2P market design helps significantly improve renewable energy utilization and reduce reliance on external electricity with high carbon-emissions. The framework achieves a balanced integration of local autonomy, self-interest pursuit, and improved community-level economic and environmental benefits.",
+      "categories": [
+        "cs.MA"
+      ],
+      "primary_category": "cs.MA",
+      "published": "2026-04-03T04:41:54+00:00",
+      "updated": "2026-04-03T04:41:54+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2604.02728v1",
+      "entry_url": "http://arxiv.org/abs/2604.02728v1",
+      "comment": "10 pages, 6 figures",
+      "journal_ref": null,
+      "doi": null,
+      "fetched_at": "2026-06-20T21:30:42.717455",
+      "summary": "这篇论文提出了一种基于多智能体强化学习的微电网低碳点对点（P2P）市场与投标策略联合设计框架。针对可再生能源不确定性和实时市场不稳定性带来的挑战，该方法将微电网的决策过程建模为去中心化部分可观测马尔可夫决策过程（DEC-POMDP），并通过多智能体强化学习求解，赋予各微电网高度自主决策权。同时，引入新型市场出清机制进行宏观调节，激励微电网优先消纳本地可再生能源，从而降低碳排放。仿真结果表明，该框架有效提升了可再生能源利用率，减少了对高碳外部电力的依赖，实现了局部自治、个体利益与社区整体经济环境效益的平衡。",
+      "summarized_at": "2026-06-20T21:30:47.663545",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "Uncertainties in renewable energy generation and instability of real-time market limit effective utilization of clean energy in microgrid communities",
+            "evidence": "The challenges of the uncertainties in renewable energy generation and the instability of the real-time market limit the effective utilization of clean energy in microgrid communities.",
+            "confidence": 0.95
+          },
+          "method": {
+            "value": "Multi-agent reinforcement learning (MARL) with DEC-POMDP formulation and novel market clearing mechanism",
+            "evidence": "the decision-making processes of the microgrids are formulated as a Decentralized Partially Observable Markov Decision Process (DEC-POMDP) and solved using a Multi-Agent Reinforcement Learning (MARL) framework. ... a novel market clearing mechanism is introduced to provide macro-regulation",
+            "confidence": 0.95
+          },
+          "scenario": {
+            "value": "Intraday peer-to-peer energy trading among self-interested microgrids",
+            "evidence": "we propose an intraday P2P trading framework that allows self-interested microgrids to pursue their economic benefits",
+            "confidence": 0.9
+          },
+          "assumption": {
+            "value": "Microgrids are self-interested and pursue their own economic benefits",
+            "evidence": "self-interested microgrids to pursue their economic benefits",
+            "confidence": 0.85
+          },
+          "constraint": {
+            "value": "Market operator maximizes social welfare (low carbon emission objective) of the entire community",
+            "evidence": "allowing the market operator to maximize the social welfare, namely the low carbon emission objective, of the entire community",
+            "confidence": 0.9
+          },
+          "metric": {
+            "value": "Renewable energy utilization, reliance on external electricity, carbon emissions",
+            "evidence": "Simulation results demonstrate that the combination ... helps significantly improve renewable energy utilization and reduce reliance on external electricity with high carbon-emissions.",
+            "confidence": 0.85
+          },
+          "dataset_or_benchmark": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "baseline": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "contribution": {
+            "value": "Joint design of self-interested bidding strategy and P2P market with macro-regulation to balance local autonomy, self-interest, and community-level economic and environmental benefits",
+            "evidence": "The framework achieves a balanced integration of local autonomy, self-interest pursuit, and improved community-level economic and environmental benefits.",
+            "confidence": 0.9
+          },
+          "limitation": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "mixed",
+            "evidence": "self-interested microgrids to pursue their economic benefits, while allowing the market operator to maximize the social welfare",
+            "confidence": 0.85,
+            "facet": "interaction_type"
+          },
+          {
+            "value": "peer-to-peer",
+            "evidence": "we propose an intraday P2P trading framework",
+            "confidence": 0.95,
+            "facet": "market_structure"
+          },
+          {
+            "value": "low-carbon",
+            "evidence": "the low carbon emission objective, of the entire community",
+            "confidence": 0.9,
+            "facet": "objective"
+          },
+          {
+            "value": "intraday",
+            "evidence": "we propose an intraday P2P trading framework",
+            "confidence": 0.95,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "multi-agent reinforcement learning",
+            "evidence": "solved using a Multi-Agent Reinforcement Learning (MARL) framework",
+            "confidence": 0.95,
+            "facet": "solution_approach"
+          },
+          {
+            "value": "Markov decision process",
+            "evidence": "formulated as a Decentralized Partially Observable Markov Decision Process (DEC-POMDP)",
+            "confidence": 0.9,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": "not specified",
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": []
+      },
+      "knowledge_extracted_at": "2026-06-22T21:57:22.471393"
+    },
+    {
+      "id": "2512.17444v1",
+      "title": "Assessing Long-Term Electricity Market Design for Ambitious Decarbonization Targets using Multi-Agent Reinforcement Learning",
+      "authors": [
+        "Javier Gonzalez-Ruiz",
+        "Carlos Rodriguez-Pardo",
+        "Iacopo Savelli",
+        "Alice Di Bella",
+        "Massimo Tavoni"
+      ],
+      "abstract": "Electricity systems are key to transforming today's society into a carbon-free economy. Long-term electricity market mechanisms, including auctions, support schemes, and other policy instruments, are critical in shaping the electricity generation mix. In light of the need for more advanced tools to support policymakers and other stakeholders in designing, testing, and evaluating long-term markets, this work presents a multi-agent reinforcement learning model capable of capturing the key features of decarbonizing energy systems. Profit-maximizing generation companies make investment decisions in the wholesale electricity market, responding to system needs, competitive dynamics, and policy signals. The model employs independent proximal policy optimization, which was selected for suitability to the decentralized and competitive environment. Nevertheless, given the inherent challenges of independent learning in multi-agent settings, an extensive hyperparameter search ensures that decentralized training yields market outcomes consistent with competitive behavior. The model is applied to a stylized version of the Italian electricity system and tested under varying levels of competition, market designs, and policy scenarios. Results highlight the critical role of market design for decarbonizing the electricity sector and avoiding price volatility. The proposed framework allows assessing long-term electricity markets in which multiple policy and market mechanisms interact simultaneously, with market participants responding and adapting to decarbonization pathways.",
+      "categories": [
+        "cs.LG",
+        "cs.AI",
+        "cs.NE",
+        "econ.GN"
+      ],
+      "primary_category": "cs.LG",
+      "published": "2025-12-19T10:56:34+00:00",
+      "updated": "2025-12-19T10:56:34+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2512.17444v1",
+      "entry_url": "http://arxiv.org/abs/2512.17444v1",
+      "comment": "Accepted to Energy and AI. Code available in https://github.com/jjgonzalez2491/MARLEY_V1",
+      "journal_ref": null,
+      "doi": null,
+      "fetched_at": "2026-06-20T21:30:42.717455",
+      "summary": "这篇论文提出了一种基于多智能体强化学习（MARL）的模型，用于评估长期电力市场设计在实现深度脱碳目标中的作用。模型采用独立近端策略优化算法，模拟发电公司在批发市场中根据系统需求、竞争动态和政策信号进行利润最大化投资决策。通过意大利电力系统的简化案例测试，研究揭示了市场设计对减少价格波动和推动电力行业脱碳的关键影响。该框架能够同时分析多种政策和市场机制的交互作用，为政策制定者评估长期市场提供了先进工具。",
+      "summarized_at": "2026-06-20T21:30:49.572371",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "Assessing long-term electricity market design for ambitious decarbonization targets",
+            "evidence": "Assessing Long-Term Electricity Market Design for Ambitious Decarbonization Targets using Multi-Agent Reinforcement Learning",
+            "confidence": 1.0
+          },
+          "method": {
+            "value": "Multi-agent reinforcement learning with independent proximal policy optimization",
+            "evidence": "presents a multi-agent reinforcement learning model ... employs independent proximal policy optimization",
+            "confidence": 1.0
+          },
+          "scenario": {
+            "value": "Stylized version of the Italian electricity system under varying competition, market designs, and policy scenarios",
+            "evidence": "applied to a stylized version of the Italian electricity system and tested under varying levels of competition, market designs, and policy scenarios",
+            "confidence": 1.0
+          },
+          "assumption": {
+            "value": "Profit-maximizing generation companies make investment decisions in the wholesale electricity market",
+            "evidence": "Profit-maximizing generation companies make investment decisions in the wholesale electricity market",
+            "confidence": 1.0
+          },
+          "constraint": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "metric": {
+            "value": "Market outcomes consistent with competitive behavior; price volatility",
+            "evidence": "decentralized training yields market outcomes consistent with competitive behavior ... avoiding price volatility",
+            "confidence": 0.9
+          },
+          "dataset_or_benchmark": {
+            "value": "Stylized version of the Italian electricity system",
+            "evidence": "applied to a stylized version of the Italian electricity system",
+            "confidence": 1.0
+          },
+          "baseline": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "contribution": {
+            "value": "A multi-agent reinforcement learning framework to assess long-term electricity markets with interacting policy and market mechanisms",
+            "evidence": "proposed framework allows assessing long-term electricity markets in which multiple policy and market mechanisms interact simultaneously",
+            "confidence": 1.0
+          },
+          "limitation": {
+            "value": "Challenges of independent learning in multi-agent settings",
+            "evidence": "given the inherent challenges of independent learning in multi-agent settings",
+            "confidence": 0.9
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "competitive",
+            "evidence": "decentralized and competitive environment",
+            "confidence": 1.0,
+            "facet": "interaction_type"
+          },
+          {
+            "value": "wholesale market",
+            "evidence": "wholesale electricity market",
+            "confidence": 1.0,
+            "facet": "market_structure"
+          },
+          {
+            "value": "profit maximization",
+            "evidence": "Profit-maximizing generation companies",
+            "confidence": 1.0,
+            "facet": "objective"
+          },
+          {
+            "value": "long-term",
+            "evidence": "long-term electricity market mechanisms, including auctions, support schemes, and other policy instruments",
+            "confidence": 1.0,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "multi-agent reinforcement learning",
+            "evidence": "multi-agent reinforcement learning model",
+            "confidence": 1.0,
+            "facet": "solution_approach"
+          },
+          {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": "not specified",
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": []
+      },
+      "knowledge_extracted_at": "2026-06-22T21:57:28.015449"
+    },
+    {
+      "id": "2604.20586v1",
+      "title": "A Hierarchical MARL-Based Approach for Coordinated Retail P2P Trading and Wholesale Market Participation of DERs",
+      "authors": [
+        "Patrick Wilk",
+        "Ethan Cantor",
+        "Yikui Liu",
+        "Jie Li"
+      ],
+      "abstract": "The ongoing shift towards decentralization of the electric energy sector, driven by the growing electrification across end-use sectors, and widespread adoption of distributed energy resources (DERs), necessitates their active participation in the electricity markets to support grid operations. Furthermore, with bi-directional energy and communication flows becoming standard, intelligent, easy-to-deploy, resource-conservative demand-side participation is expected to play a critical role in securing power grid operational flexibility and market efficiency. This work proposes a market engagement framework that leverages a hierarchical multi-agent deep reinforcement learning (MARL) approach to enable individual prosumers to participate in peer-to-peer retail auctions and further aggregate these intelligent prosumers to facilitate effective DER participation in wholesale markets. Ultimately, a Stackelberg game is proposed to coordinate this hierarchical MARL-based DER market participation framework toward enhanced market performance.",
+      "categories": [
+        "cs.LG",
+        "eess.SY"
+      ],
+      "primary_category": "cs.LG",
+      "published": "2026-04-22T14:02:56+00:00",
+      "updated": "2026-04-22T14:02:56+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2604.20586v1",
+      "entry_url": "http://arxiv.org/abs/2604.20586v1",
+      "comment": "11 pages, 6 figures, 7 tables",
+      "journal_ref": null,
+      "doi": null,
+      "fetched_at": "2026-06-20T21:30:42.718500",
+      "summary": "这篇论文提出了一种基于分层多智能体深度强化学习（MARL）的市场参与框架，旨在协调分布式能源资源（DER）在零售点对点（P2P）交易和批发市场中的协同参与。主要创新点包括：通过分层MARL使个体产消者自主参与零售P2P拍卖，并进一步聚合这些智能产消者以有效参与批发市场；引入Stackelberg博弈来协调分层MARL框架，优化市场整体性能。该研究为需求侧DER的智能化、资源节约型市场参与提供了新思路，有助于提升电网运行灵活性和市场效率。",
+      "summarized_at": "2026-06-20T21:30:51.521389",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "Coordinated retail P2P trading and wholesale market participation of DERs",
+            "evidence": "enable individual prosumers to participate in peer-to-peer retail auctions and further aggregate these intelligent prosumers to facilitate effective DER participation in wholesale markets",
+            "confidence": 0.95
+          },
+          "method": {
+            "value": "Hierarchical multi-agent deep reinforcement learning (MARL) with Stackelberg game",
+            "evidence": "proposes a market engagement framework that leverages a hierarchical multi-agent deep reinforcement learning (MARL) approach ... a Stackelberg game is proposed to coordinate this hierarchical MARL-based DER market participation framework",
+            "confidence": 0.95
+          },
+          "scenario": {
+            "value": "Electricity market with prosumers and DERs",
+            "evidence": "The ongoing shift towards decentralization of the electric energy sector ... widespread adoption of distributed energy resources (DERs)",
+            "confidence": 0.9
+          },
+          "assumption": {
+            "value": "Bi-directional energy and communication flows become standard",
+            "evidence": "with bi-directional energy and communication flows becoming standard",
+            "confidence": 0.8
+          },
+          "constraint": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "metric": {
+            "value": "Market performance",
+            "evidence": "toward enhanced market performance",
+            "confidence": 0.6
+          },
+          "dataset_or_benchmark": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "baseline": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "contribution": {
+            "value": "Hierarchical MARL framework for coordinated retail P2P and wholesale market participation of DERs, coordinated via Stackelberg game",
+            "evidence": "This work proposes a market engagement framework that leverages a hierarchical multi-agent deep reinforcement learning (MARL) approach ... a Stackelberg game is proposed to coordinate this hierarchical MARL-based DER market participation framework toward enhanced market performance",
+            "confidence": 0.95
+          },
+          "limitation": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "mixed",
+            "evidence": "Stackelberg game is proposed to coordinate this hierarchical MARL-based DER market participation framework",
+            "confidence": 0.8,
+            "facet": "interaction_type"
+          },
+          {
+            "value": "peer-to-peer and wholesale market",
+            "evidence": "enable individual prosumers to participate in peer-to-peer retail auctions and further aggregate these intelligent prosumers to facilitate effective DER participation in wholesale markets",
+            "confidence": 0.95,
+            "facet": "market_structure"
+          },
+          {
+            "value": "Market performance enhancement",
+            "evidence": "toward enhanced market performance",
+            "confidence": 0.7,
+            "facet": "objective"
+          },
+          {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "multi-agent reinforcement learning and Stackelberg game",
+            "evidence": "hierarchical multi-agent deep reinforcement learning (MARL) approach ... a Stackelberg game is proposed to coordinate this hierarchical MARL-based DER market participation framework",
+            "confidence": 0.95,
+            "facet": "solution_approach"
+          },
+          {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": []
+      },
+      "knowledge_extracted_at": "2026-06-22T21:57:33.888217"
+    },
+    {
+      "id": "2604.08973v1",
+      "title": "Multi-agent Reinforcement Learning for Low-Carbon P2P Energy Trading among Self-Interested Microgrids",
+      "authors": [
+        "Junhao Ren",
+        "Honglin Gao",
+        "Lan Zhao",
+        "Qiyu Kang",
+        "Gaoxi Xiao",
+        "Yajuan Sun"
+      ],
+      "abstract": "Uncertainties in renewable generation and demand dynamics challenge day-ahead scheduling. To enhance renewable penetration and maintain intra-day balance, we develop a multi-agent reinforcement learning framework for self-interested microgrids participating in peer-to-peer (P2P) electricity trading. Each microgrid independently bids both price and quantity while optimizing its own profit via storage arbitrage under time-varying main-grid prices. A market-clearing mechanism coordinating trades and promoting incentive compatibility is proposed. Simulation results show that the learned bidding policy improves renewable utilization and reduces reliance on high-carbon electricity, while increasing community-level economic welfare, delivering a win-win situation in emission reduction and local prosperity.",
+      "categories": [
+        "cs.MA"
+      ],
+      "primary_category": "cs.MA",
+      "published": "2026-04-10T05:27:21+00:00",
+      "updated": "2026-04-10T05:27:21+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2604.08973v1",
+      "entry_url": "http://arxiv.org/abs/2604.08973v1",
+      "comment": "Accepted by IEEE ICC 2026, 6 pages, 2 figures",
+      "journal_ref": null,
+      "doi": null,
+      "fetched_at": "2026-06-20T21:30:42.718500",
+      "summary": "这篇论文提出了一种面向自私微电网的多智能体强化学习框架，用于低碳化的点对点（P2P）电力交易。每个微电网在时变主网电价下，通过储能套利独立优化自身利润，并同时竞标电量和电价。研究设计了一种市场出清机制，以协调交易并促进激励相容性。仿真结果表明，该学习策略不仅提高了可再生能源利用率，减少了对高碳电力的依赖，还提升了社区整体经济福利，实现了减排与本地繁荣的双赢。",
+      "summarized_at": "2026-06-20T21:30:53.145085",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "Uncertainties in renewable generation and demand dynamics challenge day-ahead scheduling",
+            "evidence": "Uncertainties in renewable generation and demand dynamics challenge day-ahead scheduling",
+            "confidence": 0.95
+          },
+          "method": {
+            "value": "Multi-agent reinforcement learning framework",
+            "evidence": "we develop a multi-agent reinforcement learning framework for self-interested microgrids participating in peer-to-peer (P2P) electricity trading",
+            "confidence": 0.95
+          },
+          "scenario": {
+            "value": "Peer-to-peer electricity trading among self-interested microgrids",
+            "evidence": "self-interested microgrids participating in peer-to-peer (P2P) electricity trading",
+            "confidence": 0.95
+          },
+          "assumption": {
+            "value": "Each microgrid is self-interested and independently optimizes its own profit",
+            "evidence": "Each microgrid independently bids both price and quantity while optimizing its own profit via storage arbitrage under time-varying main-grid prices",
+            "confidence": 0.9
+          },
+          "constraint": {
+            "value": "Time-varying main-grid prices and storage arbitrage",
+            "evidence": "optimizing its own profit via storage arbitrage under time-varying main-grid prices",
+            "confidence": 0.85
+          },
+          "metric": {
+            "value": "Renewable utilization, reliance on high-carbon electricity, community-level economic welfare",
+            "evidence": "improves renewable utilization and reduces reliance on high-carbon electricity, while increasing community-level economic welfare",
+            "confidence": 0.9
+          },
+          "dataset_or_benchmark": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "baseline": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "contribution": {
+            "value": "A multi-agent reinforcement learning framework with a market-clearing mechanism that promotes incentive compatibility for low-carbon P2P energy trading",
+            "evidence": "we develop a multi-agent reinforcement learning framework for self-interested microgrids participating in peer-to-peer (P2P) electricity trading. A market-clearing mechanism coordinating trades and promoting incentive compatibility is proposed",
+            "confidence": 0.9
+          },
+          "limitation": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "mixed",
+            "evidence": "self-interested microgrids participating in peer-to-peer (P2P) electricity trading",
+            "confidence": 0.85,
+            "facet": "interaction_type"
+          },
+          {
+            "value": "peer-to-peer",
+            "evidence": "peer-to-peer (P2P) electricity trading",
+            "confidence": 0.95,
+            "facet": "market_structure"
+          },
+          {
+            "value": "low-carbon and profit maximization",
+            "evidence": "improves renewable utilization and reduces reliance on high-carbon electricity, while increasing community-level economic welfare",
+            "confidence": 0.9,
+            "facet": "objective"
+          },
+          {
+            "value": "intraday",
+            "evidence": "To enhance renewable penetration and maintain intra-day balance",
+            "confidence": 0.9,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "multi-agent reinforcement learning",
+            "evidence": "we develop a multi-agent reinforcement learning framework",
+            "confidence": 0.95,
+            "facet": "solution_approach"
+          },
+          {
+            "value": "Markov decision process",
+            "evidence": "Uncertainties in renewable generation and demand dynamics challenge day-ahead scheduling",
+            "confidence": 0.7,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": "not specified",
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": []
+      },
+      "knowledge_extracted_at": "2026-06-22T21:57:39.227110"
+    },
+    {
+      "id": "2507.16479v1",
+      "title": "Arbitrage Tactics in the Local Markets via Hierarchical Multi-agent Reinforcement Learning",
+      "authors": [
+        "Haoyang Zhang",
+        "Mina Montazeri",
+        "Philipp Heer",
+        "Koen Kok",
+        "Nikolaos G. Paterakis"
+      ],
+      "abstract": "Strategic bidding tactics employed by prosumers in local markets, including the Local Electricity Market (LEM) and Local Flexibility Market (LFM), have attracted significant attention due to their potential to enhance economic benefits for market participants through optimized energy management and bidding. While existing research has explored strategic bidding in a single market with multi-agent reinforcement learning (MARL) algorithms, arbitrage opportunities across local markets remain unexplored. This paper introduces a hierarchical MARL (HMARL) algorithm designed to enable aggregator arbitrage across multiple local markets. The strategic behavior of these aggregators in local markets is modeled as a two-stage Markov game: the first stage involves the LEM, while the second stage encompasses both the LFM and the balancing market. To solve this two-stage Markov game, the HMARL framework assigns two sub-agents to each aggregator, a primary sub-agent and a secondary sub-agent. Without the arbitrage strategy, these sub-agents operate in silos, with the primary sub-agent focusing on first-stage profits and the secondary sub-agent on second-stage profits, each employing independent MARLs. On the contrary, when implementing the arbitrage strategy with the proposed HMARL, the sub-agents communicate and coordinate to perform arbitrage across multiple local markets, enhancing overall efficiency. The case study, conducted under a scenario where all aggregators employ the arbitrage strategy, shows that despite higher initial costs in the LEM, this strategy generates substantial savings in the LFM and the balancing market, resulting in a total profit increase of $40.6\\%$ on average. This highlights the capability of the proposed HMARL to address the two-stage Markov game and facilitate arbitrage across local markets, thereby enhancing profitability for participants.",
+      "categories": [
+        "eess.SY"
+      ],
+      "primary_category": "eess.SY",
+      "published": "2025-07-22T11:35:37+00:00",
+      "updated": "2025-07-22T11:35:37+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2507.16479v1",
+      "entry_url": "http://arxiv.org/abs/2507.16479v1",
+      "comment": null,
+      "journal_ref": null,
+      "doi": null,
+      "fetched_at": "2026-06-20T21:30:42.718500",
+      "summary": "这篇论文提出了一种基于分层多智能体强化学习（HMARL）的套利策略，用于解决产消者在本地电力市场和本地灵活性市场之间的跨市场套利问题。研究将聚合商的策略行为建模为两阶段马尔可夫博弈，第一阶段涉及本地电力市场，第二阶段涵盖本地灵活性市场和平衡市场。HMARL框架为每个聚合商分配主、副两个子智能体，通过协调通信实现跨市场套利。案例研究表明，尽管在本地电力市场初期成本较高，但该策略在本地灵活性市场和平衡市场产生显著节省，平均总利润提升40.6%，验证了HMARL在提升市场参与者盈利能力方面的有效性。",
+      "summarized_at": "2026-06-20T21:30:55.165626",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "Arbitrage across local electricity and flexibility markets",
+            "evidence": "arbitrage opportunities across local markets remain unexplored",
+            "confidence": 1.0
+          },
+          "method": {
+            "value": "Hierarchical multi-agent reinforcement learning (HMARL)",
+            "evidence": "This paper introduces a hierarchical MARL (HMARL) algorithm designed to enable aggregator arbitrage across multiple local markets",
+            "confidence": 1.0
+          },
+          "scenario": {
+            "value": "Local Electricity Market (LEM) and Local Flexibility Market (LFM) with balancing market",
+            "evidence": "the first stage involves the LEM, while the second stage encompasses both the LFM and the balancing market",
+            "confidence": 1.0
+          },
+          "assumption": {
+            "value": "Aggregators act strategically in a two-stage Markov game",
+            "evidence": "The strategic behavior of these aggregators in local markets is modeled as a two-stage Markov game",
+            "confidence": 1.0
+          },
+          "constraint": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "metric": {
+            "value": "Total profit increase",
+            "evidence": "total profit increase of $40.6\\%$ on average",
+            "confidence": 1.0
+          },
+          "dataset_or_benchmark": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "baseline": {
+            "value": "Independent MARL without arbitrage strategy",
+            "evidence": "Without the arbitrage strategy, these sub-agents operate in silos... each employing independent MARLs",
+            "confidence": 1.0
+          },
+          "contribution": {
+            "value": "HMARL framework enabling cross-market arbitrage for aggregators",
+            "evidence": "This paper introduces a hierarchical MARL (HMARL) algorithm designed to enable aggregator arbitrage across multiple local markets",
+            "confidence": 1.0
+          },
+          "limitation": {
+            "value": "Case study only under scenario where all aggregators employ arbitrage strategy",
+            "evidence": "The case study, conducted under a scenario where all aggregators employ the arbitrage strategy",
+            "confidence": 0.8
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "mixed",
+            "evidence": "the sub-agents communicate and coordinate to perform arbitrage across multiple local markets",
+            "confidence": 0.9,
+            "facet": "interaction_type"
+          },
+          {
+            "value": "local markets (LEM, LFM, balancing market)",
+            "evidence": "Local Electricity Market (LEM) and Local Flexibility Market (LFM)",
+            "confidence": 1.0,
+            "facet": "market_structure"
+          },
+          {
+            "value": "profit maximization",
+            "evidence": "enhancing profitability for participants",
+            "confidence": 1.0,
+            "facet": "objective"
+          },
+          {
+            "value": "two-stage (day-ahead and real-time)",
+            "evidence": "two-stage Markov game: the first stage involves the LEM, while the second stage encompasses both the LFM and the balancing market",
+            "confidence": 0.9,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "hierarchical multi-agent reinforcement learning",
+            "evidence": "hierarchical MARL (HMARL) algorithm",
+            "confidence": 1.0,
+            "facet": "solution_approach"
+          },
+          {
+            "value": "Markov decision process",
+            "evidence": "modeled as a two-stage Markov game",
+            "confidence": 0.9,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": "not specified",
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": []
+      },
+      "knowledge_extracted_at": "2026-06-22T21:57:45.127230"
+    },
+    {
+      "id": "2508.18610v1",
+      "title": "Scalable Fairness Shaping with LLM-Guided Multi-Agent Reinforcement Learning for Peer-to-Peer Electricity Markets",
+      "authors": [
+        "Shrenik Jadhav",
+        "Birva Sevak",
+        "Srijita Das",
+        "Akhtar Hussain",
+        "Wencong Su",
+        "Van-Hai Bui"
+      ],
+      "abstract": "Peer-to-peer (P2P) energy trading is becoming central to modern distribution systems as rooftop PV and home energy management systems become pervasive, yet most existing market and reinforcement learning designs emphasize efficiency or private profit and offer little real-time guidance to ensure equitable outcomes under uncertainty. To address this gap, a fairness-aware multiagent reinforcement learning framework, FairMarket-RL, is proposed in which a large language model (LLM) critic shapes bidding policies within a continuous double auction under partial observability and discrete price-quantity actions. After each trading slot, the LLM returns normalized fairness scores Fairness-to-Grid (FTG), Fairness-Between-Sellers (FBS), and Fairness-of-Pricing (FPP) that are integrated into the reward via ramped coefficients and tunable scaling, so that fairness guidance complements, rather than overwhelms, economic incentives. The environment models realistic residential load and PV profiles and enforce hard constraints on prices, physical feasibility, and policy-update stability. Across a progression of experiments from a small pilot to a larger simulated community and a mixed-asset real-world dataset, the framework shifts exchanges toward local P2P trades, lowers consumer costs relative to grid-only procurement, sustains strong fairness across participants, and preserves utility viability. Sensitivity analyses over solar availability and aggregate demand further indicate robust performance, suggesting a scalable, LLM-guided pathway to decentralized electricity markets that are economically efficient, socially equitable, and technically sound.",
+      "categories": [
+        "eess.SY",
+        "cs.LG"
+      ],
+      "primary_category": "eess.SY",
+      "published": "2025-08-26T02:25:17+00:00",
+      "updated": "2025-08-26T02:25:17+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2508.18610v1",
+      "entry_url": "http://arxiv.org/abs/2508.18610v1",
+      "comment": null,
+      "journal_ref": null,
+      "doi": null,
+      "fetched_at": "2026-06-20T21:30:42.718500",
+      "summary": "这篇论文提出了一个名为FairMarket-RL的公平感知多智能体强化学习框架，用于解决点对点电力市场中现有方法忽视公平性的问题。该框架引入大语言模型作为评论家，在连续双向拍卖中塑造投标策略，并生成三种归一化公平性评分（对电网公平、卖家间公平、定价公平），通过斜坡系数和可调缩放整合到奖励中，以平衡公平激励与经济收益。实验从小规模试点到大型社区及真实数据集，表明该框架能促进本地交易、降低消费者成本、维持参与者间公平并保障电网可行性，且对太阳能可用性和需求变化具有鲁棒性，为构建经济高效、社会公平且技术可靠的去中心化电力市场提供了可扩展方案。",
+      "summarized_at": "2026-06-20T21:30:57.847871",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "Fairness in peer-to-peer electricity markets",
+            "evidence": "most existing market and reinforcement learning designs emphasize efficiency or private profit and offer little real-time guidance to ensure equitable outcomes under uncertainty",
+            "confidence": 0.95
+          },
+          "method": {
+            "value": "Fairness-aware multiagent reinforcement learning with LLM critic (FairMarket-RL)",
+            "evidence": "a fairness-aware multiagent reinforcement learning framework, FairMarket-RL, is proposed in which a large language model (LLM) critic shapes bidding policies within a continuous double auction",
+            "confidence": 0.95
+          },
+          "scenario": {
+            "value": "Peer-to-peer energy trading in distribution systems with rooftop PV and home energy management",
+            "evidence": "Peer-to-peer (P2P) energy trading is becoming central to modern distribution systems as rooftop PV and home energy management systems become pervasive",
+            "confidence": 0.9
+          },
+          "assumption": {
+            "value": "Partial observability and discrete price-quantity actions",
+            "evidence": "within a continuous double auction under partial observability and discrete price-quantity actions",
+            "confidence": 0.85
+          },
+          "constraint": {
+            "value": "Hard constraints on prices, physical feasibility, and policy-update stability",
+            "evidence": "enforce hard constraints on prices, physical feasibility, and policy-update stability",
+            "confidence": 0.9
+          },
+          "metric": {
+            "value": "Fairness-to-Grid (FTG), Fairness-Between-Sellers (FBS), Fairness-of-Pricing (FPP), consumer costs, local P2P trade volume",
+            "evidence": "normalized fairness scores Fairness-to-Grid (FTG), Fairness-Between-Sellers (FBS), and Fairness-of-Pricing (FPP) ... lowers consumer costs relative to grid-only procurement ... shifts exchanges toward local P2P trades",
+            "confidence": 0.9
+          },
+          "dataset_or_benchmark": {
+            "value": "Realistic residential load and PV profiles, mixed-asset real-world dataset",
+            "evidence": "The environment models realistic residential load and PV profiles ... a mixed-asset real-world dataset",
+            "confidence": 0.85
+          },
+          "baseline": {
+            "value": "Grid-only procurement",
+            "evidence": "lowers consumer costs relative to grid-only procurement",
+            "confidence": 0.8
+          },
+          "contribution": {
+            "value": "LLM-guided fairness shaping framework for multi-agent RL in P2P electricity markets",
+            "evidence": "a fairness-aware multiagent reinforcement learning framework, FairMarket-RL, is proposed in which a large language model (LLM) critic shapes bidding policies",
+            "confidence": 0.95
+          },
+          "limitation": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "mixed",
+            "evidence": "fairness guidance complements, rather than overwhelms, economic incentives",
+            "confidence": 0.85,
+            "facet": "interaction_type"
+          },
+          {
+            "value": "peer-to-peer",
+            "evidence": "Peer-to-peer (P2P) energy trading is becoming central to modern distribution systems",
+            "confidence": 0.95,
+            "facet": "market_structure"
+          },
+          {
+            "value": "fairness and economic efficiency",
+            "evidence": "fairness guidance complements, rather than overwhelms, economic incentives",
+            "confidence": 0.9,
+            "facet": "objective"
+          },
+          {
+            "value": "real-time",
+            "evidence": "offer little real-time guidance to ensure equitable outcomes under uncertainty",
+            "confidence": 0.85,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "multi-agent reinforcement learning",
+            "evidence": "a fairness-aware multiagent reinforcement learning framework, FairMarket-RL",
+            "confidence": 0.95,
+            "facet": "solution_approach"
+          },
+          {
+            "value": "Markov decision process",
+            "evidence": "under partial observability",
+            "confidence": 0.7,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": "medium-scale (10-50 agents)",
+            "evidence": "a larger simulated community",
+            "confidence": 0.7,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": [
+          {
+            "facet": "fairness_metric",
+            "value": "Fairness-to-Grid (FTG), Fairness-Between-Sellers (FBS), Fairness-of-Pricing (FPP)",
+            "evidence": "the LLM returns normalized fairness scores Fairness-to-Grid (FTG), Fairness-Between-Sellers (FBS), and Fairness-of-Pricing (FPP)",
+            "reason": "These three specific fairness scores are central to the paper's contribution and evaluation, and are not captured by existing generic or adaptive facets."
+          }
+        ]
+      },
+      "knowledge_extracted_at": "2026-06-22T21:57:52.490991"
+    },
+    {
+      "id": "2511.23148v1",
+      "title": "Peer-to-Peer Energy Trading in Dairy Farms using Multi-Agent Reinforcement Learning",
+      "authors": [
+        "Mian Ibad Ali Shah",
+        "Marcos Eduardo Cruz Victorio",
+        "Maeve Duffy",
+        "Enda Barrett",
+        "Karl Mason"
+      ],
+      "abstract": "The integration of renewable energy resources in rural areas, such as dairy farming communities, enables decentralized energy management through Peer-to-Peer (P2P) energy trading. This research highlights the role of P2P trading in efficient energy distribution and its synergy with advanced optimization techniques. While traditional rule-based methods perform well under stable conditions, they struggle in dynamic environments. To address this, Multi-Agent Reinforcement Learning (MARL), specifically Proximal Policy Optimization (PPO) and Deep Q-Networks (DQN), is combined with community/distributed P2P trading mechanisms. By incorporating auction-based market clearing, a price advisor agent, and load and battery management, the approach achieves significant improvements. Results show that, compared to baseline models, DQN reduces electricity costs by 14.2% in Ireland and 5.16% in Finland, while increasing electricity revenue by 7.24% and 12.73%, respectively. PPO achieves the lowest peak hour demand, reducing it by 55.5% in Ireland, while DQN reduces peak hour demand by 50.0% in Ireland and 27.02% in Finland. These improvements are attributed to both MARL algorithms and P2P energy trading, which together results in electricity cost and peak hour demand reduction, and increase electricity selling revenue. This study highlights the complementary strengths of DQN, PPO, and P2P trading in achieving efficient, adaptable, and sustainable energy management in rural communities.",
+      "categories": [
+        "cs.AI"
+      ],
+      "primary_category": "cs.AI",
+      "published": "2025-11-28T12:53:10+00:00",
+      "updated": "2025-11-28T12:53:10+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2511.23148v1",
+      "entry_url": "http://arxiv.org/abs/2511.23148v1",
+      "comment": "51 pages, 7 figures, 11 tables, Preprint of the article published in Applied Energy: Shah, M.I.A., Victorio, M.E.C., Duffy, M., Barrett, E. and Mason, K. (2026). Peer-to-peer energy trading in dairy farms using multi-agent reinforcement learning. Applied Energy, 402, 127041. doi:10.1016/j.apenergy.2025.127041",
+      "journal_ref": "Applied Energy (2026), 402, 127041",
+      "doi": "10.1016/j.apenergy.2025.127041",
+      "fetched_at": "2026-06-20T21:30:42.718500",
+      "summary": "这篇论文研究了多智能体强化学习（MARL）在奶牛场社区点对点（P2P）能源交易中的应用。主要创新点在于将近端策略优化（PPO）和深度Q网络（DQN）与基于拍卖的市场清算、价格顾问智能体及负载和电池管理相结合，以应对传统规则方法在动态环境中的局限性。实验结果表明，相比基线模型，DQN在爱尔兰和芬兰分别降低了14.2%和5.16%的电力成本，并增加了7.24%和12.73%的售电收入；PPO在爱尔兰将峰值需求降低了55.5%，DQN则分别降低了50.0%和27.02%。该研究证实了MARL算法与P2P交易在实现农村社区高效、自适应和可持续能源管理方面的协同优势。",
+      "summarized_at": "2026-06-20T21:31:00.276501",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "inefficient energy management in dairy farming communities under dynamic conditions",
+            "evidence": "traditional rule-based methods perform well under stable conditions, they struggle in dynamic environments",
+            "confidence": 0.9
+          },
+          "method": {
+            "value": "Multi-Agent Reinforcement Learning (MARL) with Proximal Policy Optimization (PPO) and Deep Q-Networks (DQN) combined with auction-based market clearing, price advisor agent, and load and battery management",
+            "evidence": "Multi-Agent Reinforcement Learning (MARL), specifically Proximal Policy Optimization (PPO) and Deep Q-Networks (DQN), is combined with community/distributed P2P trading mechanisms. By incorporating auction-based market clearing, a price advisor agent, and load and battery management",
+            "confidence": 0.95
+          },
+          "scenario": {
+            "value": "peer-to-peer energy trading in dairy farms",
+            "evidence": "Peer-to-Peer Energy Trading in Dairy Farms using Multi-Agent Reinforcement Learning",
+            "confidence": 0.95
+          },
+          "assumption": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "constraint": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "metric": {
+            "value": "electricity cost reduction, peak hour demand reduction, electricity revenue increase",
+            "evidence": "DQN reduces electricity costs by 14.2% in Ireland and 5.16% in Finland, while increasing electricity revenue by 7.24% and 12.73%, respectively. PPO achieves the lowest peak hour demand, reducing it by 55.5% in Ireland, while DQN reduces peak hour demand by 50.0% in Ireland and 27.02% in Finland",
+            "confidence": 0.95
+          },
+          "dataset_or_benchmark": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "baseline": {
+            "value": "rule-based methods",
+            "evidence": "traditional rule-based methods perform well under stable conditions, they struggle in dynamic environments",
+            "confidence": 0.8
+          },
+          "contribution": {
+            "value": "demonstrating that combining MARL (DQN and PPO) with P2P energy trading achieves significant reductions in electricity cost and peak demand, and increases revenue in dairy farming communities",
+            "evidence": "This study highlights the complementary strengths of DQN, PPO, and P2P trading in achieving efficient, adaptable, and sustainable energy management in rural communities",
+            "confidence": 0.9
+          },
+          "limitation": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "mixed",
+            "evidence": "Peer-to-Peer (P2P) energy trading enables decentralized energy management; agents trade with each other (competitive) but also cooperate to reduce overall costs and peak demand",
+            "confidence": 0.7,
+            "facet": "interaction_type"
+          },
+          {
+            "value": "peer-to-peer",
+            "evidence": "Peer-to-Peer (P2P) energy trading",
+            "confidence": 0.95,
+            "facet": "market_structure"
+          },
+          {
+            "value": "cost minimization and revenue maximization",
+            "evidence": "electricity cost and peak hour demand reduction, and increase electricity selling revenue",
+            "confidence": 0.9,
+            "facet": "objective"
+          },
+          {
+            "value": "real-time",
+            "evidence": "dynamic environments",
+            "confidence": 0.6,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "multi-agent reinforcement learning",
+            "evidence": "Multi-Agent Reinforcement Learning (MARL), specifically Proximal Policy Optimization (PPO) and Deep Q-Networks (DQN)",
+            "confidence": 0.95,
+            "facet": "solution_approach"
+          },
+          {
+            "value": "Markov decision process",
+            "evidence": "Multi-Agent Reinforcement Learning (MARL) implicitly models stochastic transitions",
+            "confidence": 0.5,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": "not specified",
+            "evidence": "no explicit mention of number of agents or scalability",
+            "confidence": 0.8,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": []
+      },
+      "knowledge_extracted_at": "2026-06-22T21:57:59.325482"
+    },
+    {
+      "id": "2604.10252v1",
+      "title": "A Dual-Positive Monotone Parameterization for Multi-Segment Bids and a Validity Assessment Framework for Reinforcement Learning Agent-based Simulation of Electricity Markets",
+      "authors": [
+        "Zunnan Xu",
+        "Zhaoxia Jing",
+        "Zhanhua Pan"
+      ],
+      "abstract": "Reinforcement learning agent-based simulation (RL-ABS) has become an important tool for electricity market mechanism analysis and evaluation. In the modeling of monotone, bounded, multi-segment stepwise bids, existing methods typically let the policy network first output an unconstrained action and then convert it into a feasible bid curve satisfying monotonicity and boundedness through post-processing mappings such as sorting, clipping, or projection. However, such post-processing mappings often fail to satisfy continuous differentiability, injectivity, and invertibility at boundaries or kinks, thereby causing gradient distortion and leading to spurious convergence in simulation results. Meanwhile, most existing studies conduct mechanism analysis and evaluation mainly on the basis of training-curve convergence, without rigorously assessing the distance between the simulation outcomes and Nash equilibrium, which severely undermines the credibility of the results. To address these issues, this paper proposes...",
+      "categories": [
+        "cs.AI",
+        "eess.SY"
+      ],
+      "primary_category": "cs.AI",
+      "published": "2026-04-11T15:31:50+00:00",
+      "updated": "2026-04-11T15:31:50+00:00",
+      "pdf_url": "https://arxiv.org/pdf/2604.10252v1",
+      "entry_url": "http://arxiv.org/abs/2604.10252v1",
+      "comment": null,
+      "journal_ref": null,
+      "doi": null,
+      "fetched_at": "2026-06-20T21:30:42.718500",
+      "summary": "这篇论文针对强化学习智能体仿真（RL-ABS）在电力市场分析中的应用，提出了两项关键改进。首先，针对单调、有界、多段阶梯报价的建模问题，现有方法通过排序、裁剪等后处理映射将非约束动作转换为可行报价曲线，但这类映射缺乏连续可微性、单射性和可逆性，导致梯度失真和虚假收敛。为此，论文提出了一种双正单调参数化方法，确保报价曲线满足单调性和有界性，同时保持可微性和可逆性。其次，针对现有研究仅依赖训练曲线收敛性评估仿真结果的问题，论文构建了一个有效性评估框架，严格衡量仿真结果与纳什均衡之间的距离，从而提升结果的可信度。该工作为电力市场机制分析提供了更可靠的工具。",
+      "summarized_at": "2026-06-20T21:31:03.066624",
+      "knowledge": {
+        "generic": {
+          "problem": {
+            "value": "Gradient distortion and spurious convergence in RL-ABS for electricity markets due to non-differentiable post-processing mappings for multi-segment bids; lack of rigorous validity assessment of simulation outcomes against Nash equilibrium",
+            "evidence": "existing methods typically let the policy network first output an unconstrained action and then convert it into a feasible bid curve ... such post-processing mappings often fail to satisfy continuous differentiability, injectivity, and invertibility at boundaries or kinks, thereby causing gradient distortion and leading to spurious convergence in simulation results. Meanwhile, most existing studies ... without rigorously assessing the distance between the simulation outcomes and Nash equilibrium, which severely undermines the credibility of the results.",
+            "confidence": 0.95
+          },
+          "method": {
+            "value": "Dual-Positive Monotone Parameterization for multi-segment bids; Validity Assessment Framework measuring distance to Nash equilibrium",
+            "evidence": "this paper proposes ... a dual-positive monotone parameterization ... and a validity assessment framework ...",
+            "confidence": 0.9
+          },
+          "scenario": {
+            "value": "Electricity market simulation with multi-agent reinforcement learning",
+            "evidence": "Reinforcement learning agent-based simulation (RL-ABS) has become an important tool for electricity market mechanism analysis and evaluation.",
+            "confidence": 0.85
+          },
+          "assumption": {
+            "value": "Bids are monotone, bounded, multi-segment stepwise curves",
+            "evidence": "In the modeling of monotone, bounded, multi-segment stepwise bids",
+            "confidence": 0.8
+          },
+          "constraint": {
+            "value": "Bid curves must satisfy monotonicity and boundedness",
+            "evidence": "monotone, bounded, multi-segment stepwise bids",
+            "confidence": 0.8
+          },
+          "metric": {
+            "value": "Distance between simulation outcomes and Nash equilibrium",
+            "evidence": "rigorously assessing the distance between the simulation outcomes and Nash equilibrium",
+            "confidence": 0.9
+          },
+          "dataset_or_benchmark": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          },
+          "baseline": {
+            "value": "Existing post-processing mappings (sorting, clipping, projection)",
+            "evidence": "existing methods typically let the policy network first output an unconstrained action and then convert it into a feasible bid curve through post-processing mappings such as sorting, clipping, or projection.",
+            "confidence": 0.85
+          },
+          "contribution": {
+            "value": "Dual-Positive Monotone Parameterization ensuring differentiability and invertibility; Validity Assessment Framework for Nash equilibrium distance",
+            "evidence": "this paper proposes ... a dual-positive monotone parameterization ... and a validity assessment framework ...",
+            "confidence": 0.9
+          },
+          "limitation": {
+            "value": null,
+            "evidence": null,
+            "confidence": 0.0
+          }
+        },
+        "adaptive_facets": [
+          {
+            "value": "competitive",
+            "evidence": "electricity market mechanism analysis and evaluation",
+            "confidence": 0.7,
+            "facet": "interaction_type"
+          },
+          {
+            "value": "wholesale market",
+            "evidence": "electricity market mechanism analysis and evaluation",
+            "confidence": 0.7,
+            "facet": "market_structure"
+          },
+          {
+            "value": "profit maximization",
+            "evidence": "bids ... in electricity markets",
+            "confidence": 0.6,
+            "facet": "objective"
+          },
+          {
+            "value": "day-ahead",
+            "evidence": "multi-segment stepwise bids",
+            "confidence": 0.5,
+            "facet": "decision_horizon"
+          },
+          {
+            "value": "multi-agent reinforcement learning",
+            "evidence": "Reinforcement learning agent-based simulation (RL-ABS)",
+            "confidence": 0.9,
+            "facet": "solution_approach"
+          },
+          {
+            "value": "Markov decision process",
+            "evidence": "Reinforcement learning agent-based simulation",
+            "confidence": 0.5,
+            "facet": "uncertainty_modeling"
+          },
+          {
+            "value": "not specified",
+            "evidence": null,
+            "confidence": 0.0,
+            "facet": "scalability_aspect"
+          }
+        ],
+        "new_facets": []
+      },
+      "knowledge_extracted_at": "2026-06-22T21:58:06.231577"
+    }
+  ],
+  "taxonomy": {
+    "facets": [
+      {
+        "name": "interaction_type",
+        "description": "The nature of interactions among agents or between agents and the system, e.g., cooperative, competitive, or mixed.",
+        "examples": [
+          "cooperative",
+          "competitive",
+          "mixed"
+        ]
+      },
+      {
+        "name": "market_structure",
+        "description": "The type of market or trading mechanism considered, such as peer-to-peer, wholesale, auction, or bilateral.",
+        "examples": [
+          "peer-to-peer",
+          "wholesale market",
+          "auction",
+          "bilateral"
+        ]
+      },
+      {
+        "name": "objective",
+        "description": "The primary goal or objective function optimized, e.g., profit, social welfare, resilience, or carbon emission reduction.",
+        "examples": [
+          "profit maximization",
+          "social welfare",
+          "resilience",
+          "low-carbon"
+        ]
+      },
+      {
+        "name": "decision_horizon",
+        "description": "The time scale of decisions, e.g., real-time, intraday, day-ahead, or long-term investment.",
+        "examples": [
+          "real-time",
+          "intraday",
+          "day-ahead",
+          "long-term"
+        ]
+      },
+      {
+        "name": "solution_approach",
+        "description": "The algorithmic or theoretical approach used to solve the problem, e.g., MARL, Nash equilibrium, or centralized optimization.",
+        "examples": [
+          "multi-agent reinforcement learning",
+          "Nash equilibrium",
+          "centralized optimization",
+          "Stackelberg game"
+        ]
+      },
+      {
+        "name": "uncertainty_modeling",
+        "description": "How uncertainties (e.g., renewable generation, demand, prices) are represented, e.g., stochastic, robust, or deterministic.",
+        "examples": [
+          "stochastic",
+          "robust",
+          "deterministic",
+          "Markov decision process"
+        ]
+      },
+      {
+        "name": "scalability_aspect",
+        "description": "The scale or number of agents considered, and whether the approach addresses scalability challenges.",
+        "examples": [
+          "small-scale (2-5 agents)",
+          "medium-scale (10-50 agents)",
+          "large-scale (100+ agents)",
+          "not specified"
+        ]
+      }
+    ],
+    "values": {
+      "interaction_type": [
+        {
+          "value": "mixed",
+          "count": 6,
+          "papers": [
+            "2604.02728v1",
+            "2604.20586v1",
+            "2604.08973v1",
+            "2507.16479v1",
+            "2508.18610v1",
+            "2511.23148v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.02728v1",
+              "title": "Multi-agent Reinforcement Learning-based Joint Design of Low-Carbon P2P Market and Bidding Strategy in Microgrids",
+              "evidence": "self-interested microgrids to pursue their economic benefits, while allowing the market operator to maximize the social welfare"
+            },
+            {
+              "paper_id": "2604.20586v1",
+              "title": "A Hierarchical MARL-Based Approach for Coordinated Retail P2P Trading and Wholesale Market Participation of DERs",
+              "evidence": "Stackelberg game is proposed to coordinate this hierarchical MARL-based DER market participation framework"
+            },
+            {
+              "paper_id": "2604.08973v1",
+              "title": "Multi-agent Reinforcement Learning for Low-Carbon P2P Energy Trading among Self-Interested Microgrids",
+              "evidence": "self-interested microgrids participating in peer-to-peer (P2P) electricity trading"
+            }
+          ]
+        },
+        {
+          "value": "competitive",
+          "count": 3,
+          "papers": [
+            "2509.08310v1",
+            "2512.17444v1",
+            "2604.10252v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2509.08310v1",
+              "title": "Game-Theoretic Resilience Framework for Cyber-Physical Microgrids using Multi-Agent Reinforcement Learning",
+              "evidence": "attack defense interactions"
+            },
+            {
+              "paper_id": "2512.17444v1",
+              "title": "Assessing Long-Term Electricity Market Design for Ambitious Decarbonization Targets using Multi-Agent Reinforcement Learning",
+              "evidence": "decentralized and competitive environment"
+            },
+            {
+              "paper_id": "2604.10252v1",
+              "title": "A Dual-Positive Monotone Parameterization for Multi-Segment Bids and a Validity Assessment Framework for Reinforcement Learning Agent-based Simulation of Electricity Markets",
+              "evidence": "electricity market mechanism analysis and evaluation"
+            }
+          ]
+        }
+      ],
+      "objective": [
+        {
+          "value": "profit maximization",
+          "count": 3,
+          "papers": [
+            "2512.17444v1",
+            "2507.16479v1",
+            "2604.10252v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2512.17444v1",
+              "title": "Assessing Long-Term Electricity Market Design for Ambitious Decarbonization Targets using Multi-Agent Reinforcement Learning",
+              "evidence": "Profit-maximizing generation companies"
+            },
+            {
+              "paper_id": "2507.16479v1",
+              "title": "Arbitrage Tactics in the Local Markets via Hierarchical Multi-agent Reinforcement Learning",
+              "evidence": "enhancing profitability for participants"
+            },
+            {
+              "paper_id": "2604.10252v1",
+              "title": "A Dual-Positive Monotone Parameterization for Multi-Segment Bids and a Validity Assessment Framework for Reinforcement Learning Agent-based Simulation of Electricity Markets",
+              "evidence": "bids ... in electricity markets"
+            }
+          ]
+        },
+        {
+          "value": "resilience",
+          "count": 1,
+          "papers": [
+            "2509.08310v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2509.08310v1",
+              "title": "Game-Theoretic Resilience Framework for Cyber-Physical Microgrids using Multi-Agent Reinforcement Learning",
+              "evidence": "evaluate and enhance microgrid resilience"
+            }
+          ]
+        },
+        {
+          "value": "low-carbon",
+          "count": 1,
+          "papers": [
+            "2604.02728v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.02728v1",
+              "title": "Multi-agent Reinforcement Learning-based Joint Design of Low-Carbon P2P Market and Bidding Strategy in Microgrids",
+              "evidence": "the low carbon emission objective, of the entire community"
+            }
+          ]
+        },
+        {
+          "value": "Market performance enhancement",
+          "count": 1,
+          "papers": [
+            "2604.20586v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.20586v1",
+              "title": "A Hierarchical MARL-Based Approach for Coordinated Retail P2P Trading and Wholesale Market Participation of DERs",
+              "evidence": "toward enhanced market performance"
+            }
+          ]
+        },
+        {
+          "value": "low-carbon and profit maximization",
+          "count": 1,
+          "papers": [
+            "2604.08973v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.08973v1",
+              "title": "Multi-agent Reinforcement Learning for Low-Carbon P2P Energy Trading among Self-Interested Microgrids",
+              "evidence": "improves renewable utilization and reduces reliance on high-carbon electricity, while increasing community-level economic welfare"
+            }
+          ]
+        },
+        {
+          "value": "fairness and economic efficiency",
+          "count": 1,
+          "papers": [
+            "2508.18610v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2508.18610v1",
+              "title": "Scalable Fairness Shaping with LLM-Guided Multi-Agent Reinforcement Learning for Peer-to-Peer Electricity Markets",
+              "evidence": "fairness guidance complements, rather than overwhelms, economic incentives"
+            }
+          ]
+        },
+        {
+          "value": "cost minimization and revenue maximization",
+          "count": 1,
+          "papers": [
+            "2511.23148v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2511.23148v1",
+              "title": "Peer-to-Peer Energy Trading in Dairy Farms using Multi-Agent Reinforcement Learning",
+              "evidence": "electricity cost and peak hour demand reduction, and increase electricity selling revenue"
+            }
+          ]
+        }
+      ],
+      "decision_horizon": [
+        {
+          "value": "intraday",
+          "count": 2,
+          "papers": [
+            "2604.02728v1",
+            "2604.08973v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.02728v1",
+              "title": "Multi-agent Reinforcement Learning-based Joint Design of Low-Carbon P2P Market and Bidding Strategy in Microgrids",
+              "evidence": "we propose an intraday P2P trading framework"
+            },
+            {
+              "paper_id": "2604.08973v1",
+              "title": "Multi-agent Reinforcement Learning for Low-Carbon P2P Energy Trading among Self-Interested Microgrids",
+              "evidence": "To enhance renewable penetration and maintain intra-day balance"
+            }
+          ]
+        },
+        {
+          "value": "real-time",
+          "count": 2,
+          "papers": [
+            "2508.18610v1",
+            "2511.23148v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2508.18610v1",
+              "title": "Scalable Fairness Shaping with LLM-Guided Multi-Agent Reinforcement Learning for Peer-to-Peer Electricity Markets",
+              "evidence": "offer little real-time guidance to ensure equitable outcomes under uncertainty"
+            },
+            {
+              "paper_id": "2511.23148v1",
+              "title": "Peer-to-Peer Energy Trading in Dairy Farms using Multi-Agent Reinforcement Learning",
+              "evidence": "dynamic environments"
+            }
+          ]
+        },
+        {
+          "value": "finite horizon",
+          "count": 1,
+          "papers": [
+            "2509.08310v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2509.08310v1",
+              "title": "Game-Theoretic Resilience Framework for Cyber-Physical Microgrids using Multi-Agent Reinforcement Learning",
+              "evidence": "finite horizon Markov Decision Process"
+            }
+          ]
+        },
+        {
+          "value": "long-term",
+          "count": 1,
+          "papers": [
+            "2512.17444v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2512.17444v1",
+              "title": "Assessing Long-Term Electricity Market Design for Ambitious Decarbonization Targets using Multi-Agent Reinforcement Learning",
+              "evidence": "long-term electricity market mechanisms, including auctions, support schemes, and other policy instruments"
+            }
+          ]
+        },
+        {
+          "value": "two-stage (day-ahead and real-time)",
+          "count": 1,
+          "papers": [
+            "2507.16479v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2507.16479v1",
+              "title": "Arbitrage Tactics in the Local Markets via Hierarchical Multi-agent Reinforcement Learning",
+              "evidence": "two-stage Markov game: the first stage involves the LEM, while the second stage encompasses both the LFM and the balancing market"
+            }
+          ]
+        },
+        {
+          "value": "day-ahead",
+          "count": 1,
+          "papers": [
+            "2604.10252v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.10252v1",
+              "title": "A Dual-Positive Monotone Parameterization for Multi-Segment Bids and a Validity Assessment Framework for Reinforcement Learning Agent-based Simulation of Electricity Markets",
+              "evidence": "multi-segment stepwise bids"
+            }
+          ]
+        }
+      ],
+      "solution_approach": [
+        {
+          "value": "multi-agent reinforcement learning",
+          "count": 7,
+          "papers": [
+            "2509.08310v1",
+            "2604.02728v1",
+            "2512.17444v1",
+            "2604.08973v1",
+            "2508.18610v1",
+            "2511.23148v1",
+            "2604.10252v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2509.08310v1",
+              "title": "Game-Theoretic Resilience Framework for Cyber-Physical Microgrids using Multi-Agent Reinforcement Learning",
+              "evidence": "Multi Agent Q Learning"
+            },
+            {
+              "paper_id": "2604.02728v1",
+              "title": "Multi-agent Reinforcement Learning-based Joint Design of Low-Carbon P2P Market and Bidding Strategy in Microgrids",
+              "evidence": "solved using a Multi-Agent Reinforcement Learning (MARL) framework"
+            },
+            {
+              "paper_id": "2512.17444v1",
+              "title": "Assessing Long-Term Electricity Market Design for Ambitious Decarbonization Targets using Multi-Agent Reinforcement Learning",
+              "evidence": "multi-agent reinforcement learning model"
+            }
+          ]
+        },
+        {
+          "value": "multi-agent reinforcement learning and Stackelberg game",
+          "count": 1,
+          "papers": [
+            "2604.20586v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.20586v1",
+              "title": "A Hierarchical MARL-Based Approach for Coordinated Retail P2P Trading and Wholesale Market Participation of DERs",
+              "evidence": "hierarchical multi-agent deep reinforcement learning (MARL) approach ... a Stackelberg game is proposed to coordinate this hierarchical MARL-based DER market participation framework"
+            }
+          ]
+        },
+        {
+          "value": "hierarchical multi-agent reinforcement learning",
+          "count": 1,
+          "papers": [
+            "2507.16479v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2507.16479v1",
+              "title": "Arbitrage Tactics in the Local Markets via Hierarchical Multi-agent Reinforcement Learning",
+              "evidence": "hierarchical MARL (HMARL) algorithm"
+            }
+          ]
+        }
+      ],
+      "uncertainty_modeling": [
+        {
+          "value": "Markov decision process",
+          "count": 7,
+          "papers": [
+            "2509.08310v1",
+            "2604.02728v1",
+            "2604.08973v1",
+            "2507.16479v1",
+            "2508.18610v1",
+            "2511.23148v1",
+            "2604.10252v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2509.08310v1",
+              "title": "Game-Theoretic Resilience Framework for Cyber-Physical Microgrids using Multi-Agent Reinforcement Learning",
+              "evidence": "formalized as a finite horizon Markov Decision Process"
+            },
+            {
+              "paper_id": "2604.02728v1",
+              "title": "Multi-agent Reinforcement Learning-based Joint Design of Low-Carbon P2P Market and Bidding Strategy in Microgrids",
+              "evidence": "formulated as a Decentralized Partially Observable Markov Decision Process (DEC-POMDP)"
+            },
+            {
+              "paper_id": "2604.08973v1",
+              "title": "Multi-agent Reinforcement Learning for Low-Carbon P2P Energy Trading among Self-Interested Microgrids",
+              "evidence": "Uncertainties in renewable generation and demand dynamics challenge day-ahead scheduling"
+            }
+          ]
+        }
+      ],
+      "scalability_aspect": [
+        {
+          "value": "not specified",
+          "count": 7,
+          "papers": [
+            "2509.08310v1",
+            "2604.02728v1",
+            "2512.17444v1",
+            "2604.08973v1",
+            "2507.16479v1",
+            "2511.23148v1",
+            "2604.10252v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2511.23148v1",
+              "title": "Peer-to-Peer Energy Trading in Dairy Farms using Multi-Agent Reinforcement Learning",
+              "evidence": "no explicit mention of number of agents or scalability"
+            }
+          ]
+        },
+        {
+          "value": "medium-scale (10-50 agents)",
+          "count": 1,
+          "papers": [
+            "2508.18610v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2508.18610v1",
+              "title": "Scalable Fairness Shaping with LLM-Guided Multi-Agent Reinforcement Learning for Peer-to-Peer Electricity Markets",
+              "evidence": "a larger simulated community"
+            }
+          ]
+        }
+      ],
+      "market_structure": [
+        {
+          "value": "peer-to-peer",
+          "count": 4,
+          "papers": [
+            "2604.02728v1",
+            "2604.08973v1",
+            "2508.18610v1",
+            "2511.23148v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.02728v1",
+              "title": "Multi-agent Reinforcement Learning-based Joint Design of Low-Carbon P2P Market and Bidding Strategy in Microgrids",
+              "evidence": "we propose an intraday P2P trading framework"
+            },
+            {
+              "paper_id": "2604.08973v1",
+              "title": "Multi-agent Reinforcement Learning for Low-Carbon P2P Energy Trading among Self-Interested Microgrids",
+              "evidence": "peer-to-peer (P2P) electricity trading"
+            },
+            {
+              "paper_id": "2508.18610v1",
+              "title": "Scalable Fairness Shaping with LLM-Guided Multi-Agent Reinforcement Learning for Peer-to-Peer Electricity Markets",
+              "evidence": "Peer-to-peer (P2P) energy trading is becoming central to modern distribution systems"
+            }
+          ]
+        },
+        {
+          "value": "wholesale market",
+          "count": 2,
+          "papers": [
+            "2512.17444v1",
+            "2604.10252v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2512.17444v1",
+              "title": "Assessing Long-Term Electricity Market Design for Ambitious Decarbonization Targets using Multi-Agent Reinforcement Learning",
+              "evidence": "wholesale electricity market"
+            },
+            {
+              "paper_id": "2604.10252v1",
+              "title": "A Dual-Positive Monotone Parameterization for Multi-Segment Bids and a Validity Assessment Framework for Reinforcement Learning Agent-based Simulation of Electricity Markets",
+              "evidence": "electricity market mechanism analysis and evaluation"
+            }
+          ]
+        },
+        {
+          "value": "peer-to-peer and wholesale market",
+          "count": 1,
+          "papers": [
+            "2604.20586v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2604.20586v1",
+              "title": "A Hierarchical MARL-Based Approach for Coordinated Retail P2P Trading and Wholesale Market Participation of DERs",
+              "evidence": "enable individual prosumers to participate in peer-to-peer retail auctions and further aggregate these intelligent prosumers to facilitate effective DER participation in wholesale markets"
+            }
+          ]
+        },
+        {
+          "value": "local markets (LEM, LFM, balancing market)",
+          "count": 1,
+          "papers": [
+            "2507.16479v1"
+          ],
+          "evidence_examples": [
+            {
+              "paper_id": "2507.16479v1",
+              "title": "Arbitrage Tactics in the Local Markets via Hierarchical Multi-agent Reinforcement Learning",
+              "evidence": "Local Electricity Market (LEM) and Local Flexibility Market (LFM)"
+            }
+          ]
+        }
+      ]
+    },
+    "emerging_facets": {}
+  },
+  "paper_count": 9,
+  "llm_provider": "DeepSeek",
+  "llm_model": "deepseek-chat",
+  "generated_at": "2026-06-22T21:58:06.231577"
+}
