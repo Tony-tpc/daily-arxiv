@@ -73,7 +73,7 @@ llm:
     base_url: ""  # 可选，用于代理或自定义端点 / Optional for proxy or custom endpoint
     temperature: 0.2
     max_tokens: 8192
-  
+
   # Google Gemini 配置 / Google Gemini settings
   gemini:
     api_key: ""  # 在 .env 文件中设置 / Set in .env file
@@ -103,6 +103,22 @@ llm:
     base_url: "http://172.24.128.111:30207/v1"  # vLLM 服务地址 example: http://172.24.128.111:30207/v1
     temperature: 0.2
     max_tokens: 8192
+
+# 自适应知识抽取 / Adaptive knowledge extraction
+knowledge_extraction:
+  enabled: true
+  # 通用字段固定，seed facets 只作为初始提示；系统会根据主题和论文自动生成最终 facets。
+  # Generic fields are fixed; seed facets only guide topic-adaptive schema induction.
+  seed_facets:
+    - "method"
+    - "scenario"
+    - "mechanism"
+    - "constraint"
+    - "metric"
+  allow_new_facets: true
+  require_evidence: true
+  max_papers: 20
+  new_facet_min_support: 2
 
 # Web 服务配置 / Web service settings
 web:

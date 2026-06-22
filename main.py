@@ -81,8 +81,19 @@ def main():
             logger.info(text("继续执行后续步骤...", "Continuing with following steps..."))
             summarized_papers = papers
         
+        # 自适应知识抽取 / Adaptive knowledge extraction
+        if config.get('knowledge_extraction', {}).get('enabled', True):
+            logger.info(text("\n步骤 3: 自适应结构化知识抽取...", "\nStep 3: Adaptive structured knowledge extraction..."))
+            try:
+                from src.extractor.knowledge_extractor import KnowledgeExtractor
+                extractor = KnowledgeExtractor(config)
+                extractor.extract(summarized_papers)
+            except Exception as e:
+                logger.error(text(f"自适应知识抽取失败: {str(e)}", f"Adaptive knowledge extraction failed: {str(e)}"), exc_info=True)
+                logger.info(text("继续执行后续步骤...", "Continuing with following steps..."))
+        
         # 第四步 - 实现趋势分析 ✅ / Step 4 - Analyze trends
-        logger.info(text("\n步骤 3: 分析研究趋势...", "\nStep 3: Analyzing research trends..."))
+        logger.info(text("\n步骤 4: 分析研究趋势...", "\nStep 4: Analyzing research trends..."))
         try:
             from src.analyzer.trend_analyzer import TrendAnalyzer
             from src.summarizer.llm_factory import LLMClientFactory
