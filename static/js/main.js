@@ -31,7 +31,19 @@ const I18N = {
         noPapers: '暂无论文',
         noCategories: '暂无类别',
         allCategories: '全部类别',
-        noData: '暂无数据'
+        noData: '暂无数据',
+        timelineHint: '按日期展示论文数量，并突出每期高频研究关键词',
+        paperCount: '论文数量',
+        categoryCount: '类别数量',
+        methodScenario: '方法/场景',
+        mechanism: '机制',
+        relatedPapers: '相关论文',
+        comparisonPaper: '论文',
+        comparisonProblem: '研究问题',
+        comparisonMethod: '方法',
+        comparisonScenario: '场景',
+        comparisonMetric: '指标',
+        comparisonContribution: '贡献'
     },
     en: {
         monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -60,7 +72,19 @@ const I18N = {
         noPapers: 'No papers available',
         noCategories: 'No categories',
         allCategories: 'All categories',
-        noData: 'No data'
+        noData: 'No data',
+        timelineHint: 'Shows paper volume by date and highlights frequent research keywords',
+        paperCount: 'Papers',
+        categoryCount: 'Categories',
+        methodScenario: 'Method / Scenario',
+        mechanism: 'Mechanism',
+        relatedPapers: 'Related papers',
+        comparisonPaper: 'Paper',
+        comparisonProblem: 'Problem',
+        comparisonMethod: 'Method',
+        comparisonScenario: 'Scenario',
+        comparisonMetric: 'Metric',
+        comparisonContribution: 'Contribution'
     }
 };
 
@@ -93,8 +117,12 @@ const state = {
     searchQuery: '',
     allPapers: [],
     allCategories: [],
+    analysis: null,
+    history: [],
     knowledgeByPaperId: {},
     facetSchema: [],
+    categoryChart: null,
+    trendChart: null,
     currentDate: new Date(),
     theme: localStorage.getItem('theme') || 'light'
 };
@@ -291,10 +319,16 @@ async function loadAllData() {
         await Promise.all([
             loadStats(),
             loadAnalysis(),
+            loadHistory(),
             loadKnowledge(),
             loadPapers(),
             loadCategories()
         ]);
+        renderPapers(filterPapers(state.allPapers));
+        renderFeaturedPapers(state.allPapers.slice(0, 5));
+        renderResearchTrendModules();
+        renderResearchMatrix();
+        renderComparisonTable();
     } catch (error) {
         console.error('加载数据失败:', error);
     }
@@ -319,6 +353,22 @@ async function loadKnowledge() {
         console.warn('加载结构化知识失败:', error);
         state.knowledgeByPaperId = {};
         state.facetSchema = [];
+    }
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch('/api/history');
+        if (!response.ok) {
+            state.history = [];
+            return;
+        }
+
+        const history = await response.json();
+        state.history = history.snapshots || [];
+    } catch (error) {
+        console.warn('加载历史趋势失败:', error);
+        state.history = [];
     }
 }
 
@@ -359,6 +409,7 @@ async function loadAnalysis() {
         if (!response.ok) throw new Error('Failed to load analysis');
         
         const analysis = await response.json();
+        state.analysis = analysis;
         
         // 加载词云
         await loadWordcloud();
@@ -371,6 +422,7 @@ async function loadAnalysis() {
         renderAnalysisContent('trends-content', llmAnalysis.trends_html || llmAnalysis.trends);
         renderAnalysisContent('future-content', llmAnalysis.future_directions_html || llmAnalysis.future_directions);
         renderAnalysisContent('ideas-content', llmAnalysis.research_ideas_html || llmAnalysis.research_ideas);
+        renderResearchTrendModules();
         
     } catch (error) {
         console.error('加载分析数据失败:', error);
@@ -423,6 +475,8 @@ async function loadPapers(page = 1) {
         
         // 渲染热门论文（概览页）
         renderFeaturedPapers(state.allPapers.slice(0, 5));
+        renderResearchMatrix();
+        renderComparisonTable();
         
     } catch (error) {
         console.error('加载论文失败:', error);
@@ -720,6 +774,215 @@ function renderAnalysisContent(elementId, content) {
     } else {
         element.innerHTML = `<p style="color: var(--text-secondary);">${t('noData')}</p>`;
     }
+}
+
+function renderResearchTrendModules() {
+    renderCategoryChart();
+    renderTrendTimeline();
+}
+
+function renderCategoryChart() {
+    const canvas = document.getElementById('category-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const distribution = state.analysis?.statistics?.category_distribution || {};
+    const entries = Object.entries(distribution).slice(0, 8);
+    if (!entries.length) return;
+
+    if (state.categoryChart) state.categoryChart.destroy();
+    state.categoryChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: entries.map(([category]) => category),
+            datasets: [{
+                data: entries.map(([, count]) => count),
+                backgroundColor: ['#4f46e5', '#06b6d4', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6', '#14b8a6', '#ef4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+
+function renderTrendTimeline() {
+    const canvas = document.getElementById('trend-chart');
+    const keywordStrip = document.getElementById('trend-keyword-strip');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const snapshots = state.history.length
+        ? state.history
+        : [{
+            date: state.analysis?.date || '',
+            paper_count: state.analysis?.paper_count || state.allPapers.length,
+            keywords: state.analysis?.keywords || [],
+            categories: state.analysis?.statistics?.category_distribution || {}
+        }];
+
+    const usableSnapshots = snapshots.filter(snapshot => snapshot.date);
+    if (!usableSnapshots.length) return;
+
+    if (state.trendChart) state.trendChart.destroy();
+    state.trendChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: usableSnapshots.map(snapshot => snapshot.date),
+            datasets: [
+                {
+                    label: t('paperCount'),
+                    data: usableSnapshots.map(snapshot => snapshot.paper_count || 0),
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.12)',
+                    fill: true,
+                    tension: 0.35
+                },
+                {
+                    label: t('categoryCount'),
+                    data: usableSnapshots.map(snapshot => Object.keys(snapshot.categories || {}).length),
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6, 182, 212, 0.12)',
+                    fill: true,
+                    tension: 0.35
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        afterBody: context => {
+                            const snapshot = usableSnapshots[context[0].dataIndex];
+                            const keywords = (snapshot.keywords || []).slice(0, 5).map(item => item.keyword || item.value || item);
+                            return keywords.length ? `${LANG === 'zh' ? '关键词' : 'Keywords'}: ${keywords.join(', ')}` : '';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    if (keywordStrip) {
+        const latest = usableSnapshots[usableSnapshots.length - 1];
+        const keywords = (latest.keywords || state.analysis?.keywords || []).slice(0, 12);
+        keywordStrip.innerHTML = keywords.length
+            ? keywords.map(item => `<span class="trend-keyword">${escapeHtml(item.keyword || item.value || item)}</span>`).join('')
+            : `<span class="trend-note">${t('timelineHint')}</span>`;
+    }
+}
+
+function renderResearchMatrix() {
+    const container = document.getElementById('research-matrix');
+    if (!container) return;
+
+    const rows = state.allPapers.map(paper => {
+        const knowledge = state.knowledgeByPaperId[paper.id];
+        const method = getKnowledgeValue(knowledge, 'method') || getAdaptiveFacetValue(knowledge, 'solution_approach');
+        const scenario = getKnowledgeValue(knowledge, 'scenario') || getAdaptiveFacetValue(knowledge, 'application_context');
+        const mechanismValue = getAdaptiveFacetValue(knowledge, 'mechanism_or_process') || getAdaptiveFacetValue(knowledge, 'market_structure') || getAdaptiveFacetValue(knowledge, 'interaction_type');
+        if (!method && !scenario && !mechanismValue) return null;
+        return {
+            title: paper.title,
+            method: shorten(method || t('unknown'), 76),
+            scenario: shorten(scenario || t('unknown'), 76),
+            mechanism: shorten(mechanismValue || t('unknown'), 76)
+        };
+    }).filter(Boolean).slice(0, 12);
+
+    if (!rows.length) {
+        container.innerHTML = `<p class="trend-note">${t('noData')}</p>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="matrix-grid matrix-grid-header">
+            <div>${t('methodScenario')}</div>
+            <div>${t('mechanism')}</div>
+            <div>${t('relatedPapers')}</div>
+        </div>
+        ${rows.map(row => `
+            <div class="matrix-grid matrix-row">
+                <div class="matrix-cell">
+                    <strong>${escapeHtml(row.method)}</strong>
+                    <span>${escapeHtml(row.scenario)}</span>
+                </div>
+                <div class="matrix-cell">${escapeHtml(row.mechanism)}</div>
+                <div class="matrix-cell matrix-paper-title">${escapeHtml(shorten(row.title, 96))}</div>
+            </div>
+        `).join('')}
+    `;
+}
+
+function renderComparisonTable() {
+    const container = document.getElementById('comparison-table');
+    if (!container) return;
+
+    const rows = state.allPapers.map(paper => {
+        const knowledge = state.knowledgeByPaperId[paper.id];
+        return {
+            paper,
+            problem: getKnowledgeValue(knowledge, 'problem'),
+            method: getKnowledgeValue(knowledge, 'method'),
+            scenario: getKnowledgeValue(knowledge, 'scenario'),
+            metric: getKnowledgeValue(knowledge, 'metric'),
+            contribution: getKnowledgeValue(knowledge, 'contribution')
+        };
+    }).filter(row => row.problem || row.method || row.contribution).slice(0, 10);
+
+    if (!rows.length) {
+        container.innerHTML = `<p class="trend-note">${t('noData')}</p>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>${t('comparisonPaper')}</th>
+                    <th>${t('comparisonProblem')}</th>
+                    <th>${t('comparisonMethod')}</th>
+                    <th>${t('comparisonScenario')}</th>
+                    <th>${t('comparisonMetric')}</th>
+                    <th>${t('comparisonContribution')}</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.map(row => `
+                    <tr>
+                        <td><a href="${row.paper.entry_url}" target="_blank">${escapeHtml(shorten(row.paper.title, 72))}</a></td>
+                        <td>${escapeHtml(shorten(row.problem, 120))}</td>
+                        <td>${escapeHtml(shorten(row.method, 120))}</td>
+                        <td>${escapeHtml(shorten(row.scenario, 100))}</td>
+                        <td>${escapeHtml(shorten(row.metric, 100))}</td>
+                        <td>${escapeHtml(shorten(row.contribution, 140))}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function getKnowledgeValue(knowledge, field) {
+    const item = knowledge?.generic?.[field];
+    if (!item) return '';
+    return typeof item === 'string' ? item : item.value || '';
+}
+
+function getAdaptiveFacetValue(knowledge, facetName) {
+    const item = (knowledge?.adaptive_facets || []).find(facet => facet.facet === facetName && facet.value);
+    return item?.value || '';
+}
+
+function shorten(value, maxLength = 100) {
+    if (!value) return '';
+    const text = String(value).trim();
+    return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
 // ==================== 过滤和搜索 ==================== //

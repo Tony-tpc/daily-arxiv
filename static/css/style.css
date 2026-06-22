@@ -1051,6 +1051,114 @@ body {
     margin: 1rem 0;
 }
 
+/* ==================== 研究趋势辅助模块 ==================== */
+.trend-keyword-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.trend-keyword {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(79, 70, 229, 0.1);
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.trend-note {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.research-matrix {
+    overflow-x: auto;
+}
+
+.matrix-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 0.8fr) minmax(260px, 1.2fr);
+    min-width: 760px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.matrix-grid-header {
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    font-weight: 800;
+}
+
+.matrix-grid-header > div,
+.matrix-cell {
+    padding: 0.95rem;
+}
+
+.matrix-row:nth-child(odd) {
+    background: var(--bg-secondary);
+}
+
+.matrix-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.matrix-cell strong,
+.matrix-paper-title {
+    color: var(--text-primary);
+}
+
+.comparison-table-wrap {
+    overflow-x: auto;
+}
+
+.comparison-table {
+    width: 100%;
+    min-width: 1080px;
+    border-collapse: collapse;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.comparison-table th {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.85rem;
+    text-align: left;
+    font-size: 0.85rem;
+}
+
+.comparison-table td {
+    padding: 0.85rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    vertical-align: top;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.comparison-table tr:last-child td {
+    border-bottom: none;
+}
+
+.comparison-table a {
+    color: var(--primary-color);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.comparison-table a:hover {
+    text-decoration: underline;
+}
+
 /* ==================== 分页 ==================== */
 .pagination-nav {
     display: flex;

@@ -355,11 +355,36 @@
                     <div class="card-header">
                         <div class="header-left">
                             <i class="fas fa-chart-line"></i>
-                            <h2>{{ '论文趋势' if language == 'zh' else 'Paper Trends' }}</h2>
+                            <h2>{{ '研究趋势时间线' if language == 'zh' else 'Research Trend Timeline' }}</h2>
                         </div>
                     </div>
                     <div class="card-body">
                         <canvas id="trend-chart"></canvas>
+                        <div class="trend-keyword-strip" id="trend-keyword-strip"></div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="header-left">
+                            <i class="fas fa-table-cells-large"></i>
+                            <h2>{{ '方法 × 场景 × 机制矩阵' if language == 'zh' else 'Method × Scenario × Mechanism Matrix' }}</h2>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="research-matrix" class="research-matrix"></div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="header-left">
+                            <i class="fas fa-file-lines"></i>
+                            <h2>{{ '文献对比表' if language == 'zh' else 'Literature Comparison Table' }}</h2>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="comparison-table" class="comparison-table-wrap"></div>
                     </div>
                 </div>
             </section>
