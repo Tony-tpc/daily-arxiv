@@ -1,11 +1,12 @@
 """工具函数模块"""
+import copy
 import os
 import yaml
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
 
@@ -20,7 +21,47 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     """
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
-    return config
+    return normalize_config(config)
+
+
+def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize config to the new multi-source shape while preserving compatibility."""
+    normalized = copy.deepcopy(config or {})
+
+    sources = normalized.setdefault('sources', {})
+    legacy_arxiv = normalized.get('arxiv')
+    source_arxiv = sources.get('arxiv')
+
+    if isinstance(legacy_arxiv, dict) and not isinstance(source_arxiv, dict):
+        sources['arxiv'] = copy.deepcopy(legacy_arxiv)
+    elif isinstance(source_arxiv, dict) and not isinstance(legacy_arxiv, dict):
+        normalized['arxiv'] = copy.deepcopy(source_arxiv)
+
+    normalized.setdefault('tracking_topics', [])
+    normalized.setdefault('keyword_groups', [])
+    normalized.setdefault('negative_keywords', [])
+    normalized.setdefault('priority_rules', [])
+
+    outputs = normalized.setdefault('outputs', {})
+    outputs.setdefault('markdown', {'enabled': True, 'directory': 'data/markdown'})
+    outputs.setdefault('json', {'enabled': True, 'directory': 'data'})
+    outputs.setdefault('obsidian', {'enabled': False, 'vault_path': 'data/obsidian'})
+    outputs.setdefault('zotero', {'enabled': False, 'mode': 'local_api'})
+
+    analysis = normalized.setdefault('analysis', {})
+    analysis.setdefault('trend_window_days', [7, 30, 60])
+    analysis.setdefault('compare_sources', True)
+    analysis.setdefault('entity_tracking', True)
+
+    for source_name in ['arxiv', 'openalex', 'rss', 'policy', 'industry_report']:
+        source_config = sources.setdefault(source_name, {})
+        if isinstance(source_config, dict):
+            source_config.setdefault('enabled', source_name == 'arxiv')
+
+    if isinstance(normalized.get('arxiv'), dict):
+        normalized['arxiv'].setdefault('enabled', True)
+
+    return normalized
 
 
 def load_env():
@@ -93,7 +134,7 @@ def load_json(filepath: str) -> Any:
         return json.load(f)
 
 
-def get_date_string(date: datetime = None) -> str:
+def get_date_string(date: Optional[datetime] = None) -> str:
     """获取日期字符串
     
     Args:
