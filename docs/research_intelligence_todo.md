@@ -207,14 +207,16 @@ src/
 
 ### 6.4 定义输出模板与字段规范
 
-- [ ] 设计统一 Markdown 模板：
+状态：已完成
+
+- [x] 设计统一 Markdown 模板：
   - 论文摘要卡片
   - 政策简报卡片
   - 新闻速览卡片
   - 行业报告卡片
-- [ ] 定义统一 YAML frontmatter 规范
-- [ ] 定义 JSON schema version 字段
-- [ ] 定义阅读建议结构：
+- [x] 定义统一 YAML frontmatter 规范
+- [x] 定义 JSON schema version 字段
+- [x] 定义阅读建议结构：
   - `why_relevant`
   - `read_priority`
   - `recommended_action`
