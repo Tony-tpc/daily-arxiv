@@ -29,25 +29,34 @@ def main():
     
     try:
         # 第二步 - 实现论文爬取 ✅ / Step 2 - Fetch papers
-        logger.info(text("步骤 1: 爬取 arXiv 论文...", "Step 1: Fetching arXiv papers..."))
-        from src.crawler.arxiv_fetcher import ArxivFetcher
-        fetcher = ArxivFetcher(config)
+        logger.info(text("步骤 1: 加载数据来源并抓取论文...", "Step 1: Loading sources and fetching papers..."))
+        from src.sources.registry import build_source_registry
+
+        registry = build_source_registry(config)
+        enabled_sources = registry.get_enabled_sources()
+        if not enabled_sources:
+            raise ValueError(text("未找到启用的数据来源", "No enabled data source found"))
+
+        primary_source_name = enabled_sources[0]
+        source_adapter = registry.create(primary_source_name)
+        source_adapter.validate()
         
         # 尝试获取论文，如果没找到，逐步放宽条件 / Retry with broader window if no papers are found
-        arxiv_config = config.get('arxiv', {})
-        days_back = arxiv_config.get('days_back', 2)
-        fallback_days_back = arxiv_config.get('fallback_days_back', 7)
-        papers = fetcher.fetch_papers(days_back=days_back)
+        source_config = source_adapter.source_config
+        days_back = source_config.get('days_back', 2)
+        fallback_days_back = source_config.get('fallback_days_back', 7)
+        papers = source_adapter.fetch(days_back=days_back)
         
         if not papers:
             logger.warning(text(
                 f"⚠️  过去{days_back}天没有找到符合条件的论文，尝试扩大到{fallback_days_back}天...",
                 f"⚠️  No matching papers found in last {days_back} days, retrying with a {fallback_days_back}-day window..."
             ))
-            papers = fetcher.fetch_papers(days_back=fallback_days_back)
-        
+            papers = source_adapter.fetch(days_back=fallback_days_back)
+
         if papers:
-            fetcher.print_paper_summary(papers)
+            if hasattr(source_adapter, 'print_summary'):
+                source_adapter.print_summary(papers)
         else:
             logger.warning(text("⚠️  没有找到符合条件的论文", "⚠️  No matching papers found"))
             logger.info(text("💡 提示: 可以尝试以下方法：", "💡 Tips:"))

@@ -154,15 +154,17 @@ src/
 
 ### 6.2 设计 Source Adapter 抽象层
 
-- [ ] 新增文件：`src/sources/base.py`
-- [ ] 设计 `BaseSourceAdapter` 接口，至少包含：
+状态：已完成
+
+- [x] 新增文件：`src/sources/base.py`
+- [x] 设计 `BaseSourceAdapter` 接口，至少包含：
   - `fetch()`
   - `normalize()`
   - `validate()`
   - `save_raw_snapshot()`
-- [ ] 新增文件：`src/sources/registry.py`
-- [ ] 将现有 `src/crawler/arxiv_fetcher.py` 迁移或包裹为 `ArxivSourceAdapter`
-- [ ] 使主流程通过 registry 加载来源，而不是写死调用 arXiv
+- [x] 新增文件：`src/sources/registry.py`
+- [x] 将现有 `src/crawler/arxiv_fetcher.py` 迁移或包裹为 `ArxivSourceAdapter`
+- [x] 使主流程通过 registry 加载来源，而不是写死调用 arXiv
 
 **验收标准**
 
