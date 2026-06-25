@@ -81,6 +81,12 @@ class DocumentSchema:
     institution: Optional[str] = None
     report_type: Optional[str] = None
 
+    def __post_init__(self) -> None:
+        if isinstance(self.reading_suggestion, dict):
+            self.reading_suggestion = ReadingSuggestion(**self.reading_suggestion)
+        if isinstance(self.provenance, dict):
+            self.provenance = Provenance(**self.provenance)
+
     def validate(self) -> None:
         """Validate common and source-specific requirements."""
         if not self.id.strip():
