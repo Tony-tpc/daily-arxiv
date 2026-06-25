@@ -4,6 +4,7 @@ Daily arXiv Agent - 主程序入口 / Main entry
 每日追踪 arXiv 最新论文，使用 LLM 进行总结和分析 /
 Track latest arXiv papers daily and summarize/analyze them with LLMs
 """
+import importlib
 import sys
 from pathlib import Path
 
@@ -30,7 +31,7 @@ def main():
     try:
         # 第二步 - 实现论文爬取 ✅ / Step 2 - Fetch papers
         logger.info(text("步骤 1: 加载数据来源并抓取论文...", "Step 1: Loading sources and fetching papers..."))
-        from src.sources.registry import build_source_registry
+        build_source_registry = importlib.import_module("src.sources.registry").build_source_registry
 
         registry = build_source_registry(config)
         enabled_sources = registry.get_enabled_sources()

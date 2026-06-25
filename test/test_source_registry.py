@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Tests for source adapter registry and arXiv adapter wiring."""
 
+import importlib
 import sys
 import unittest
 from pathlib import Path
@@ -9,9 +10,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.sources.arxiv_adapter import ArxivSourceAdapter
-from src.sources.base import BaseSourceAdapter
-from src.sources.registry import build_source_registry
+arxiv_adapter_module = importlib.import_module("src.sources.arxiv_adapter")
+base_module = importlib.import_module("src.sources.base")
+registry_module = importlib.import_module("src.sources.registry")
+
+ArxivSourceAdapter = arxiv_adapter_module.ArxivSourceAdapter
+BaseSourceAdapter = base_module.BaseSourceAdapter
+build_source_registry = registry_module.build_source_registry
 
 
 class SourceRegistryTests(unittest.TestCase):
