@@ -1,0 +1,12 @@
+{
+  "include": [
+    "src",
+    "test",
+    "main.py",
+    "scheduler.py"
+  ],
+  "extraPaths": [
+    ".",
+    "src"
+  ]
+}
