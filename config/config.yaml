@@ -5,61 +5,129 @@ app:
   # 部署语言 / Deployment language: zh 或 en
   language: "zh"
 
-# arXiv 搜索配置 / arXiv search settings
-arxiv:
-  # 研究领域类别（可以是多个）/ Research categories (multiple allowed)
-  # 当前方向: 强化学习 + 博弈 + 虚拟电厂 / Current focus: RL + game theory + virtual power plants
-  categories:
-    - "eess.SY"  # Systems and Control / Power Systems
-    - "cs.LG"    # Machine Learning / Reinforcement Learning
-    - "cs.MA"    # Multiagent Systems
-    - "cs.GT"    # Computer Science and Game Theory
-    - "cs.AI"    # Artificial Intelligence
-  
-  # 精细交叉关键词：组内 OR，组间 AND / Fine-grained intersection: OR within groups, AND across groups
-  keyword_groups:
-    - name: "virtual_power_plant_and_energy_system"
-      terms:
-        - "virtual power plant"
-        - "virtual power plants"
-        - "VPP"
-        - "distributed energy resource"
-        - "distributed energy resources"
-        - "energy management"
-        - "electricity market"
-        - "demand response"
-        - "microgrid"
-        - "power system"
-    - name: "reinforcement_learning"
-      terms:
-        - "reinforcement learning"
-        - "deep reinforcement learning"
-        - "multi-agent reinforcement learning"
-        - "MARL"
-        - "Markov decision process"
-        - "MDP"
-    - name: "game_and_market_mechanism"
-      terms:
-        - "game theory"
-        - "game-theoretic"
-        - "Stackelberg"
-        - "Nash"
-        - "auction"
-        - "bidding"
-        - "market mechanism"
-  # 兼容旧逻辑的宽泛关键词；当 keyword_groups 存在时不会使用 / Legacy broad keywords; ignored when keyword_groups is set
-  keywords: []
-  
-  # 每天获取的最大论文数量 / Maximum papers fetched per day
-  max_results: 20
-  days_back: 30
-  fallback_days_back: 365
-  
-  # 排序方式 / Sort by: submittedDate (提交日期) 或 relevance (相关性)
-  sort_by: "relevance"
-  
-  # 排序顺序 / Sort order: descending 或 ascending
-  sort_order: "descending"
+# 跟踪主题配置 / Research tracking settings
+tracking_topics:
+  - "virtual power plant"
+  - "reinforcement learning"
+  - "game theory"
+  - "embodied intelligence"
+  - "energy systems"
+
+# 研究主题关键词组（用于标签、摘要、分析，不直接等同于抓取查询）
+# Research keyword groups for analysis and classification, separate from fetch queries.
+keyword_groups:
+  - name: "energy_systems"
+    terms:
+      - "virtual power plant"
+      - "distributed energy resources"
+      - "energy management"
+      - "electricity market"
+      - "demand response"
+      - "microgrid"
+      - "power system"
+  - name: "learning_and_control"
+    terms:
+      - "reinforcement learning"
+      - "deep reinforcement learning"
+      - "multi-agent reinforcement learning"
+      - "Markov decision process"
+      - "control"
+  - name: "markets_and_coordination"
+    terms:
+      - "game theory"
+      - "Stackelberg"
+      - "Nash"
+      - "auction"
+      - "bidding"
+      - "market mechanism"
+
+# 负向关键词 / Negative keywords
+negative_keywords: []
+
+# 优先级规则 / Priority rules
+priority_rules:
+  - name: "core_research_match"
+    description: "Boost documents that mention both energy systems and learning/control topics."
+  - name: "recent_policy_signal"
+    description: "Boost recent policy documents that directly mention tracked topics."
+
+# 多源采集配置 / Multi-source collection settings
+sources:
+  arxiv:
+    enabled: true
+    # 研究领域类别（可以是多个）/ Research categories (multiple allowed)
+    categories:
+      - "eess.SY"
+      - "cs.LG"
+      - "cs.MA"
+      - "cs.GT"
+      - "cs.AI"
+    # 抓取查询关键词组：组内 OR，组间 AND / Fetch query groups: OR within groups, AND across groups
+    keyword_groups:
+      - name: "virtual_power_plant_and_energy_system"
+        terms:
+          - "virtual power plant"
+          - "virtual power plants"
+          - "VPP"
+          - "distributed energy resource"
+          - "distributed energy resources"
+          - "energy management"
+          - "electricity market"
+          - "demand response"
+          - "microgrid"
+          - "power system"
+      - name: "reinforcement_learning"
+        terms:
+          - "reinforcement learning"
+          - "deep reinforcement learning"
+          - "multi-agent reinforcement learning"
+          - "MARL"
+          - "Markov decision process"
+          - "MDP"
+      - name: "game_and_market_mechanism"
+        terms:
+          - "game theory"
+          - "game-theoretic"
+          - "Stackelberg"
+          - "Nash"
+          - "auction"
+          - "bidding"
+          - "market mechanism"
+    keywords: []
+    max_results: 20
+    days_back: 30
+    fallback_days_back: 365
+    sort_by: "relevance"
+    sort_order: "descending"
+
+  openalex:
+    enabled: false
+    email: ""
+    per_page: 25
+    select_fields:
+      - "id"
+      - "display_name"
+      - "cited_by_count"
+      - "concepts"
+      - "authorships"
+
+  rss:
+    enabled: false
+    feeds: []
+    request_timeout_seconds: 20
+    deduplication: "url_and_title_hash"
+
+  policy:
+    enabled: false
+    feeds: []
+    regions:
+      - "CN"
+
+  industry_report:
+    enabled: false
+    feeds: []
+    regions:
+      - "global"
 
 # LLM 配置 / LLM settings
 llm:
@@ -169,6 +237,31 @@ storage:
   
   # 保留历史数据的天数（0 表示永久保留）/ Retention days (0 means keep forever)
   retention_days: 30
+
+# 输出配置 / Output settings
+outputs:
+  markdown:
+    enabled: true
+    directory: "data/markdown"
+  json:
+    enabled: true
+    directory: "data"
+  obsidian:
+    enabled: false
+    vault_path: "data/obsidian"
+    use_markdown_links: true
+  zotero:
+    enabled: false
+    mode: "local_api"
+
+# 分析配置 / Analysis settings
+analysis:
+  trend_window_days:
+    - 7
+    - 30
+    - 60
+  compare_sources: true
+  entity_tracking: true
 
 # 日志配置 / Logging settings
 logging:

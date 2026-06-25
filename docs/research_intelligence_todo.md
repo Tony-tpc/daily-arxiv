@@ -175,24 +175,26 @@ src/
 
 ### 6.3 重构配置结构
 
-- [ ] 更新 `config/config.yaml`
-- [ ] 从单一 `arxiv` 配置升级为：
+状态：已完成
+
+- [x] 更新 `config/config.yaml`
+- [x] 从单一 `arxiv` 配置升级为：
   - `sources.arxiv`
   - `sources.openalex`
   - `sources.rss`
   - `sources.policy`
   - `sources.industry_report`
-- [ ] 新增研究方向配置：
+- [x] 新增研究方向配置：
   - `tracking_topics`
   - `keyword_groups`
   - `negative_keywords`
   - `priority_rules`
-- [ ] 新增输出配置：
+- [x] 新增输出配置：
   - `outputs.markdown`
   - `outputs.json`
   - `outputs.obsidian`
   - `outputs.zotero`
-- [ ] 新增分析配置：
+- [x] 新增分析配置：
   - `analysis.trend_window_days`
   - `analysis.compare_sources`
   - `analysis.entity_tracking`
