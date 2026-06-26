@@ -6,6 +6,7 @@ Flask Web 应用
 import os
 import sys
 import json
+from copy import deepcopy
 from pathlib import Path
 
 # 添加项目根目录到 Python 路径
@@ -16,6 +17,8 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 # from flask_cors import CORS  # 暂时注释，本地开发不需要
 import markdown
 
+from src.exporters.output_templates import build_web_card_payload
+from src.models.document_schema import SourceType, create_document
 from src.utils import load_config, load_json, get_language
 
 
@@ -71,6 +74,58 @@ app.config['TITLE'] = web_config.get('title', t('title_default'))
 app.config['DESCRIPTION'] = web_config.get('description', t('description_default'))
 
 
+def _load_summaries_by_id() -> dict:
+    summaries_data = load_json('data/summaries/latest.json') or {}
+    summaries = summaries_data.get('summaries') or summaries_data.get('papers', [])
+    summary_index = {}
+    for summary in summaries:
+        paper_id = summary.get('paper_id') or summary.get('id')
+        if paper_id:
+            summary_index[paper_id] = summary
+    return summary_index
+
+
+def _build_document_from_paper(paper: dict, summary_record: dict | None = None):
+    summary_record = summary_record or {}
+    return create_document(
+        SourceType.PAPER,
+        id=paper.get('id', ''),
+        source_name='arXiv',
+        title=paper.get('title', ''),
+        summary=summary_record.get('summary') or paper.get('summary', ''),
+        authors_or_orgs=paper.get('authors', []),
+        published_at=paper.get('published', ''),
+        collected_at=paper.get('fetched_at', ''),
+        url=paper.get('entry_url') or paper.get('pdf_url') or '',
+        raw_text=paper.get('abstract', ''),
+        keywords=paper.get('categories', []),
+        tags=paper.get('categories', []),
+        entities=paper.get('authors', []),
+        provenance={
+            'collected_via': 'arxiv_fetcher',
+            'source_record_id': paper.get('id', ''),
+            'fetch_url': paper.get('entry_url') or '',
+            'metadata': {
+                'primary_category': paper.get('primary_category'),
+                'updated': paper.get('updated'),
+            },
+        },
+        doi=paper.get('doi'),
+        arxiv_id=paper.get('id'),
+        categories=paper.get('categories', []),
+    )
+
+
+def _build_paper_response(paper: dict, summary_record: dict | None = None) -> dict:
+    summary_record = summary_record or {}
+    payload = deepcopy(paper)
+    if summary_record.get('summary'):
+        payload['summary'] = summary_record.get('summary')
+    document = _build_document_from_paper(payload, summary_record)
+    payload['web_card'] = build_web_card_payload(document, raw_record=paper)
+    return payload
+
+
 @app.route('/')
 def index():
     """主页"""
@@ -123,6 +178,7 @@ def get_papers():
             return jsonify({'error': t('error_no_papers')}), 404
         
         papers = papers_data.get('papers', [])
+        summary_index = _load_summaries_by_id()
         
         # 按类别过滤
         if category:
@@ -132,7 +188,10 @@ def get_papers():
         total = len(papers)
         start = (page - 1) * per_page
         end = start + per_page
-        papers_page = papers[start:end]
+        papers_page = [
+            _build_paper_response(paper, summary_index.get(paper.get('id')))
+            for paper in papers[start:end]
+        ]
         
         return jsonify({
             'papers': papers_page,
@@ -166,19 +225,10 @@ def get_paper_detail(paper_id):
             return jsonify({'error': t('error_paper_not_found')}), 404
         
         # 加载总结数据
-        summaries_data = load_json('data/summaries/latest.json')
-        if summaries_data:
-            summaries = summaries_data.get('summaries') or summaries_data.get('papers', [])
-            # 查找对应的总结
-            for summary in summaries:
-                if summary.get('paper_id') == paper_id:
-                    paper['summary'] = summary.get('summary')
-                    break
-                if summary.get('id') == paper_id:
-                    paper['summary'] = summary.get('summary')
-                    break
-        
-        return jsonify(paper)
+        summary_index = _load_summaries_by_id()
+        enriched_paper = _build_paper_response(paper, summary_index.get(paper_id))
+
+        return jsonify(enriched_paper)
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500

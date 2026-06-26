@@ -15,6 +15,22 @@ READING_SUGGESTION_FIELDS = [
     "related_topics",
 ]
 
+WEB_CARD_FIELDS = [
+    "schema_version",
+    "source_type",
+    "source_name",
+    "title",
+    "summary",
+    "description",
+    "authors_or_orgs",
+    "author_line",
+    "published_at",
+    "badges",
+    "links",
+    "reading_suggestion",
+    "source_metadata",
+]
+
 COMMON_FRONTMATTER_FIELDS = [
     "schema_version",
     "source_type",
@@ -73,6 +89,64 @@ def render_markdown_card(document: DocumentSchema | Dict[str, Any]) -> str:
     return _render_frontmatter(frontmatter) + "\n" + body.strip() + "\n"
 
 
+def build_web_card_payload(
+    document: DocumentSchema | Dict[str, Any],
+    raw_record: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Build a stable web-facing card payload from canonical document fields."""
+    payload = _to_payload(document)
+    raw_record = raw_record or {}
+    suggestion = payload.get("reading_suggestion", {})
+    authors = payload.get("authors_or_orgs", [])
+    badges = _merge_badges(payload.get("categories", []), payload.get("tags", []))
+
+    primary_url = raw_record.get("entry_url") or payload.get("url") or raw_record.get("pdf_url") or ""
+    pdf_url = raw_record.get("pdf_url") or payload.get("url") or primary_url
+    source_url = raw_record.get("entry_url") or payload.get("url") or ""
+    description = payload.get("summary") or payload.get("raw_text") or ""
+
+    source_metadata = {
+        key: value
+        for key, value in {
+            "arxiv_id": payload.get("arxiv_id"),
+            "doi": payload.get("doi"),
+            "categories": payload.get("categories", []),
+            "issuing_body": payload.get("issuing_body"),
+            "policy_level": payload.get("policy_level"),
+            "region": payload.get("region"),
+            "effective_date": payload.get("effective_date"),
+            "media_name": payload.get("media_name"),
+            "event_type": payload.get("event_type"),
+            "institution": payload.get("institution"),
+            "report_type": payload.get("report_type"),
+        }.items()
+        if value not in (None, "", [], {})
+    }
+
+    return {
+        "schema_version": payload.get("schema_version", OUTPUT_JSON_SCHEMA_VERSION),
+        "source_type": payload.get("source_type", "paper"),
+        "source_name": payload.get("source_name", ""),
+        "title": payload.get("title", ""),
+        "summary": payload.get("summary", ""),
+        "description": description,
+        "authors_or_orgs": authors,
+        "author_line": _build_author_line(authors),
+        "published_at": payload.get("published_at", ""),
+        "badges": badges,
+        "links": {
+            "primary_url": primary_url,
+            "pdf_url": pdf_url,
+            "source_url": source_url,
+        },
+        "reading_suggestion": {
+            key: suggestion.get(key, [] if key == "related_topics" else "")
+            for key in READING_SUGGESTION_FIELDS
+        },
+        "source_metadata": source_metadata,
+    }
+
+
 def _template_context(payload: Dict[str, Any]) -> Dict[str, str]:
     suggestion = payload.get("reading_suggestion", {})
     return {
@@ -100,6 +174,22 @@ def _to_payload(document: DocumentSchema | Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(document, DocumentSchema):
         return document.to_dict()
     return dict(document)
+
+
+def _build_author_line(authors: List[str]) -> str:
+    if not authors:
+        return ""
+    preview = authors[:3]
+    suffix = " et al." if len(authors) > 3 else ""
+    return ", ".join(preview) + suffix
+
+
+def _merge_badges(categories: List[str], tags: List[str]) -> List[str]:
+    merged: List[str] = []
+    for item in [*(categories or []), *(tags or [])]:
+        if item and item not in merged:
+            merged.append(item)
+    return merged
 
 
 def _render_frontmatter(frontmatter: Dict[str, Any]) -> str:
