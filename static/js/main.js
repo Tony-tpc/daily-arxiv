@@ -686,27 +686,28 @@ function renderKnowledgePanel(knowledge) {
         .filter(Boolean)
         .join('');
 
+    const collapsedId = 'kp-body-' + Math.random().toString(36).slice(2, 8);
+
     return `
         <div class="knowledge-panel">
-            <div class="knowledge-panel-title" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+            <div class="knowledge-panel-title" onclick="var e=document.getElementById('${collapsedId}');e.style.display=e.style.display==='none'?'block':'none'">
                 <i class="fas fa-sitemap"></i>
                 <span>${t('structuredInsight')}</span>
-                <span style="font-size:0.6rem;opacity:0.6;margin-left:auto;">▼</span>
+                <span style="font-size:0.65rem;opacity:0.5;margin-left:auto;">▼</span>
             </div>
-            <div style="display:none">
-            <div class="knowledge-grid">${highlights}</div>
             ${facetBadges ? `
                 <div class="facet-strip">
-                    <span class="facet-strip-label">${t('adaptiveFacets')}</span>
                     ${facetBadges}
                 </div>
             ` : ''}
-            ${evidenceRows ? `
-                <details class="knowledge-evidence">
-                    <summary>${t('evidence')}</summary>
-                    <div class="evidence-list">${evidenceRows}</div>
-                </details>
-            ` : ''}
+            <div id="${collapsedId}" style="display:none">
+                <div class="knowledge-grid">${highlights}</div>
+                ${evidenceRows ? `
+                    <details class="knowledge-evidence">
+                        <summary>${t('evidence')}</summary>
+                        <div class="evidence-list">${evidenceRows}</div>
+                    </details>
+                ` : ''}
             </div>
         </div>
     `;
