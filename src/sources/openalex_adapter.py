@@ -18,6 +18,7 @@ class OpenAlexAdapter:
     """Lightweight OpenAlex enrichment client with local JSON caching."""
 
     base_url = "https://api.openalex.org"
+    MISS = {"miss": True}
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -67,6 +68,7 @@ class OpenAlexAdapter:
         enriched["openalex_id"] = work.get("id")
         enriched["citation_count"] = work.get("cited_by_count", 0)
         enriched["openalex_topics"] = [topic.get("display_name") for topic in work.get("topics", []) if topic.get("display_name")]
+        enriched["openalex_concepts"] = [concept.get("display_name") for concept in work.get("concepts", []) if concept.get("display_name")]
         primary_topic = work.get("primary_topic") or {}
         enriched["openalex_primary_topic"] = primary_topic.get("display_name")
         enriched["openalex_institutions"] = self._extract_institutions(work)
@@ -74,7 +76,9 @@ class OpenAlexAdapter:
         enriched["openalex_referenced_works_count"] = work.get("referenced_works_count", 0)
         enriched["openalex_updated_date"] = work.get("updated_date")
         enriched["openalex_enriched_at"] = datetime.now().isoformat()
-        if not enriched.get("doi") and work.get("doi"):
+        if enriched.get("doi"):
+            enriched["doi"] = self._normalize_doi(enriched.get("doi"))
+        elif work.get("doi"):
             enriched["doi"] = self._normalize_doi(work.get("doi"))
         return enriched
 
@@ -121,7 +125,7 @@ class OpenAlexAdapter:
                 "select": ",".join(self.select_fields),
             }
         )
-        matched = next((work for work in works if arxiv_id.lower() in json.dumps(work).lower()), None)
+        matched = next((work for work in works if self._matches_arxiv_id(work, arxiv_id)), None)
         self._set_cache(cache_key, matched)
         return matched
 
@@ -145,7 +149,7 @@ class OpenAlexAdapter:
                 for work in works
                 if self._normalize_title(work.get("display_name") or work.get("title") or "") == normalized_title
             ),
-            works[0] if works else None,
+            None,
         )
         self._set_cache(cache_key, matched)
         return matched
@@ -186,12 +190,12 @@ class OpenAlexAdapter:
         if key not in by_key:
             return None
         cached = by_key[key]
-        if cached == {"miss": True}:
-            return None
+        if cached == self.MISS:
+            return self.MISS
         return cached
 
     def _set_cache(self, key: str, work: Optional[Dict[str, Any]]) -> None:
-        self.cache.setdefault("by_key", {})[key] = work if work is not None else {"miss": True}
+        self.cache.setdefault("by_key", {})[key] = work if work is not None else self.MISS
 
     def _persist_cache(self) -> None:
         save_json(self.cache, self.cache_path)
@@ -214,3 +218,12 @@ class OpenAlexAdapter:
         lowered = re.sub(r"\s+", " ", lowered)
         lowered = re.sub(r"[^a-z0-9\s]", "", lowered)
         return lowered.strip()
+
+    def _matches_arxiv_id(self, work: Dict[str, Any], arxiv_id: str) -> bool:
+        normalized = arxiv_id.lower()
+        ids = work.get("ids", {}) or {}
+        for value in ids.values():
+            value_str = str(value or "").lower()
+            if normalized == value_str or normalized in value_str:
+                return True
+        return False

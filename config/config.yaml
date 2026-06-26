@@ -102,8 +102,8 @@ sources:
 
   openalex:
     enabled: false
-    api_key: "c3w51zEJ0b463KVwBcbghI"
-    email: "23013352@mail.ecust.edu.cn"
+    api_key: ""
+    email: ""
     per_page: 25
     request_timeout_seconds: 20
     max_title_search_results: 5
@@ -117,7 +117,6 @@ sources:
       - "cited_by_count"
       - "primary_topic"
       - "topics"
-      - "concepts"
       - "authorships"
       - "referenced_works"
       - "referenced_works_count"
