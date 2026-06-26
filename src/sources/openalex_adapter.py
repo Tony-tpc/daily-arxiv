@@ -54,7 +54,25 @@ class OpenAlexAdapter:
         if not self.source_config.get("enabled", False):
             return list(records)
 
-        enriched = [self.enrich_record(record) for record in records]
+        if not self.source_config.get("api_key"):
+            self.logger.warning(
+                "OpenAlex enrichment is enabled but no api_key is configured - "
+                "lookups may fail or be heavily rate-limited. "
+                "Set OPENALEX_API_KEY in your .env file."
+            )
+
+        enriched = []
+        hits = missed = 0
+        for record in records:
+            before_keys = set(record.keys())
+            result = self.enrich_record(record)
+            if len(set(result.keys()) - before_keys) <= 1:
+                missed += 1
+            else:
+                hits += 1
+            enriched.append(result)
+
+        self.logger.info(f"OpenAlex enrichment: {hits} enriched, {missed} unchanged")
         self._persist_cache()
         return enriched
 

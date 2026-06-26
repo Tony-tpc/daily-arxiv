@@ -74,6 +74,14 @@ app.config['TITLE'] = web_config.get('title', t('title_default'))
 app.config['DESCRIPTION'] = web_config.get('description', t('description_default'))
 
 
+def _load_papers_data() -> dict:
+    """Load paper records, preferring enriched snapshot when available."""
+    enriched = load_json('data/papers/latest_enriched.json')
+    if enriched and enriched.get('papers'):
+        return enriched
+    return load_json('data/papers/latest.json') or {}
+
+
 def _load_summaries_by_id() -> dict:
     summaries_data = load_json('data/summaries/latest.json') or {}
     summaries = summaries_data.get('summaries') or summaries_data.get('papers', [])
@@ -174,9 +182,9 @@ def get_papers():
         category = request.args.get('category', '')
         
         # 加载论文数据
-        papers_data = load_json('data/papers/latest.json')
+        papers_data = _load_papers_data()
         
-        if not papers_data:
+        if not papers_data.get('papers'):
             return jsonify({'error': t('error_no_papers')}), 404
         
         papers = papers_data.get('papers', [])
@@ -213,7 +221,7 @@ def get_paper_detail(paper_id):
     """获取论文详情（包括总结）"""
     try:
         # 加载论文数据
-        papers_data = load_json('data/papers/latest.json')
+        papers_data = _load_papers_data()
         papers = papers_data.get('papers', [])
         
         # 查找论文
@@ -255,9 +263,9 @@ def get_summaries():
 def get_categories():
     """获取所有类别"""
     try:
-        papers_data = load_json('data/papers/latest.json')
+        papers_data = _load_papers_data()
         
-        if not papers_data:
+        if not papers_data.get('papers'):
             return jsonify({'error': t('error_no_papers')}), 404
         
         papers = papers_data.get('papers', [])
@@ -286,14 +294,14 @@ def get_stats():
     """获取统计信息"""
     try:
         # 加载数据
-        papers_data = load_json('data/papers/latest.json')
+        papers_data = _load_papers_data()
         summaries_data = load_json('data/summaries/latest.json')
         analysis_data = load_json('data/analysis/latest.json')
         knowledge_data = load_json('data/knowledge/latest.json')
         summaries = summaries_data.get('summaries') or summaries_data.get('papers', []) if summaries_data else []
         
         stats = {
-            'papers_count': len(papers_data.get('papers', [])) if papers_data else 0,
+            'papers_count': len(papers_data.get('papers', [])),
             'summaries_count': len(summaries),
             'knowledge_count': len(knowledge_data.get('papers', [])) if knowledge_data else 0,
             'knowledge_available': knowledge_data is not None,
