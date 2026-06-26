@@ -538,7 +538,6 @@ function renderPapers(papers) {
         const sourceUrl = links.source_url || paper.entry_url || primaryUrl;
         const pdfUrl = links.pdf_url || paper.pdf_url || sourceUrl;
         const authorLine = card.author_line || (paper.authors ? paper.authors.slice(0, 3).join(', ') : t('unknown'));
-        const authors = card.authors_or_orgs || paper.authors || [];
         const publishedAt = card.published_at || paper.published || 'N/A';
         const summaryText = card.summary || card.description || paper.summary || paper.abstract || t('noAbstract');
         const badges = card.badges || paper.categories || [];
@@ -559,19 +558,13 @@ function renderPapers(papers) {
                             <i class="fas fa-user"></i>
                             ${escapeHtml(authorLine || t('unknown'))}
                         </span>
-                        <span class="paper-meta-item">
-                            <i class="fas fa-database"></i>
-                            ${escapeHtml(card.source_name || 'arXiv')}
-                        </span>
                     </div>
                 </div>
             </div>
-            <p class="paper-authors">
-                <strong>${t('authorLabel')}:</strong> ${authors.length ? escapeHtml(authors.join(', ')) : t('unknown')}
-            </p>
             <p class="paper-abstract">${escapeHtml(summaryText)}</p>
-            ${renderWebSuggestionPanel(card)}
-            ${renderOpenAlexPanel(card)}
+            <div class="paper-meta" style="margin-bottom:0.375rem">
+                ${renderCompactInfoBar(card, paper)}
+            </div>
             ${renderKnowledgePanel(knowledge)}
             <div class="paper-categories">
                 ${badges.map(cat => 
@@ -584,7 +577,7 @@ function renderPapers(papers) {
             <div class="paper-actions">
                 <a href="${pdfUrl}" target="_blank" class="btn-paper btn-primary">
                     <i class="fas fa-file-pdf"></i>
-                    ${t('viewPdf')}
+                    PDF
                 </a>
                 <a href="${sourceUrl}" target="_blank" class="btn-paper btn-secondary">
                     <i class="fas fa-external-link-alt"></i>
@@ -639,6 +632,27 @@ function renderOpenAlexPanel(card) {
     return `<div class="paper-authors">${items.join(' · ')}</div>`;
 }
 
+function renderCompactInfoBar(card, paper) {
+    const meta = card.source_metadata || {};
+    const parts = [];
+
+    if (card.source_name) {
+        parts.push(`<span><i class="fas fa-database"></i> ${escapeHtml(card.source_name)}</span>`);
+    }
+    if (meta.citation_count !== undefined && meta.citation_count !== null) {
+        parts.push(`<span><i class="fas fa-quote-right"></i> ${escapeHtml(String(meta.citation_count))}</span>`);
+    }
+    if (meta.openalex_primary_topic) {
+        parts.push(`<span><i class="fas fa-tag"></i> ${escapeHtml(meta.openalex_primary_topic)}</span>`);
+    }
+    if (meta.openalex_institutions && meta.openalex_institutions.length) {
+        parts.push(`<span><i class="fas fa-building"></i> ${escapeHtml(meta.openalex_institutions.slice(0, 2).join(', '))}</span>`);
+    }
+
+    if (!parts.length) return '';
+    return parts.join(' <span style=\"color:var(--text-tertiary)\">|</span> ');
+}
+
 function renderKnowledgePanel(knowledge) {
     if (!knowledge || !knowledge.generic) return '';
 
@@ -674,10 +688,12 @@ function renderKnowledgePanel(knowledge) {
 
     return `
         <div class="knowledge-panel">
-            <div class="knowledge-panel-title">
+            <div class="knowledge-panel-title" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
                 <i class="fas fa-sitemap"></i>
                 <span>${t('structuredInsight')}</span>
+                <span style="font-size:0.6rem;opacity:0.6;margin-left:auto;">▼</span>
             </div>
+            <div style="display:none">
             <div class="knowledge-grid">${highlights}</div>
             ${facetBadges ? `
                 <div class="facet-strip">
@@ -691,6 +707,7 @@ function renderKnowledgePanel(knowledge) {
                     <div class="evidence-list">${evidenceRows}</div>
                 </details>
             ` : ''}
+            </div>
         </div>
     `;
 }
@@ -751,9 +768,8 @@ function renderFeaturedPapers(papers) {
             <p class="paper-abstract" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                 ${escapeHtml(summaryText)}
             </p>
-            <p class="paper-authors"><strong>${t('sourceLabel')}:</strong> ${escapeHtml(sourceName)}</p>
-            ${renderOpenAlexPanel(card)}
-            <div class="paper-actions" style="margin-top: 0.75rem;">
+            ${renderCompactInfoBar(card, paper)}
+            <div class="paper-actions" style="margin-top: 0.5rem;">
                 <a href="${primaryUrl}" target="_blank" class="btn-paper btn-primary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
                     <i class="fas fa-arrow-right"></i>
                     ${t('viewDetail')}
