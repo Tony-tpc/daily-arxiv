@@ -276,7 +276,7 @@ src/
   - `analyze_stage.py`
   - `export_stage.py`
 - [x] 引入 pipeline context 对象
-- [x] 每个 stage 明确输入与输出文件
+- [x] 每个 stage 明确输入与输出职责（当前以 `PipelineContext` 为主，文件化阶段边界将在后续持久化增强中继续完善）
 
 **验收标准**
 
