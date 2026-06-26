@@ -265,16 +265,18 @@ src/
 
 ### 7.1 拆分主流程为阶段化 Pipeline
 
-- [ ] 新增目录：`src/pipeline/`
-- [ ] 将 `main.py` 拆为独立阶段模块：
+状态：已完成
+
+- [x] 新增目录：`src/pipeline/`
+- [x] 将 `main.py` 拆为独立阶段模块：
   - `fetch_stage.py`
   - `normalize_stage.py`
   - `summarize_stage.py`
   - `extract_stage.py`
   - `analyze_stage.py`
   - `export_stage.py`
-- [ ] 引入 pipeline context 对象
-- [ ] 每个 stage 明确输入与输出文件
+- [x] 引入 pipeline context 对象
+- [x] 每个 stage 明确输入与输出文件
 
 **验收标准**
 
