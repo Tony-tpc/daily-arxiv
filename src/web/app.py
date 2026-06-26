@@ -99,8 +99,8 @@ def _build_document_from_paper(paper: dict, summary_record: dict | None = None):
         url=paper.get('entry_url') or paper.get('pdf_url') or '',
         raw_text=paper.get('abstract', ''),
         keywords=paper.get('categories', []),
-        tags=paper.get('categories', []),
-        entities=paper.get('authors', []),
+        tags=paper.get('categories', []) + paper.get('openalex_topics', []),
+        entities=paper.get('authors', []) + paper.get('openalex_institutions', []),
         provenance={
             'collected_via': 'arxiv_fetcher',
             'source_record_id': paper.get('id', ''),
@@ -108,6 +108,8 @@ def _build_document_from_paper(paper: dict, summary_record: dict | None = None):
             'metadata': {
                 'primary_category': paper.get('primary_category'),
                 'updated': paper.get('updated'),
+                'openalex_id': paper.get('openalex_id'),
+                'citation_count': paper.get('citation_count'),
             },
         },
         doi=paper.get('doi'),

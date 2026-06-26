@@ -19,6 +19,10 @@ const I18N = {
         priorityLabel: '优先级',
         recommendationLabel: '建议动作',
         relatedTopicsLabel: '相关主题',
+        citationsLabel: '引用次数',
+        primaryTopicLabel: 'OpenAlex 主主题',
+        institutionsLabel: '机构',
+        referencesLabel: '参考文献数',
         noAbstract: '暂无摘要',
         problem: '研究问题',
         method: '核心方法',
@@ -64,6 +68,10 @@ const I18N = {
         priorityLabel: 'Priority',
         recommendationLabel: 'Recommended action',
         relatedTopicsLabel: 'Related topics',
+        citationsLabel: 'Citations',
+        primaryTopicLabel: 'OpenAlex primary topic',
+        institutionsLabel: 'Institutions',
+        referencesLabel: 'Referenced works',
         noAbstract: 'No abstract',
         problem: 'Problem',
         method: 'Method',
@@ -563,6 +571,7 @@ function renderPapers(papers) {
             </p>
             <p class="paper-abstract">${escapeHtml(summaryText)}</p>
             ${renderWebSuggestionPanel(card)}
+            ${renderOpenAlexPanel(card)}
             ${renderKnowledgePanel(knowledge)}
             <div class="paper-categories">
                 ${badges.map(cat => 
@@ -607,6 +616,27 @@ function renderWebSuggestionPanel(card) {
 
     if (!blocks.length) return '';
     return `<div class="paper-authors">${blocks.join(' · ')}</div>`;
+}
+
+function renderOpenAlexPanel(card) {
+    const meta = card.source_metadata || {};
+    const items = [];
+
+    if (meta.citation_count !== undefined && meta.citation_count !== null) {
+        items.push(`<span><strong>${t('citationsLabel')}:</strong> ${escapeHtml(String(meta.citation_count))}</span>`);
+    }
+    if (meta.openalex_primary_topic) {
+        items.push(`<span><strong>${t('primaryTopicLabel')}:</strong> ${escapeHtml(meta.openalex_primary_topic)}</span>`);
+    }
+    if (meta.openalex_institutions && meta.openalex_institutions.length) {
+        items.push(`<span><strong>${t('institutionsLabel')}:</strong> ${escapeHtml(meta.openalex_institutions.slice(0, 3).join(', '))}</span>`);
+    }
+    if (meta.openalex_referenced_works_count !== undefined && meta.openalex_referenced_works_count !== null) {
+        items.push(`<span><strong>${t('referencesLabel')}:</strong> ${escapeHtml(String(meta.openalex_referenced_works_count))}</span>`);
+    }
+
+    if (!items.length) return '';
+    return `<div class="paper-authors">${items.join(' · ')}</div>`;
 }
 
 function renderKnowledgePanel(knowledge) {
@@ -722,6 +752,7 @@ function renderFeaturedPapers(papers) {
                 ${escapeHtml(summaryText)}
             </p>
             <p class="paper-authors"><strong>${t('sourceLabel')}:</strong> ${escapeHtml(sourceName)}</p>
+            ${renderOpenAlexPanel(card)}
             <div class="paper-actions" style="margin-top: 0.75rem;">
                 <a href="${primaryUrl}" target="_blank" class="btn-paper btn-primary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
                     <i class="fas fa-arrow-right"></i>

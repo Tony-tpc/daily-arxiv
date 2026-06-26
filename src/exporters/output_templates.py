@@ -119,6 +119,13 @@ def build_web_card_payload(
             "event_type": payload.get("event_type"),
             "institution": payload.get("institution"),
             "report_type": payload.get("report_type"),
+            "citation_count": raw_record.get("citation_count"),
+            "openalex_primary_topic": raw_record.get("openalex_primary_topic"),
+            "openalex_topics": raw_record.get("openalex_topics", []),
+            "openalex_concepts": raw_record.get("openalex_concepts", []),
+            "openalex_institutions": raw_record.get("openalex_institutions", []),
+            "openalex_referenced_works_count": raw_record.get("openalex_referenced_works_count"),
+            "openalex_updated_date": raw_record.get("openalex_updated_date"),
         }.items()
         if value not in (None, "", [], {})
     }

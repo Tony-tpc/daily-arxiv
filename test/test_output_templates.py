@@ -95,13 +95,22 @@ class OutputTemplateTests(unittest.TestCase):
 
         payload = build_web_card_payload(
             document,
-            raw_record={"entry_url": "https://arxiv.org/abs/2501.00001", "pdf_url": "https://arxiv.org/pdf/2501.00001"},
+            raw_record={
+                "entry_url": "https://arxiv.org/abs/2501.00001",
+                "pdf_url": "https://arxiv.org/pdf/2501.00001",
+                "citation_count": 42,
+                "openalex_primary_topic": "Energy systems",
+                "openalex_institutions": ["Tsinghua University"],
+                "openalex_referenced_works_count": 12,
+            },
         )
 
         self.assertEqual(sorted(payload.keys()), sorted(WEB_CARD_FIELDS))
         self.assertEqual(payload["links"]["pdf_url"], "https://arxiv.org/pdf/2501.00001")
         self.assertEqual(payload["author_line"], "Alice, Bob, Carol et al.")
         self.assertEqual(payload["badges"], ["cs.AI", "energy"])
+        self.assertEqual(payload["source_metadata"]["citation_count"], 42)
+        self.assertEqual(payload["source_metadata"]["openalex_primary_topic"], "Energy systems")
 
 
 if __name__ == "__main__":
