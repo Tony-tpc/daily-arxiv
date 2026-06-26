@@ -119,6 +119,17 @@ class PipelineTests(unittest.TestCase):
 
         analyzer_instance.analyze.assert_called_once_with(context.normalized_records, context.summarized_papers)
 
+    def test_normalize_stage_persists_normalized_snapshot(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.papers = [{'id': 'paper-1'}]
+        context.source_adapter = Mock()
+        context.source_adapter.normalize.return_value = [{'id': 'paper-1', 'openalex_id': 'W1'}]
+
+        from src.pipeline import normalize_stage
+        normalize_stage.run(context)
+
+        context.source_adapter.save_raw_snapshot.assert_called_once_with(context.normalized_records)
+
 
 def _mark_stop(context):
     context.stop_requested = True

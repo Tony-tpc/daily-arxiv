@@ -287,14 +287,16 @@ src/
 
 ### 7.2 接入 OpenAlex 补充学术元数据
 
-- [ ] 新增文件：`src/sources/openalex_adapter.py`
-- [ ] 支持按标题 / DOI / arXiv ID 做 enrichment
-- [ ] 补充信息至少包括：
+- 状态：已完成
+
+- [x] 新增文件：`src/sources/openalex_adapter.py`
+- [x] 支持按标题 / DOI / arXiv ID 做 enrichment
+- [x] 补充信息至少包括：
   - citation counts
   - concepts / topics
   - institutions
   - referenced works
-- [ ] 为 enrichment 增加本地缓存逻辑
+- [x] 为 enrichment 增加本地缓存逻辑
 
 **验收标准**
 
