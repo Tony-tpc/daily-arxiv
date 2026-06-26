@@ -128,7 +128,7 @@ class PipelineTests(unittest.TestCase):
         from src.pipeline import normalize_stage
         normalize_stage.run(context)
 
-        context.source_adapter.save_raw_snapshot.assert_called_once_with(context.normalized_records)
+        context.source_adapter.save_enriched_snapshot.assert_called_once_with(context.normalized_records)
 
 
 def _mark_stop(context):

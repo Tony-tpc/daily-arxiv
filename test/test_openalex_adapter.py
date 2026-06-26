@@ -92,3 +92,20 @@ class OpenAlexAdapterTests(unittest.TestCase):
 
         self.assertEqual(enriched['openalex_id'], 'https://openalex.org/W999')
         self.assertEqual(enriched['citation_count'], 5)
+
+    @patch('src.sources.openalex_adapter.save_json')
+    @patch('src.sources.openalex_adapter.load_json', return_value=None)
+    @patch('src.sources.openalex_adapter.httpx.Client')
+    def test_negative_cache_prevents_duplicate_lookup(self, client_cls, _load_json, _save_json):
+        client = Mock()
+        response = Mock()
+        response.status_code = 404
+        response.raise_for_status.return_value = None
+        client.get.return_value = response
+        client_cls.return_value = client
+
+        adapter = OpenAlexAdapter(self.config)
+        adapter.enrich_record({'id': '2501.00001', 'title': 'Paper', 'doi': 'doi:10.1000/example'})
+        adapter.enrich_record({'id': '2501.00001', 'title': 'Paper', 'doi': 'doi:10.1000/example'})
+
+        self.assertEqual(client.get.call_count, 1)
