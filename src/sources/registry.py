@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Type
 
 from .arxiv_adapter import ArxivSourceAdapter
 from .base import BaseSourceAdapter
+from .openalex_search_adapter import OpenAlexSearchAdapter
 
 
 class SourceRegistry:
@@ -45,4 +46,5 @@ def build_source_registry(config: Dict[str, Any]) -> SourceRegistry:
     """Build the default registry for the current repository."""
     registry = SourceRegistry(config)
     registry.register("arxiv", ArxivSourceAdapter)
+    registry.register("openalex_search", OpenAlexSearchAdapter)
     return registry

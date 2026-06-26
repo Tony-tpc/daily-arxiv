@@ -53,10 +53,10 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     analysis.setdefault('compare_sources', True)
     analysis.setdefault('entity_tracking', True)
 
-    for source_name in ['arxiv', 'openalex', 'rss', 'policy', 'industry_report']:
+    for source_name in ['arxiv', 'openalex', 'openalex_search', 'rss', 'policy', 'industry_report']:
         source_config = sources.setdefault(source_name, {})
         if isinstance(source_config, dict):
-            source_config.setdefault('enabled', source_name == 'arxiv')
+            source_config.setdefault('enabled', source_name in ('arxiv', 'openalex'))
 
     arxiv_config = sources.setdefault('arxiv', {})
     if isinstance(arxiv_config, dict):

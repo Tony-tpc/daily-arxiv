@@ -127,6 +127,15 @@ sources:
       - "ids"
       - "updated_date"
 
+  openalex_search:
+    enabled: false
+    search_terms:
+      - '"virtual power plant" "reinforcement learning"'
+    request_timeout_seconds: 20
+    per_page: 25
+    max_results: 20
+    keyword_groups: []
+
   rss:
     enabled: false
     feeds: []
