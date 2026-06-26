@@ -16,7 +16,9 @@ from src.models.document_schema import SourceType, create_document
 output_templates = importlib.import_module("src.exporters.output_templates")
 OUTPUT_JSON_SCHEMA_VERSION = output_templates.OUTPUT_JSON_SCHEMA_VERSION
 READING_SUGGESTION_FIELDS = output_templates.READING_SUGGESTION_FIELDS
+WEB_CARD_FIELDS = output_templates.WEB_CARD_FIELDS
 build_frontmatter = output_templates.build_frontmatter
+build_web_card_payload = output_templates.build_web_card_payload
 render_markdown_card = output_templates.render_markdown_card
 
 
@@ -70,6 +72,36 @@ class OutputTemplateTests(unittest.TestCase):
             READING_SUGGESTION_FIELDS,
             ["why_relevant", "read_priority", "recommended_action", "related_topics"],
         )
+
+    def test_build_web_card_payload_for_paper(self):
+        document = create_document(
+            SourceType.PAPER,
+            id="paper-001",
+            source_name="arXiv",
+            title="Paper Title",
+            summary="Normalized summary",
+            raw_text="Fallback abstract",
+            authors_or_orgs=["Alice", "Bob", "Carol", "Dave"],
+            arxiv_id="2501.00001",
+            categories=["cs.AI"],
+            tags=["energy"],
+            reading_suggestion={
+                "why_relevant": "Matches tracked topic",
+                "read_priority": "high",
+                "recommended_action": "deep_read",
+                "related_topics": ["robotics"],
+            },
+        )
+
+        payload = build_web_card_payload(
+            document,
+            raw_record={"entry_url": "https://arxiv.org/abs/2501.00001", "pdf_url": "https://arxiv.org/pdf/2501.00001"},
+        )
+
+        self.assertEqual(sorted(payload.keys()), sorted(WEB_CARD_FIELDS))
+        self.assertEqual(payload["links"]["pdf_url"], "https://arxiv.org/pdf/2501.00001")
+        self.assertEqual(payload["author_line"], "Alice, Bob, Carol et al.")
+        self.assertEqual(payload["badges"], ["cs.AI", "energy"])
 
 
 if __name__ == "__main__":

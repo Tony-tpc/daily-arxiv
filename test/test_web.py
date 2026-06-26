@@ -79,10 +79,45 @@ def test_web_service(base_url='http://localhost:5000'):
             print(f"✅ 论文列表加载成功")
             print(f"   总论文数: {data.get('total')}")
             print(f"   当前页论文数: {len(data.get('papers', []))}")
-            tests.append(True)
+            first_paper = (data.get('papers') or [None])[0]
+            if first_paper and first_paper.get('web_card'):
+                print(f"   web_card: 已提供标准化前端展示结构")
+                print(f"   来源: {first_paper['web_card'].get('source_name')}")
+                tests.append(True)
+            else:
+                print("❌ 缺少 web_card 标准化展示结构")
+                tests.append(False)
         else:
             print(f"❌ 论文列表加载失败: {response.status_code}")
             tests.append(False)
+    except Exception as e:
+        print(f"❌ 测试失败: {str(e)}")
+        tests.append(False)
+
+    # 测试 4.5: 单篇论文详情
+    print("\n测试 4.5: 论文详情 API")
+    try:
+        papers_response = requests.get(f'{base_url}/api/papers?page=1&per_page=1')
+        papers_payload = papers_response.json() if papers_response.status_code == 200 else {}
+        first_paper = (papers_payload.get('papers') or [None])[0]
+        if not first_paper:
+            print("❌ 没有可测试的论文详情")
+            tests.append(False)
+        else:
+            paper_id = first_paper.get('id')
+            response = requests.get(f'{base_url}/api/papers/{paper_id}')
+            if response.status_code == 200:
+                detail = response.json()
+                if detail.get('web_card') and detail['web_card'].get('title'):
+                    print("✅ 论文详情包含标准化 web_card")
+                    print(f"   标题: {detail['web_card'].get('title')}")
+                    tests.append(True)
+                else:
+                    print("❌ 论文详情缺少 web_card")
+                    tests.append(False)
+            else:
+                print(f"❌ 论文详情加载失败: {response.status_code}")
+                tests.append(False)
     except Exception as e:
         print(f"❌ 测试失败: {str(e)}")
         tests.append(False)
