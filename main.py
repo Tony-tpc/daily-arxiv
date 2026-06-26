@@ -33,10 +33,11 @@ def main():
         context = create_pipeline_context(config, logger, text)
         run_pipeline(context)
         
-        logger.info("=" * 60)
-        logger.info(text("✅ 所有任务完成！", "✅ All tasks completed!"))
-        logger.info("=" * 60)
-        logger.info(text("提示: 运行 'python src/web/app.py' 启动 Web 服务查看结果", "Tip: run 'python src/web/app.py' to start the web service"))
+        if not context.stop_requested:
+            logger.info("=" * 60)
+            logger.info(text("✅ 所有任务完成！", "✅ All tasks completed!"))
+            logger.info("=" * 60)
+            logger.info(text("提示: 运行 'python src/web/app.py' 启动 Web 服务查看结果", "Tip: run 'python src/web/app.py' to start the web service"))
         
     except Exception as e:
         logger.error(text(f"❌ 执行出错: {str(e)}", f"❌ Execution failed: {str(e)}"), exc_info=True)

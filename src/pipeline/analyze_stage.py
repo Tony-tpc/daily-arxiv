@@ -2,25 +2,24 @@
 
 from __future__ import annotations
 
-from src.analyzer.trend_analyzer import TrendAnalyzer
-from src.summarizer.llm_factory import LLMClientFactory
-from src.utils import load_json
-
 from .context import PipelineContext
 
 
 def run(context: PipelineContext) -> PipelineContext:
-    """Analyze trends using persisted summaries, preserving current semantics."""
+    """Analyze trends using the pipeline context outputs."""
     if context.stop_requested:
         return context
 
     context.logger.info(context.text("\n步骤 4: 分析研究趋势...", "\nStep 4: Analyzing research trends..."))
     try:
+        from src.analyzer.trend_analyzer import TrendAnalyzer
+        from src.summarizer.llm_factory import LLMClientFactory
+
         llm_client = LLMClientFactory.create_client(context.config)
-        summaries_data = load_json('data/summaries/latest.json')
-        summaries = summaries_data.get('summaries') or summaries_data.get('papers', []) if summaries_data else []
         analyzer = TrendAnalyzer(context.config, llm_client)
-        context.analysis_result = analyzer.analyze(context.papers, summaries)
+        summarized_records = context.summarized_papers or context.normalized_records or context.papers
+        input_records = context.normalized_records or context.papers
+        context.analysis_result = analyzer.analyze(input_records, summarized_records)
         if context.analysis_result:
             analyzer.print_analysis_summary(context.analysis_result)
     except Exception as exc:

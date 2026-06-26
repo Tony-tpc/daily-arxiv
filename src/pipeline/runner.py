@@ -2,22 +2,24 @@
 
 from __future__ import annotations
 
+import importlib
+
 from .context import PipelineContext
-from . import analyze_stage, export_stage, extract_stage, fetch_stage, normalize_stage, summarize_stage
 
 
 def run_pipeline(context: PipelineContext) -> PipelineContext:
     """Run the daily workflow through ordered stages."""
-    stages = [
-        fetch_stage.run,
-        normalize_stage.run,
-        summarize_stage.run,
-        export_stage.run,
-        extract_stage.run,
-        analyze_stage.run,
+    stage_modules = [
+        'src.pipeline.fetch_stage',
+        'src.pipeline.normalize_stage',
+        'src.pipeline.summarize_stage',
+        'src.pipeline.export_stage',
+        'src.pipeline.extract_stage',
+        'src.pipeline.analyze_stage',
     ]
 
-    for stage in stages:
+    for module_name in stage_modules:
+        stage = importlib.import_module(module_name).run
         context = stage(context)
         if context.stop_requested:
             break
