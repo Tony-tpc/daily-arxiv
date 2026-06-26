@@ -102,14 +102,27 @@ sources:
 
   openalex:
     enabled: false
-    email: ""
+    api_key: "c3w51zEJ0b463KVwBcbghI"
+    email: "23013352@mail.ecust.edu.cn"
     per_page: 25
+    request_timeout_seconds: 20
+    max_title_search_results: 5
+    cache_path: "data/cache/openalex_works.json"
     select_fields:
       - "id"
+      - "doi"
+      - "title"
       - "display_name"
+      - "publication_year"
       - "cited_by_count"
+      - "primary_topic"
+      - "topics"
       - "concepts"
       - "authorships"
+      - "referenced_works"
+      - "referenced_works_count"
+      - "ids"
+      - "updated_date"
 
   rss:
     enabled: false

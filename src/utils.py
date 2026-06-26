@@ -58,6 +58,33 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(source_config, dict):
             source_config.setdefault('enabled', source_name == 'arxiv')
 
+    openalex_config = sources.setdefault('openalex', {})
+    if isinstance(openalex_config, dict):
+        openalex_config.setdefault('api_key', '')
+        openalex_config.setdefault('email', '')
+        openalex_config.setdefault('per_page', 25)
+        openalex_config.setdefault('request_timeout_seconds', 20)
+        openalex_config.setdefault('max_title_search_results', 5)
+        openalex_config.setdefault('cache_path', 'data/cache/openalex_works.json')
+        openalex_config.setdefault(
+            'select_fields',
+            [
+                'id',
+                'doi',
+                'title',
+                'display_name',
+                'publication_year',
+                'cited_by_count',
+                'primary_topic',
+                'topics',
+                'authorships',
+                'referenced_works',
+                'referenced_works_count',
+                'ids',
+                'updated_date',
+            ],
+        )
+
     if isinstance(normalized.get('arxiv'), dict):
         normalized['arxiv'].setdefault('enabled', True)
 
