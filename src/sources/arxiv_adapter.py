@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from src.crawler.arxiv_fetcher import ArxivFetcher
+from src.sources.openalex_adapter import OpenAlexAdapter
 
 from .base import BaseSourceAdapter
 
@@ -17,6 +18,7 @@ class ArxivSourceAdapter(BaseSourceAdapter):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.fetcher = ArxivFetcher(config)
+        self.openalex_adapter = OpenAlexAdapter(config)
 
     @property
     def source_config(self) -> Dict[str, Any]:
@@ -35,7 +37,7 @@ class ArxivSourceAdapter(BaseSourceAdapter):
         return self.fetcher.fetch_papers(days_back=days_back)
 
     def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        return records
+        return self.openalex_adapter.enrich_records(records)
 
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         self.fetcher._save_papers(records)
