@@ -75,8 +75,8 @@ app.config['DESCRIPTION'] = web_config.get('description', t('description_default
 
 
 def _load_papers_data() -> dict:
-    """Load paper records, preferring enriched or OpenAlex snapshots when available."""
-    for candidate in ['data/papers/latest_enriched.json', 'data/papers/latest_openalex.json']:
+    """Load paper records, preferring OpenAlex search or enriched snapshots when available."""
+    for candidate in ['data/papers/latest_openalex.json', 'data/papers/latest_enriched.json']:
         data = load_json(candidate)
         if data and data.get('papers'):
             return data

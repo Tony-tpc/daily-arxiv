@@ -79,10 +79,14 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
             )
 
             works = self._search_works(params)
-            for work in works[:max_results]:
+            for work in works:
                 record = self._work_to_record(work)
+                if self._is_survey(record):
+                    continue
                 if not any(r.get("id") == record["id"] for r in all_results):
                     all_results.append(record)
+                if len(all_results) >= max_results:
+                    break
 
             if len(all_results) >= max_results:
                 break
@@ -126,27 +130,43 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         return en if str(lang).startswith("en") else zh
 
     def _build_search_terms(self) -> List[str]:
-        terms = self._source_config.get("search_terms", [])
-        if terms:
-            return [str(t).strip() for t in terms if str(t).strip()]
+        raw_terms = self._source_config.get("search_terms", [])
+        if raw_terms:
+            return [str(t).strip() for t in raw_terms if str(t).strip()]
 
-        keyword_groups = self._source_config.get("keyword_groups", [])
+        keyword_groups = self.config.get("keyword_groups", []) if isinstance(self.config, dict) else []
         if not keyword_groups:
             tracking = self.config.get("tracking_topics", []) if isinstance(self.config, dict) else []
             if tracking:
                 return [" ".join(str(t).strip() for t in tracking if str(t).strip())]
             return []
 
-        queries = []
-        for group in keyword_groups:
-            if isinstance(group, dict):
-                group_terms = group.get("terms", [])
+        groups = []
+        for g in keyword_groups:
+            if isinstance(g, dict):
+                terms = g.get("terms", [])
             else:
-                group_terms = group
-            joined = " ".join(str(t).strip() for t in group_terms if str(t).strip())
-            if joined:
-                queries.append(joined)
-        return queries
+                terms = g
+            cleaned = [str(t).strip() for t in terms if str(t).strip()]
+            if cleaned:
+                groups.append(cleaned)
+
+        queries = []
+
+        primary_energy = groups[0] if len(groups) > 0 else []
+        primary_learning = groups[1] if len(groups) > 1 else []
+
+        for eterm in primary_energy[:4]:
+            for lterm in primary_learning[:3]:
+                queries.append(f'"{eterm}" "{lterm}"')
+
+        if len(groups) > 2:
+            primary_market = groups[2]
+            for eterm in primary_energy[:2]:
+                for mterm in primary_market[:2]:
+                    queries.append(f'"{eterm}" "{mterm}"')
+
+        return list(dict.fromkeys(queries))
 
     def _search_works(self, params: Dict[str, str]) -> List[Dict[str, Any]]:
         headers = {}
@@ -220,3 +240,14 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         if cites >= 5:
             return "notable"
         return ""
+
+    @staticmethod
+    def _is_survey(record: dict) -> bool:
+        title = str(record.get("title", "")).lower()
+        survey_words = ["survey", "review", "comprehensive review", "state-of-the-art",
+                        "state of the art", "overview", "taxonomy", "bibliometric",
+                        "systematic literature review", "meta-analysis"]
+        for w in survey_words:
+            if w in title:
+                return True
+        return False

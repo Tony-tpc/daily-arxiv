@@ -306,7 +306,12 @@ class TrendAnalyzer:
         for paper in papers:
             published = paper.get('published', '')
             if published:
-                date = published.split('T')[0]
+                if isinstance(published, int):
+                    date = str(published)
+                elif 'T' in str(published):
+                    date = str(published).split('T')[0]
+                else:
+                    date = str(published)[:10]
                 time_distribution[date] += 1
         
         statistics = {

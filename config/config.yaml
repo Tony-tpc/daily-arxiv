@@ -54,7 +54,7 @@ priority_rules:
 # 多源采集配置 / Multi-source collection settings
 sources:
   arxiv:
-    enabled: true
+    enabled: false
     # 研究领域类别（可以是多个）/ Research categories (multiple allowed)
     categories:
       - "eess.SY"
@@ -128,13 +128,10 @@ sources:
       - "updated_date"
 
   openalex_search:
-    enabled: false
-    search_terms:
-      - '"virtual power plant" "reinforcement learning"'
+    enabled: true
     request_timeout_seconds: 20
     per_page: 25
     max_results: 20
-    keyword_groups: []
 
   rss:
     enabled: false
