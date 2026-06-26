@@ -640,7 +640,13 @@ function renderCompactInfoBar(card, paper) {
         parts.push(`<span><i class="fas fa-database"></i> ${escapeHtml(card.source_name)}</span>`);
     }
     if (meta.citation_count !== undefined && meta.citation_count !== null) {
-        parts.push(`<span><i class="fas fa-quote-right"></i> ${escapeHtml(String(meta.citation_count))}</span>`);
+        const cites = meta.citation_count;
+        const bracket = meta.impact_bracket || '';
+        let badge = '';
+        if (bracket === 'hot') badge = ' <span class=\"impact-badge impact-hot\">\u{1f525} \u9ad8\u5f15</span>';
+        else if (bracket === 'high') badge = ' <span class=\"impact-badge impact-high\">\u{2b50} \u9ad8\u5f71\u54cd</span>';
+        else if (bracket === 'notable') badge = ` <span class=\"impact-badge impact-notable\">\u{1f4c8} \u5f15\u7528 ${cites}</span>`;
+        parts.push(`<span><i class="fas fa-quote-right"></i> ${escapeHtml(String(cites))}${badge}</span>`);
     }
     if (meta.openalex_primary_topic) {
         parts.push(`<span><i class="fas fa-tag"></i> ${escapeHtml(meta.openalex_primary_topic)}</span>`);

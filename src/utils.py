@@ -58,6 +58,14 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(source_config, dict):
             source_config.setdefault('enabled', source_name == 'arxiv')
 
+    arxiv_config = sources.setdefault('arxiv', {})
+    if isinstance(arxiv_config, dict):
+        ranking = arxiv_config.setdefault('ranking', {})
+        if isinstance(ranking, dict):
+            ranking.setdefault('enabled', True)
+            ranking.setdefault('primary', 'citation_count')
+            ranking.setdefault('secondary', 'openalex_referenced_works_count')
+
     openalex_config = sources.setdefault('openalex', {})
     if isinstance(openalex_config, dict):
         openalex_config.setdefault('api_key', '')

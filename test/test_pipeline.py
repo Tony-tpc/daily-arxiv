@@ -52,6 +52,7 @@ class PipelineTests(unittest.TestCase):
             import_module.side_effect = [
                 Mock(run=lambda ctx: _record(calls, 'fetch', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'normalize', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'ranking', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'summarize', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'export', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'extract', ctx)),
@@ -59,7 +60,7 @@ class PipelineTests(unittest.TestCase):
             ]
             run_pipeline(context)
 
-        self.assertEqual(calls, ['fetch', 'normalize', 'summarize', 'export', 'extract', 'analyze'])
+        self.assertEqual(calls, ['fetch', 'normalize', 'ranking', 'summarize', 'export', 'extract', 'analyze'])
 
     def test_fetch_stage_retries_with_fallback_window(self):
         context = create_pipeline_context(self.config, self.logger, self.text)

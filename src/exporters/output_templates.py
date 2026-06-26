@@ -126,6 +126,7 @@ def build_web_card_payload(
             "openalex_institutions": raw_record.get("openalex_institutions", []),
             "openalex_referenced_works_count": raw_record.get("openalex_referenced_works_count"),
             "openalex_updated_date": raw_record.get("openalex_updated_date"),
+            "impact_bracket": raw_record.get("impact_bracket", ""),
         }.items()
         if value not in (None, "", [], {})
     }

@@ -845,6 +845,40 @@ body {
     color: white;
 }
 
+.impact-badge {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.65rem;
+    font-weight: 700;
+    margin-left: 0.25rem;
+    vertical-align: middle;
+}
+.impact-hot {
+    background: #fef3c7;
+    color: #92400e;
+}
+.impact-high {
+    background: #dbeafe;
+    color: #1e40af;
+}
+.impact-notable {
+    background: #d1fae5;
+    color: #065f46;
+}
+[data-theme="dark"] .impact-hot {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+[data-theme="dark"] .impact-high {
+    background: rgba(96, 165, 250, 0.2);
+    color: #60a5fa;
+}
+[data-theme="dark"] .impact-notable {
+    background: rgba(52, 211, 153, 0.2);
+    color: #34d399;
+}
+
 .paper-actions {
     display: flex;
     gap: 0.625rem;

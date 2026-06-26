@@ -99,9 +99,13 @@ sources:
     fallback_days_back: 365
     sort_by: "relevance"
     sort_order: "descending"
+    ranking:
+      enabled: true
+      primary: "citation_count"
+      secondary: "openalex_referenced_works_count"
 
   openalex:
-    enabled: false
+    enabled: true
     api_key: ""
     email: ""
     per_page: 25
