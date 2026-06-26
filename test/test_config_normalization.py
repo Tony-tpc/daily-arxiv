@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Tests for multi-source config normalization."""
 
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -48,6 +49,25 @@ class ConfigNormalizationTests(unittest.TestCase):
 
         self.assertEqual(normalized["arxiv"]["categories"], ["cs.LG"])
         self.assertTrue(normalized["sources"]["arxiv"]["enabled"])
+
+    def test_normalize_openalex_can_read_env_defaults(self):
+        previous_api_key = os.environ.get("OPENALEX_API_KEY")
+        previous_email = os.environ.get("OPENALEX_EMAIL")
+        os.environ["OPENALEX_API_KEY"] = "env-key"
+        os.environ["OPENALEX_EMAIL"] = "env@example.com"
+        try:
+            normalized = normalize_config({})
+            self.assertEqual(normalized["sources"]["openalex"]["api_key"], "env-key")
+            self.assertEqual(normalized["sources"]["openalex"]["email"], "env@example.com")
+        finally:
+            if previous_api_key is None:
+                os.environ.pop("OPENALEX_API_KEY", None)
+            else:
+                os.environ["OPENALEX_API_KEY"] = previous_api_key
+            if previous_email is None:
+                os.environ.pop("OPENALEX_EMAIL", None)
+            else:
+                os.environ["OPENALEX_EMAIL"] = previous_email
 
 
 if __name__ == "__main__":

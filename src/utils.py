@@ -62,6 +62,10 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(openalex_config, dict):
         openalex_config.setdefault('api_key', '')
         openalex_config.setdefault('email', '')
+        if not openalex_config.get('api_key'):
+            openalex_config['api_key'] = os.getenv('OPENALEX_API_KEY', '')
+        if not openalex_config.get('email'):
+            openalex_config['email'] = os.getenv('OPENALEX_EMAIL', '')
         openalex_config.setdefault('per_page', 25)
         openalex_config.setdefault('request_timeout_seconds', 20)
         openalex_config.setdefault('max_title_search_results', 5)
