@@ -50,56 +50,79 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
             )
 
     def fetch(self, **kwargs: Any) -> List[Dict[str, Any]]:
-        days_back = int(kwargs.get("days_back", 0) or 0)
-        search_terms = self._build_search_terms()
-        if not search_terms:
-            self.logger.warning("No search terms configured for OpenAlex search adapter")
-            return []
-
-        all_results: List[Dict[str, Any]] = []
         max_results = int(self._source_config.get("max_results", kwargs.get("max_results", 20)))
+        all_results: List[Dict[str, Any]] = []
 
-        for term in search_terms:
-            params = {
-                "search": term,
-                "sort": "cited_by_count:desc",
-                "per_page": str(self.per_page),
-                "select": ",".join(self.select_fields),
-            }
-            if days_back > 0:
-                year_from = datetime.now().year - max(1, days_back // 365)
-                if year_from >= 2000:
-                    params["filter"] = f"from_publication_date:{year_from}-01-01"
+        search_terms = self._build_search_terms()
 
-            self.logger.info(
-                self.fetcher_text(
-                    f"OpenAlex 搜索: {term[:60]}...",
-                    f"OpenAlex search: {term[:60]}...",
-                )
-            )
-
-            works = self._search_works(params)
-            for work in works:
-                record = self._work_to_record(work)
-                if self._is_survey(record):
+        if search_terms == ["__concept_filter__"]:
+            all_results = self._fetch_by_concepts(max_results)
+        else:
+            for term in search_terms:
+                if not term:
                     continue
-                if not any(r.get("id") == record["id"] for r in all_results):
-                    all_results.append(record)
+                params = {
+                    "search": term,
+                    "sort": "cited_by_count:desc",
+                    "per_page": str(self.per_page),
+                    "select": ",".join(self.select_fields),
+                }
+                self.logger.info(self.fetcher_text(f"OpenAlex 搜索: {term[:60]}...", f"OpenAlex search: {term[:60]}..."))
+                works = self._search_works(params)
+                for work in works:
+                    record = self._work_to_record(work)
+                    if self._is_survey(record):
+                        continue
+                    if not any(r.get("id") == record["id"] for r in all_results):
+                        all_results.append(record)
+                    if len(all_results) >= max_results:
+                        break
                 if len(all_results) >= max_results:
                     break
 
-            if len(all_results) >= max_results:
-                break
-
         all_results = all_results[:max_results]
         self.save_raw_snapshot(all_results)
-        self.logger.info(
-            self.fetcher_text(
-                f"\u2705 OpenAlex \u641c\u7d22\u5b8c\u6210: {len(all_results)} \u7bc7\u8bba\u6587",
-                f"\u2705 OpenAlex search complete: {len(all_results)} papers",
-            )
-        )
+        self.logger.info(self.fetcher_text(f"\u2705 OpenAlex 搜索完成: {len(all_results)} 篇论文", f"\u2705 OpenAlex search complete: {len(all_results)} papers"))
         return all_results
+
+    def _fetch_by_concepts(self, max_results: int) -> List[Dict[str, Any]]:
+        keyword_groups = self.config.get("keyword_groups", []) if isinstance(self.config, dict) else []
+        if not keyword_groups:
+            return []
+
+        groups = []
+        for g in keyword_groups:
+            terms = g.get("terms", []) if isinstance(g, dict) else g
+            cleaned = [str(t).strip() for t in terms if str(t).strip()]
+            if cleaned:
+                groups.append(cleaned)
+
+        learning_terms = groups[1] if len(groups) > 1 else []
+        search_query = " OR ".join(f'"{t}"' for t in learning_terms[:4])
+
+        params = {
+            "search": search_query,
+            "sort": "cited_by_count:desc",
+            "per_page": str(self.per_page),
+            "select": ",".join(self.select_fields),
+            "filter": "concepts.id:C89227174",
+        }
+
+        self.logger.info(self.fetcher_text(
+            f"OpenAlex 概念过滤: 电力系统 + {learning_terms[0] if learning_terms else ''}...",
+            f"OpenAlex concept filter: power system + {learning_terms[0] if learning_terms else ''}..."
+        ))
+
+        results: List[Dict[str, Any]] = []
+        works = self._search_works(params)
+        for work in works:
+            record = self._work_to_record(work)
+            if self._is_survey(record):
+                continue
+            results.append(record)
+            if len(results) >= max_results:
+                break
+        return results
 
     def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         return records
@@ -134,39 +157,14 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         if raw_terms:
             return [str(t).strip() for t in raw_terms if str(t).strip()]
 
+        # Build one query: intersect all keyword groups by chaining filters
         keyword_groups = self.config.get("keyword_groups", []) if isinstance(self.config, dict) else []
         if not keyword_groups:
             tracking = self.config.get("tracking_topics", []) if isinstance(self.config, dict) else []
             if tracking:
                 return [" ".join(str(t).strip() for t in tracking if str(t).strip())]
             return []
-
-        groups = []
-        for g in keyword_groups:
-            if isinstance(g, dict):
-                terms = g.get("terms", [])
-            else:
-                terms = g
-            cleaned = [str(t).strip() for t in terms if str(t).strip()]
-            if cleaned:
-                groups.append(cleaned)
-
-        queries = []
-
-        primary_energy = groups[0] if len(groups) > 0 else []
-        primary_learning = groups[1] if len(groups) > 1 else []
-
-        for eterm in primary_energy[:4]:
-            for lterm in primary_learning[:3]:
-                queries.append(f'"{eterm}" "{lterm}"')
-
-        if len(groups) > 2:
-            primary_market = groups[2]
-            for eterm in primary_energy[:2]:
-                for mterm in primary_market[:2]:
-                    queries.append(f'"{eterm}" "{mterm}"')
-
-        return list(dict.fromkeys(queries))
+        return ["__concept_filter__"]  # signal to use concept-based filtering
 
     def _search_works(self, params: Dict[str, str]) -> List[Dict[str, Any]]:
         headers = {}
