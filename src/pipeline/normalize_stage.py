@@ -15,7 +15,7 @@ def run(context: PipelineContext) -> PipelineContext:
     else:
         context.normalized_records = list(context.papers)
 
-    if context.source_adapter and hasattr(context.source_adapter, 'save_raw_snapshot'):
-        context.source_adapter.save_raw_snapshot(context.normalized_records)
-        context.artifacts['normalized_snapshot'] = 'data/papers/latest.json'
+    if context.source_adapter and hasattr(context.source_adapter, 'save_enriched_snapshot'):
+        context.source_adapter.save_enriched_snapshot(context.normalized_records)
+        context.artifacts['normalized_snapshot'] = 'data/papers/latest_enriched.json'
     return context

@@ -6,6 +6,9 @@ from typing import Any, Dict, List
 
 from src.crawler.arxiv_fetcher import ArxivFetcher
 from src.sources.openalex_adapter import OpenAlexAdapter
+from src.utils import get_data_path, get_date_string, save_json
+
+from pathlib import Path
 
 from .base import BaseSourceAdapter
 
@@ -41,6 +44,21 @@ class ArxivSourceAdapter(BaseSourceAdapter):
 
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         self.fetcher._save_papers(records)
+
+    def save_enriched_snapshot(self, records: List[Dict[str, Any]]) -> None:
+        data_path = get_data_path(self.config, 'papers')
+        Path(data_path).mkdir(parents=True, exist_ok=True)
+        date_str = get_date_string()
+        filepath = f"{data_path}/papers_enriched_{date_str}.json"
+        latest_filepath = f"{data_path}/latest_enriched.json"
+        save_json(records, filepath)
+        save_json({
+            'date': date_str,
+            'count': len(records),
+            'papers': records,
+        }, latest_filepath)
+        self.logger.info(self.fetcher.text(f"💾 enriched 论文数据已保存到: {filepath}", f"💾 Enriched paper data saved to: {filepath}"))
+        self.logger.info(self.fetcher.text(f"💾 enriched 最新数据已保存到: {latest_filepath}", f"💾 Enriched latest data saved to: {latest_filepath}"))
 
     def print_summary(self, records: List[Dict[str, Any]]) -> None:
         self.fetcher.print_paper_summary(records)
