@@ -297,11 +297,14 @@ src/
   - institutions
   - referenced works
 - [x] 为 enrichment 增加本地缓存逻辑
+- [x] OpenAlex 配置支持通过环境变量提供 `api_key` / `email`
+- [x] OpenAlex 关键信息已接入网页卡片展示结构，而不只是写入 enrichment 文件
 
 **验收标准**
 
 - 学术记录不再只依赖 arXiv 原始字段。
 - 原始 arXiv 抓取快照与 enriched 快照分离保存，避免语义混淆。
+- 用户无需手动查看 json/md，即可在网页端看到引用次数、主主题、机构、参考文献数等 OpenAlex 信息。
 
 ---
 
