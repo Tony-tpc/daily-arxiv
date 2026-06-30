@@ -112,6 +112,11 @@ class OpenAlexAdapter:
             work = self._search_by_arxiv_id(arxiv_id)
             if work:
                 return work
+            arxiv_doi = self._arxiv_id_to_doi(arxiv_id)
+            if arxiv_doi:
+                work = self._lookup_by_doi(arxiv_doi)
+                if work:
+                    return work
 
         title = str(record.get("title") or "").strip()
         if title:
@@ -217,6 +222,15 @@ class OpenAlexAdapter:
 
     def _persist_cache(self) -> None:
         save_json(self.cache, self.cache_path)
+
+    @staticmethod
+    def _arxiv_id_to_doi(arxiv_id: str) -> str:
+        """Convert an arXiv ID to its DOI form (e.g. 2509.08310v1 → 10.48550/arxiv.2509.08310)."""
+        import re
+        match = re.match(r"^(\d{4}\.\d{4,5})", arxiv_id.strip())
+        if not match:
+            return ""
+        return f"10.48550/arxiv.{match.group(1)}"
 
     @staticmethod
     def _normalize_doi(doi: Any) -> str:
