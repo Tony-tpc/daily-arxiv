@@ -132,6 +132,7 @@ sources:
     request_timeout_seconds: 20
     per_page: 25
     max_results: 20
+    recent_days: 180
 
   rss:
     enabled: false

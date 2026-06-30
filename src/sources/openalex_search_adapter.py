@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -32,7 +32,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         self.timeout = float(self._source_config.get("request_timeout_seconds", 20))
         self.per_page = int(self._source_config.get("per_page", 25))
         self.select_fields = [
-            "id", "doi", "title", "display_name", "publication_year",
+            "id", "doi", "title", "display_name", "publication_year", "publication_date",
             "cited_by_count", "primary_topic", "topics", "concepts",
             "authorships", "referenced_works_count", "ids", "updated_date",
         ]
@@ -97,31 +97,55 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
             if cleaned:
                 groups.append(cleaned)
 
-        learning_terms = groups[1] if len(groups) > 1 else []
-        search_query = " OR ".join(f'"{t}"' for t in learning_terms[:4])
-
-        params = {
-            "search": search_query,
-            "sort": "cited_by_count:desc",
-            "per_page": str(self.per_page),
-            "select": ",".join(self.select_fields),
-            "filter": "concepts.id:C89227174",
-        }
-
-        self.logger.info(self.fetcher_text(
-            f"OpenAlex 概念过滤: 电力系统 + {learning_terms[0] if learning_terms else ''}...",
-            f"OpenAlex concept filter: power system + {learning_terms[0] if learning_terms else ''}..."
-        ))
-
         results: List[Dict[str, Any]] = []
-        works = self._search_works(params)
-        for work in works:
-            record = self._work_to_record(work)
-            if self._is_survey(record):
-                continue
-            results.append(record)
+        seen_ids = set()
+        recent_days = int(self._source_config.get("recent_days", 180))
+        cutoff_date = (datetime.now() - timedelta(days=recent_days)).strftime("%Y-%m-%d")
+
+        energy_terms = groups[0] if len(groups) > 0 else []
+        learning_terms = groups[1] if len(groups) > 1 else []
+        market_terms = groups[2] if len(groups) > 2 else []
+
+        energy_focus = [t for t in energy_terms if t in {"virtual power plant", "electricity market", "demand response", "microgrid", "power system"}]
+        learning_focus = [t for t in learning_terms if t in {"reinforcement learning", "deep reinforcement learning", "multi-agent reinforcement learning", "MARL"}]
+        market_focus = [t for t in market_terms if t in {"game theory", "Stackelberg", "Nash", "auction", "bidding", "market mechanism"}]
+
+        query_triplets = []
+        for eterm in energy_focus[:3]:
+            for lterm in learning_focus[:3]:
+                for mterm in market_focus[:3]:
+                    query_triplets.append((eterm, lterm, mterm))
+
+        for eterm, lterm, mterm in query_triplets:
+            search_query = f'"{eterm}" "{lterm}" "{mterm}"'
+            params = {
+                "search": search_query,
+                "sort": "cited_by_count:desc",
+                "per_page": str(self.per_page),
+                "select": ",".join(self.select_fields),
+                "filter": f"concepts.id:C89227174,from_publication_date:{cutoff_date}",
+            }
+
+            self.logger.info(self.fetcher_text(
+                f"OpenAlex 概念过滤: 最近{recent_days}天 + {eterm} + {lterm} + {mterm}",
+                f"OpenAlex concept filter: last {recent_days} days + {eterm} + {lterm} + {mterm}",
+            ))
+
+            works = self._search_works(params)
+            for work in works:
+                record = self._work_to_record(work)
+                if self._is_survey(record):
+                    continue
+                if record.get("id") in seen_ids:
+                    continue
+                seen_ids.add(record.get("id"))
+                results.append(record)
+                if len(results) >= max_results:
+                    break
             if len(results) >= max_results:
                 break
+
+        results.sort(key=lambda item: int(item.get("citation_count", 0) or 0), reverse=True)
         return results
 
     def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -208,7 +232,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
             "abstract": "",
             "categories": [t for t in topics[:3]],
             "primary_category": topics[0] if topics else "",
-            "published": work.get("publication_year", ""),
+            "published": work.get("publication_date") or work.get("publication_year", ""),
             "updated": work.get("updated_date", ""),
             "pdf_url": entry_url.replace("/abs/", "/pdf/") if entry_url else doi_url,
             "entry_url": entry_url or doi_url or work.get("id", ""),

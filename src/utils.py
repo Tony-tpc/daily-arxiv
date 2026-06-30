@@ -97,6 +97,14 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
             ],
         )
 
+    openalex_search_config = sources.setdefault('openalex_search', {})
+    if isinstance(openalex_search_config, dict):
+        openalex_search_config.setdefault('enabled', False)
+        openalex_search_config.setdefault('request_timeout_seconds', 20)
+        openalex_search_config.setdefault('per_page', 25)
+        openalex_search_config.setdefault('max_results', 20)
+        openalex_search_config.setdefault('recent_days', 180)
+
     if isinstance(normalized.get('arxiv'), dict):
         normalized['arxiv'].setdefault('enabled', True)
 

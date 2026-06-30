@@ -299,6 +299,7 @@ src/
 - [x] 为 enrichment 增加本地缓存逻辑
 - [x] OpenAlex 配置支持通过环境变量提供 `api_key` / `email`
 - [x] OpenAlex 关键信息已接入网页卡片展示结构，而不只是写入 enrichment 文件
+- [x] OpenAlex 搜索默认共享顶层 `keyword_groups`，并已收敛到近 180 天的电力系统 / P2P 市场交易 / 强化学习方向
 
 **验收标准**
 
