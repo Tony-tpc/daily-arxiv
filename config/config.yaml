@@ -133,6 +133,8 @@ sources:
     per_page: 25
     max_results: 20
     recent_days: 180
+    sort: "publication_date:desc"
+    topic_query: '"peer-to-peer energy trading" OR "P2P energy trading" OR "peer-to-peer electricity market" OR "peer-to-peer electricity trading" OR "peer-to-peer energy market" OR "P2P electricity market"'
 
   rss:
     enabled: false

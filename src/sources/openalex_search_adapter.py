@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -32,7 +32,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         self.timeout = float(self._source_config.get("request_timeout_seconds", 20))
         self.per_page = int(self._source_config.get("per_page", 25))
         self.select_fields = [
-            "id", "doi", "title", "display_name", "publication_year", "publication_date",
+            "id", "doi", "title", "display_name", "publication_year",
             "cited_by_count", "primary_topic", "topics", "concepts",
             "authorships", "referenced_works_count", "ids", "updated_date",
         ]
@@ -86,66 +86,71 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         return all_results
 
     def _fetch_by_concepts(self, max_results: int) -> List[Dict[str, Any]]:
-        keyword_groups = self.config.get("keyword_groups", []) if isinstance(self.config, dict) else []
-        if not keyword_groups:
-            return []
+        from datetime import timedelta
 
-        groups = []
-        for g in keyword_groups:
-            terms = g.get("terms", []) if isinstance(g, dict) else g
-            cleaned = [str(t).strip() for t in terms if str(t).strip()]
-            if cleaned:
-                groups.append(cleaned)
+        recent_days = int(self._source_config.get("recent_days", 180))
+        date_from = (datetime.now() - timedelta(days=recent_days)).strftime("%Y-%m-%d")
+
+        topic_query = self._source_config.get("topic_query") or (
+            '"peer-to-peer energy trading" OR "P2P energy trading" OR '
+            '"peer-to-peer electricity market" OR "peer-to-peer electricity trading" OR '
+            '"peer-to-peer energy market" OR "P2P electricity market"'
+        )
+
+        # electric power system concept keeps results inside the energy domain,
+        # avoiding generic peer-to-peer networking / file-sharing papers
+        filters = [f"from_publication_date:{date_from}", "concepts.id:C89227174"]
+        sort = self._source_config.get("sort", "publication_date:desc")
+
+        params = {
+            "search": topic_query,
+            "sort": sort,
+            "per_page": str(self.per_page),
+            "select": ",".join(self.select_fields),
+            "filter": ",".join(filters),
+        }
+
+        self.logger.info(self.fetcher_text(
+            f"OpenAlex 检索: P2P 市场交易 (近 {recent_days} 天, 自 {date_from})...",
+            f"OpenAlex search: P2P market trading (last {recent_days} days, since {date_from})..."
+        ))
 
         results: List[Dict[str, Any]] = []
-        seen_ids = set()
-        recent_days = int(self._source_config.get("recent_days", 180))
-        cutoff_date = (datetime.now() - timedelta(days=recent_days)).strftime("%Y-%m-%d")
+        seen_titles: set = set()
 
-        energy_terms = groups[0] if len(groups) > 0 else []
-        learning_terms = groups[1] if len(groups) > 1 else []
-        market_terms = groups[2] if len(groups) > 2 else []
+        def _accept(record: Dict[str, Any]) -> bool:
+            if self._is_survey(record):
+                return False
+            if self._is_off_topic(record):
+                return False
+            key = self._title_key(record.get("title", ""))
+            if not key or key in seen_titles:
+                return False
+            seen_titles.add(key)
+            return True
 
-        energy_focus = [t for t in energy_terms if t in {"virtual power plant", "electricity market", "demand response", "microgrid", "power system"}]
-        learning_focus = [t for t in learning_terms if t in {"reinforcement learning", "deep reinforcement learning", "multi-agent reinforcement learning", "MARL"}]
-        market_focus = [t for t in market_terms if t in {"game theory", "Stackelberg", "Nash", "auction", "bidding", "market mechanism"}]
-
-        query_triplets = []
-        for eterm in energy_focus[:3]:
-            for lterm in learning_focus[:3]:
-                for mterm in market_focus[:3]:
-                    query_triplets.append((eterm, lterm, mterm))
-
-        for eterm, lterm, mterm in query_triplets:
-            search_query = f'"{eterm}" "{lterm}" "{mterm}"'
-            params = {
-                "search": search_query,
-                "sort": "cited_by_count:desc",
-                "per_page": str(self.per_page),
-                "select": ",".join(self.select_fields),
-                "filter": f"concepts.id:C89227174,from_publication_date:{cutoff_date}",
-            }
-
-            self.logger.info(self.fetcher_text(
-                f"OpenAlex 概念过滤: 最近{recent_days}天 + {eterm} + {lterm} + {mterm}",
-                f"OpenAlex concept filter: last {recent_days} days + {eterm} + {lterm} + {mterm}",
-            ))
-
-            works = self._search_works(params)
-            for work in works:
-                record = self._work_to_record(work)
-                if self._is_survey(record):
-                    continue
-                if record.get("id") in seen_ids:
-                    continue
-                seen_ids.add(record.get("id"))
+        works = self._search_works(params)
+        for work in works:
+            record = self._work_to_record(work)
+            if _accept(record):
                 results.append(record)
-                if len(results) >= max_results:
-                    break
             if len(results) >= max_results:
                 break
 
-        results.sort(key=lambda item: int(item.get("citation_count", 0) or 0), reverse=True)
+        # Fallback: if power-system concept filter is too strict, retry without it
+        if not results:
+            self.logger.info(self.fetcher_text(
+                f"未命中, 放宽概念限制重试 (近 {recent_days} 天)...",
+                f"No hits, retrying without concept filter (last {recent_days} days)..."
+            ))
+            params["filter"] = f"from_publication_date:{date_from}"
+            for work in self._search_works(params):
+                record = self._work_to_record(work)
+                if _accept(record):
+                    results.append(record)
+                if len(results) >= max_results:
+                    break
+
         return results
 
     def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -232,7 +237,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
             "abstract": "",
             "categories": [t for t in topics[:3]],
             "primary_category": topics[0] if topics else "",
-            "published": work.get("publication_date") or work.get("publication_year", ""),
+            "published": work.get("publication_year", ""),
             "updated": work.get("updated_date", ""),
             "pdf_url": entry_url.replace("/abs/", "/pdf/") if entry_url else doi_url,
             "entry_url": entry_url or doi_url or work.get("id", ""),
@@ -273,3 +278,33 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
             if w in title:
                 return True
         return False
+
+    @staticmethod
+    def _is_off_topic(record: dict) -> bool:
+        """Drop peer-to-peer papers that are not about energy/electricity trading."""
+        title = str(record.get("title", "")).lower()
+        topics = " ".join(str(t).lower() for t in record.get("openalex_topics", []))
+        concepts = " ".join(str(c).lower() for c in record.get("openalex_concepts", []))
+        haystack = f"{title} {topics} {concepts}"
+
+        # Must touch the energy / electricity / grid domain at all
+        energy_words = ["energy", "electricity", "power", "grid", "microgrid",
+                        "renewable", "carbon", "battery", "voltage", "load",
+                        "demand response", "prosumer", "der", "photovoltaic", "ev"]
+        if not any(w in haystack for w in energy_words):
+            return True
+
+        # Explicitly exclude non-energy peer-to-peer domains
+        off_words = ["data center", "cloud service", "file sharing", "blockchain network throughput",
+                     "video streaming", "content delivery", "cryptocurrency mining"]
+        if any(w in title for w in off_words):
+            return True
+        return False
+
+    @staticmethod
+    def _title_key(title: str) -> str:
+        import re
+        key = str(title or "").lower().strip()
+        key = re.sub(r"[^a-z0-9 ]", "", key)
+        key = re.sub(r"\s+", " ", key)
+        return key
