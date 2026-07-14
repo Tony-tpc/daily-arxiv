@@ -61,6 +61,41 @@ class IndustryReportSourceAdapterTests(unittest.TestCase):
         self.assertIn("aggregator", document["keywords"])
         llm_client.generate.assert_called_once()
 
+    @patch("src.sources.industry_report_adapter.save_json")
+    @patch("src.sources.rss_adapter.load_json", return_value=None)
+    @patch("src.sources.rss_adapter.httpx.Client")
+    def test_fetch_collects_filtered_chinese_html_reports(
+        self, client_class, _load_json, _save_json
+    ):
+        self.config["sources"]["industry_report"]["feeds"] = [{
+            "name": "国家能源局可靠性和质监中心",
+            "url": "https://reports.example/list",
+            "format": "html",
+            "item_selector": "dl.dl_l",
+            "link_selector": "dt a[href]",
+            "date_selector": "dd span",
+            "detail_content_selector": ".article-content",
+            "institution": "国家能源局",
+            "region": "CN",
+            "title_keywords_any": ["报告"],
+            "title_keywords_exclude": ["预算"],
+        }]
+        listing = self._response(
+            b'<dl class="dl_l"><dt><a href="/report">2025 Energy Report \xe6\x8a\xa5\xe5\x91\x8a</a></dt>'
+            b'<dd><span>\xe6\x97\xa5\xe6\x9c\x9f\xef\xbc\x9a2026-07-01</span></dd></dl>'
+            b'<dl class="dl_l"><dt><a href="/budget">2026 \xe9\xa2\x84\xe7\xae\x97\xe6\x8a\xa5\xe5\x91\x8a</a></dt></dl>'
+        )
+        detail = self._response(b'<div class="article-content">China power market evidence.</div>')
+        client_class.return_value.get.side_effect = [listing, detail]
+        adapter = IndustryReportSourceAdapter(self.config)
+
+        records = adapter.fetch()
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["published_at"], "2026-07-01")
+        self.assertEqual(records[0]["region"], "CN")
+        self.assertIn("power market evidence", records[0]["content"])
+
     @staticmethod
     def _record():
         return {
@@ -77,6 +112,15 @@ class IndustryReportSourceAdapterTests(unittest.TestCase):
             "region": "",
             "tags": ["flexibility"],
         }
+
+    @staticmethod
+    def _response(content, status_code=200, headers=None):
+        response = Mock()
+        response.content = content
+        response.status_code = status_code
+        response.headers = headers or {}
+        response.raise_for_status.return_value = None
+        return response
 
 
 if __name__ == "__main__":

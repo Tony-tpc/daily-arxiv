@@ -466,6 +466,50 @@ def get_stats():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/scheduler/status')
+def get_scheduler_status():
+    """Return configured source jobs together with their latest durable state."""
+    try:
+        from scheduler import build_job_specs
+
+        scheduler_config = config.get('scheduler', {})
+        configured_path = Path(
+            scheduler_config.get('status_path', 'data/state/scheduler_status.json')
+        )
+        status_path = configured_path if configured_path.is_absolute() else project_root / configured_path
+        payload = load_json(str(status_path)) or {}
+        statuses = payload.get('jobs', {}) if isinstance(payload.get('jobs'), dict) else {}
+        jobs = []
+        for spec in build_job_specs(config):
+            if spec['trigger'] == 'interval':
+                schedule = f"每 {spec['hours']:g} 小时" if language == 'zh' else f"Every {spec['hours']:g} hours"
+            else:
+                time_label = f"{int(spec.get('hour', 0)):02d}:{int(spec.get('minute', 0)):02d}"
+                day = str(spec.get('day_of_week') or '')
+                schedule = (
+                    f"每周 {day} {time_label}" if day and language == 'zh'
+                    else f"Weekly {day} {time_label}" if day
+                    else f"每日 {time_label}" if language == 'zh'
+                    else f"Daily {time_label}"
+                )
+            jobs.append({
+                'id': spec['id'],
+                'name': spec.get('name') or spec['id'],
+                'sources': spec['sources'],
+                'schedule': schedule,
+                'trigger': spec['trigger'],
+                **(statuses.get(spec['id'], {}) if isinstance(statuses.get(spec['id']), dict) else {}),
+            })
+        return jsonify({
+            'enabled': bool(scheduler_config.get('enabled', False)),
+            'timezone': scheduler_config.get('timezone', 'Asia/Shanghai'),
+            'updated_at': payload.get('updated_at'),
+            'jobs': jobs,
+        })
+    except (OSError, ValueError) as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
 @app.route('/api/documents')
 def get_documents():
     """Return a filtered directory of policies, news, or industry reports."""

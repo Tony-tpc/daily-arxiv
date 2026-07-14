@@ -43,6 +43,14 @@ data/summaries/*.json
 
 # Logs
 logs/*.log
+logs/*.jsonl
+data/state/*.json
+data/documents/
+data/raw/
+data/reports/
+data/markdown/
+data/obsidian/
+data/zotero/
 
 # OS
 .DS_Store

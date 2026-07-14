@@ -108,6 +108,34 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     storage.setdefault('sqlite_path', 'data/arxiv.db')
     storage.setdefault('retention_days', 30)
 
+    scheduler = normalized.setdefault('scheduler', {})
+    scheduler.setdefault('enabled', False)
+    scheduler.setdefault('timezone', 'Asia/Shanghai')
+    scheduler.setdefault('run_on_start', False)
+    scheduler.setdefault('status_path', 'data/state/scheduler_status.json')
+    scheduler.setdefault('task_log_path', 'logs/scheduler_jobs.jsonl')
+    scheduler_retry = scheduler.setdefault('retry', {})
+    scheduler_retry.setdefault('max_attempts', 3)
+    scheduler_retry.setdefault('base_delay_seconds', 30)
+    scheduler_retry.setdefault('max_delay_seconds', 300)
+    scheduler.setdefault('jobs', copy.deepcopy({
+        'academic_daily': {
+            'enabled': True, 'sources': ['arxiv', 'openalex_search'],
+            'trigger': 'cron', 'hour': 9, 'minute': 0,
+        },
+        'news_8h': {
+            'enabled': True, 'sources': ['rss'], 'trigger': 'interval', 'hours': 8,
+        },
+        'policy_daily': {
+            'enabled': True, 'sources': ['policy'],
+            'trigger': 'cron', 'hour': 10, 'minute': 0,
+        },
+        'industry_weekly': {
+            'enabled': True, 'sources': ['industry_report'],
+            'trigger': 'cron', 'day_of_week': 'mon', 'hour': 11, 'minute': 0,
+        },
+    }))
+
     for source_name in ['arxiv', 'openalex', 'openalex_search', 'rss', 'policy', 'industry_report']:
         source_config = sources.setdefault(source_name, {})
         if isinstance(source_config, dict):
@@ -168,6 +196,9 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         rss_config.setdefault('snapshot_dir', 'data/raw/rss')
         rss_config.setdefault('max_entries_per_feed', 100)
         rss_config.setdefault('max_seen_items', 10000)
+        rss_config.setdefault('include_keywords', [])
+        rss_config.setdefault('exclude_keywords', [])
+        rss_config.setdefault('filter_scope', 'all')
 
     policy_config = sources.setdefault('policy', {})
     if isinstance(policy_config, dict):

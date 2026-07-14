@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from src.storage.base import build_storage
+from src.utils import get_data_path, load_json
+
 from .context import PipelineContext
 
 
@@ -53,6 +56,42 @@ def run(context: PipelineContext) -> PipelineContext:
         if context.source_adapter and hasattr(context.source_adapter, 'save_enriched_snapshot'):
             context.source_adapter.save_enriched_snapshot(context.normalized_records)
             context.artifacts['normalized_snapshot'] = 'data/papers/latest_enriched.json'
+
+    runtime_config = context.config.get('runtime', {})
+    if context.normalized_records and runtime_config.get('merge_with_latest', False):
+        try:
+            latest = build_storage(context.config).load_latest()
+            existing = [
+                dict(item)
+                for item in latest.get('documents', [])
+                if isinstance(item, dict)
+            ]
+            baseline_id = str(latest.get('snapshot_id') or 'latest')
+            if not existing:
+                summaries_path = f"{get_data_path(context.config, 'summaries')}/latest.json"
+                summary_payload = load_json(summaries_path) or {}
+                fallback_documents = (
+                    summary_payload.get('documents')
+                    or summary_payload.get('summaries')
+                    or summary_payload.get('papers')
+                    or []
+                )
+                existing = [
+                    dict(item) for item in fallback_documents if isinstance(item, dict)
+                ]
+                baseline_id = 'summaries/latest'
+            if existing:
+                context.normalized_records = existing + context.normalized_records
+                context.artifacts['incremental_baseline'] = baseline_id
+                context.logger.info(context.text(
+                    f"增量任务已合并 {len(existing)} 条现有情报，后续统一去重",
+                    f"Incremental job merged {len(existing)} existing documents before deduplication",
+                ))
+        except Exception as exc:
+            context.logger.warning(context.text(
+                f"读取增量基线失败，将仅处理本次抓取结果: {exc}",
+                f"Could not load the incremental baseline; processing only the new batch: {exc}",
+            ))
 
     if not context.normalized_records:
         context.stop_requested = True

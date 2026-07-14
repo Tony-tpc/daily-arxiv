@@ -149,6 +149,22 @@ class DocumentSummarizerTests(unittest.TestCase):
         self.assertEqual(latest["documents"], latest["papers"])
         self.assertEqual(latest["documents"], latest["summaries"])
 
+    def test_batch_reuses_existing_successful_summary(self):
+        existing = {
+            "id": "policy-existing",
+            "source_type": "policy",
+            "title": "已分析政策",
+            "summary": "已有中文摘要",
+            "summarized_at": "2026-07-14T00:00:00",
+            "summary_error": False,
+            "web_card": {"summary": "已有中文摘要"},
+        }
+        with patch.object(self.summarizer, "_save_summaries"):
+            results = self.summarizer.summarize_documents([existing], show_progress=False)
+
+        self.assertEqual(results[0]["summary"], "已有中文摘要")
+        self.client.generate.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

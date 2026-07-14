@@ -88,6 +88,27 @@ class RSSSourceAdapterTests(unittest.TestCase):
         self.assertEqual(document["media_name"], "Energy News")
         self.assertEqual(document["provenance"]["collected_via"], "rss")
 
+    @patch("src.sources.rss_adapter.save_json")
+    @patch("src.sources.rss_adapter.load_json", return_value=None)
+    @patch("src.sources.rss_adapter.httpx.Client")
+    def test_keyword_filters_keep_energy_news_and_exclude_robotics(
+        self, client_class, _load_json, _save_json
+    ):
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0"><channel><title>国内科技</title>
+        <item><guid>1</guid><title>电力市场推进虚拟电厂建设</title><link>https://cn.example/energy</link></item>
+        <item><guid>2</guid><title>人形机器人机械臂发布</title><link>https://cn.example/robot</link><description>能源演示</description></item>
+        <item><guid>3</guid><title>消费市场动态</title><link>https://cn.example/other</link></item>
+        </channel></rss>""".encode("utf-8")
+        client_class.return_value.get.return_value = self._response(xml)
+        self.config["sources"]["rss"]["feeds"] = [self.config["sources"]["rss"]["feeds"][0]]
+        self.config["sources"]["rss"]["include_keywords"] = ["电力", "能源"]
+        self.config["sources"]["rss"]["exclude_keywords"] = ["机械臂", "人形机器人"]
+
+        records = RSSSourceAdapter(self.config).fetch()
+
+        self.assertEqual([record["entry_id"] for record in records], ["1"])
+
     @staticmethod
     def _response(content, status_code=200, headers=None):
         response = Mock()

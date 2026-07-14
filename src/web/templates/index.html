@@ -205,6 +205,13 @@
                             <div class="card-header"><div class="header-left"><i class="fas fa-bolt"></i><h2>{{ '趋势信号' if language == 'zh' else 'Trend Signals' }}</h2></div></div>
                             <div class="card-body home-trend-signals" id="home-trend-signals"></div>
                         </div>
+                        <div class="content-card scheduler-status-card">
+                            <div class="card-header">
+                                <div class="header-left"><i class="fas fa-clock-rotate-left"></i><h2>{{ '自动采集任务' if language == 'zh' else 'Collection Jobs' }}</h2></div>
+                                <button type="button" id="scheduler-status-refresh" class="scheduler-refresh-btn" title="{{ '刷新任务状态' if language == 'zh' else 'Refresh job status' }}"><i class="fas fa-rotate"></i></button>
+                            </div>
+                            <div class="card-body scheduler-job-list" id="scheduler-job-status"><div class="loading-small"><div class="spinner-small"></div></div></div>
+                        </div>
                     </aside>
                 </div>
 

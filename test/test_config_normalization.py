@@ -88,6 +88,11 @@ class ConfigNormalizationTests(unittest.TestCase):
         self.assertTrue(
             all(feed["region"] == "CN" for feed in config["sources"]["policy"]["feeds"])
         )
+        self.assertTrue(config["sources"]["rss"]["enabled"])
+        self.assertTrue(config["sources"]["policy"]["enabled"])
+        self.assertTrue(config["sources"]["industry_report"]["enabled"])
+        self.assertEqual(config["sources"]["rss"]["filter_scope"], "title")
+        self.assertEqual(config["scheduler"]["jobs"]["news_8h"]["hours"], 8)
 
 
 if __name__ == "__main__":

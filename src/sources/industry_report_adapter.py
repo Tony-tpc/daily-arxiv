@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+from urllib.parse import urljoin
+
+import httpx
+from bs4 import BeautifulSoup
 
 from src.models.document_schema import SourceType, create_document
 from src.summarizer.llm_factory import LLMClientFactory
@@ -81,6 +87,143 @@ class IndustryReportSourceAdapter(RSSSourceAdapter):
             )
             documents.append(document.to_dict())
         return documents
+
+    def _configured_feeds(self) -> List[Dict[str, Any]]:
+        """Leave HTML report listings to the report-specific collector."""
+        return [
+            item
+            for item in self.source_config.get("feeds", [])
+            if isinstance(item, dict) and str(item.get("format", "rss")).lower() != "html"
+        ]
+
+    def fetch(self, **kwargs: Any) -> List[Dict[str, Any]]:
+        """Collect RSS/Atom and configured Chinese industry-report listings."""
+        feed_kwargs = dict(kwargs)
+        feed_kwargs["save_snapshot"] = False
+        feed_kwargs["persist_state"] = False
+        feed_records = super().fetch(**feed_kwargs)
+        records = feed_records + self._fetch_html_sources()
+        self._prune_seen()
+        if records:
+            self.save_raw_snapshot(records)
+        save_json(self.state, self.state_path)
+        return records
+
+    def _fetch_html_sources(self) -> List[Dict[str, Any]]:
+        records: List[Dict[str, Any]] = []
+        now = self._now()
+        sources = [
+            item
+            for item in self.source_config.get("feeds", [])
+            if isinstance(item, dict) and str(item.get("format", "rss")).lower() == "html"
+        ]
+        for source in sources:
+            source_url = str(source["url"]).strip()
+            source_state = self.state["feeds"].setdefault(source_url, {})
+            headers = {"User-Agent": self.source_config.get("user_agent", "daily-arxiv/1.0")}
+            if source_state.get("etag"):
+                headers["If-None-Match"] = source_state["etag"]
+            if source_state.get("last_modified"):
+                headers["If-Modified-Since"] = source_state["last_modified"]
+            try:
+                response = self.client.get(source_url, headers=headers)
+                if response.status_code == 304:
+                    source_state["checked_at"] = now
+                    continue
+                response.raise_for_status()
+            except httpx.HTTPError as exc:
+                source_state.update({"checked_at": now, "last_error": str(exc)})
+                self.logger.warning("Industry report page fetch failed for %s: %s", source_url, exc)
+                continue
+
+            source_state.update({
+                "etag": response.headers.get("ETag", source_state.get("etag", "")),
+                "last_modified": response.headers.get(
+                    "Last-Modified", source_state.get("last_modified", "")
+                ),
+                "checked_at": now,
+                "last_success_at": now,
+                "last_error": "",
+            })
+            soup = BeautifulSoup(response.content, "html.parser")
+            item_selector = str(source.get("item_selector", "a[href]"))
+            items = soup.select(item_selector)
+            if not items:
+                message = f"selector matched no items: {item_selector}"
+                source_state["last_error"] = message
+                self.logger.warning("Industry report parse failed for %s: %s", source_url, message)
+                continue
+            for item in items[: int(source.get("max_entries", 50))]:
+                link = item.select_one(str(source.get("link_selector", "a[href]")))
+                if link is None and getattr(item, "name", None) == "a":
+                    link = item
+                if link is None or not link.get("href"):
+                    continue
+                title = self._clean_text(link.get("title") or link.get_text(" ", strip=True))
+                if not self._matches_report_title(title, source):
+                    continue
+                url = self._canonical_url(urljoin(source_url, str(link["href"])))
+                if not title or not url:
+                    continue
+                dedup_key = hashlib.sha256(f"{url}\n{title.casefold()}".encode("utf-8")).hexdigest()
+                if dedup_key in self.state["seen"]:
+                    continue
+                date_node = (
+                    item.select_one(str(source.get("date_selector", "")))
+                    if source.get("date_selector")
+                    else None
+                )
+                published_at = self._clean_text(
+                    date_node.get_text(" ", strip=True) if date_node else ""
+                )
+                published_at = re.sub(r"^(日期|发布时间)\s*[：:]\s*", "", published_at)
+                published_at = published_at.strip("() ").replace("/", "-")
+                content = self._fetch_detail_text(url, source) if source.get("fetch_detail", True) else title
+                content = content or title
+                records.append({
+                    "entry_id": url,
+                    "title": title,
+                    "url": url,
+                    "author": str(source.get("institution") or source.get("name", "")),
+                    "published_at": published_at,
+                    "collected_at": now,
+                    "summary": content[:1000],
+                    "content": content,
+                    "tags": self._string_list(source.get("tags")),
+                    "source_name": str(source.get("name", "中国能源行业机构")),
+                    "feed_title": str(source.get("name", "")),
+                    "feed_url": source_url,
+                    "region": source.get("region", "CN"),
+                    "event_type": "industry_report",
+                    "source_category": "industry_report",
+                    "dedup_key": dedup_key,
+                })
+                self.state["seen"][dedup_key] = now
+        return records
+
+    def _fetch_detail_text(self, url: str, source: Dict[str, Any]) -> str:
+        try:
+            response = self.client.get(
+                url,
+                headers={"User-Agent": self.source_config.get("user_agent", "daily-arxiv/1.0")},
+            )
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, "html.parser")
+            selector = str(source.get("detail_content_selector", "article, .article-content"))
+            content_node = soup.select_one(selector)
+            return self._clean_text(content_node.get_text(" ", strip=True)) if content_node else ""
+        except httpx.HTTPError as exc:
+            self.logger.warning("Industry report detail fetch failed for %s: %s", url, exc)
+            return ""
+
+    @classmethod
+    def _matches_report_title(cls, title: str, source: Dict[str, Any]) -> bool:
+        include = cls._string_list(source.get("title_keywords_any"))
+        exclude = cls._string_list(source.get("title_keywords_exclude"))
+        lowered = title.casefold()
+        if exclude and any(term.casefold() in lowered for term in exclude):
+            return False
+        return bool(title) and (not include or any(term.casefold() in lowered for term in include))
 
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

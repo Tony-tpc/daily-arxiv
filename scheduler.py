@@ -1,198 +1,402 @@
-"""
-定时调度器 / Scheduled runner
+"""Source-specific APScheduler orchestration with durable job state."""
 
-使用 APScheduler 实现每日自动运行 /
-Use APScheduler to run daily jobs automatically
-"""
+from __future__ import annotations
+
+import copy
+import json
+import logging
+import os
 import sys
+import threading
+import time
+import traceback
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Callable, Dict, Iterable, List
 
-# 添加项目根目录到 Python 路径 / Add project root to Python path
+import pytz
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+
+
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime
-import pytz
-import traceback
-import logging
-
-from src.utils import load_config, load_env, setup_logging, load_json, pick_text
 from src.notifier import EmailNotifier
-from main import main as run_daily_task
+from src.pipeline.context import create_pipeline_context
+from src.pipeline.runner import run_pipeline
+from src.utils import load_config, load_env, pick_text, setup_logging
 
 
-def scheduled_task(logger=None, notifier=None, language='zh'):
-    """定时执行的任务 / Scheduled task entry."""
-    start_time = datetime.now()
-    lang = str(language).strip().lower()
-    text = (lambda zh, en: en) if lang.startswith('en') else (lambda zh, en: zh)
-    
-    print("\n" + "=" * 60)
-    print(f"⏰ Scheduled task triggered - {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 60 + "\n")
-    
-    if logger:
-        logger.info(text(f"定时任务开始执行 - {start_time}", f"Scheduled task started - {start_time}"))
-    
+PIPELINE_SOURCES = ("arxiv", "openalex_search", "rss", "policy", "industry_report")
+DEFAULT_JOBS: Dict[str, Dict[str, Any]] = {
+    "academic_daily": {
+        "enabled": True,
+        "sources": ["arxiv", "openalex_search"],
+        "trigger": "cron",
+        "hour": 9,
+        "minute": 0,
+    },
+    "news_8h": {
+        "enabled": True,
+        "sources": ["rss"],
+        "trigger": "interval",
+        "hours": 8,
+    },
+    "policy_daily": {
+        "enabled": True,
+        "sources": ["policy"],
+        "trigger": "cron",
+        "hour": 10,
+        "minute": 0,
+    },
+    "industry_weekly": {
+        "enabled": True,
+        "sources": ["industry_report"],
+        "trigger": "cron",
+        "day_of_week": "mon",
+        "hour": 11,
+        "minute": 0,
+    },
+}
+
+_PIPELINE_LOCK = threading.Lock()
+_STATE_LOCK = threading.Lock()
+
+
+def build_job_specs(config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return validated, enabled source job definitions in configuration order."""
+    scheduler_config = config.get("scheduler", {})
+    configured = scheduler_config.get("jobs")
+    jobs = configured if isinstance(configured, dict) and configured else DEFAULT_JOBS
+    specs: List[Dict[str, Any]] = []
+    for job_id, raw in jobs.items():
+        if not isinstance(raw, dict) or not raw.get("enabled", True):
+            continue
+        sources = [str(item) for item in raw.get("sources", []) if str(item) in PIPELINE_SOURCES]
+        if not sources:
+            raise ValueError(f"Scheduler job {job_id!r} has no supported sources")
+        trigger = str(raw.get("trigger", "cron")).lower()
+        if trigger not in {"cron", "interval"}:
+            raise ValueError(f"Scheduler job {job_id!r} has unsupported trigger {trigger!r}")
+        spec = {"id": str(job_id), **copy.deepcopy(raw), "sources": sources, "trigger": trigger}
+        if trigger == "interval":
+            hours = float(spec.get("hours", 0))
+            if hours <= 0:
+                raise ValueError(f"Scheduler job {job_id!r} requires hours > 0")
+            if sources == ["rss"] and not 6 <= hours <= 12:
+                raise ValueError("The domestic news interval must be between 6 and 12 hours")
+        specs.append(spec)
+    return specs
+
+
+def build_source_config(config: Dict[str, Any], source_names: Iterable[str]) -> Dict[str, Any]:
+    """Create an isolated incremental config without mutating the shared config."""
+    isolated = copy.deepcopy(config)
+    selected = {str(name) for name in source_names}
+    sources = isolated.setdefault("sources", {})
+    for name in PIPELINE_SOURCES:
+        source_config = sources.setdefault(name, {})
+        if isinstance(source_config, dict):
+            source_config["enabled"] = name in selected
+    runtime = isolated.setdefault("runtime", {})
+    runtime["merge_with_latest"] = True
+    runtime["scheduler_sources"] = sorted(selected)
+    isolated.setdefault("summarization", {}).setdefault("reuse_existing", True)
+    return isolated
+
+
+def run_source_job(
+    job_id: str,
+    source_names: Iterable[str],
+    *,
+    config: Dict[str, Any] | None = None,
+    logger: logging.Logger | None = None,
+    notifier: Any = None,
+    pipeline_runner: Callable[[Any], Any] = run_pipeline,
+    sleep_func: Callable[[float], None] = time.sleep,
+) -> Dict[str, Any]:
+    """Run one isolated source group with bounded retry and durable status."""
+    base_config = copy.deepcopy(config or load_config())
+    logger = logger or setup_logging(base_config)
+    text = lambda zh, en: pick_text(base_config, zh, en)
+    scheduler_config = base_config.get("scheduler", {})
+    retry = scheduler_config.get("retry", {})
+    max_attempts = max(1, int(retry.get("max_attempts", 3)))
+    base_delay = max(0.0, float(retry.get("base_delay_seconds", 30)))
+    max_delay = max(base_delay, float(retry.get("max_delay_seconds", 300)))
+    sources = [str(name) for name in source_names]
+    job_config = build_source_config(base_config, sources)
+    started_at = _utc_now()
+    started_clock = time.monotonic()
+
+    for attempt in range(1, max_attempts + 1):
+        attempt_started = _utc_now()
+        _update_job_status(base_config, job_id, {
+            "status": "running",
+            "sources": sources,
+            "last_started_at": started_at,
+            "attempt_started_at": attempt_started,
+            "attempts": attempt,
+            "error": "",
+        })
+        _append_job_event(base_config, {
+            "event": "started",
+            "job_id": job_id,
+            "sources": sources,
+            "attempt": attempt,
+            "timestamp": attempt_started,
+        })
+        try:
+            with _PIPELINE_LOCK:
+                context = create_pipeline_context(job_config, logger, text)
+                context = pipeline_runner(context) or context
+
+            record_count = sum(
+                len(records) for records in getattr(context, "source_records", {}).values()
+            )
+            source_errors = dict(getattr(context, "source_errors", {}) or {})
+            if source_errors and record_count == 0:
+                details = "; ".join(f"{name}: {error}" for name, error in source_errors.items())
+                raise RuntimeError(f"All scheduled sources failed: {details}")
+            if record_count and not getattr(context, "normalized_records", []) and getattr(
+                context, "stop_requested", False
+            ):
+                raise RuntimeError("Fetched records could not be normalized into documents")
+
+            status = "partial" if source_errors else ("empty" if record_count == 0 else "succeeded")
+            finished_at = _utc_now()
+            duration = round(time.monotonic() - started_clock, 3)
+            result = {
+                "success": True,
+                "job_id": job_id,
+                "status": status,
+                "sources": sources,
+                "record_count": record_count,
+                "document_count": len(getattr(context, "normalized_records", []) or []),
+                "source_errors": source_errors,
+                "attempts": attempt,
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "duration_seconds": duration,
+                "artifacts": dict(getattr(context, "artifacts", {}) or {}),
+            }
+            _update_job_status(base_config, job_id, {
+                **result,
+                "last_finished_at": finished_at,
+                "last_success_at": finished_at,
+                "error": "",
+            })
+            _append_job_event(base_config, {"event": status, "timestamp": finished_at, **result})
+            logger.info(text(
+                f"调度任务 {job_id} 完成：{status}，新增 {record_count} 条，尝试 {attempt} 次",
+                f"Scheduled job {job_id} finished: {status}, {record_count} new records, {attempt} attempt(s)",
+            ))
+            _notify(notifier, True, duration=duration, stats={"papers_count": record_count})
+            return result
+        except Exception as exc:
+            error = str(exc)
+            logger.error(text(
+                f"调度任务 {job_id} 第 {attempt}/{max_attempts} 次失败: {error}",
+                f"Scheduled job {job_id} failed on attempt {attempt}/{max_attempts}: {error}",
+            ), exc_info=True)
+            if attempt < max_attempts:
+                delay = min(max_delay, base_delay * (2 ** (attempt - 1)))
+                _append_job_event(base_config, {
+                    "event": "retry_scheduled",
+                    "job_id": job_id,
+                    "sources": sources,
+                    "attempt": attempt,
+                    "delay_seconds": delay,
+                    "error": error,
+                    "timestamp": _utc_now(),
+                })
+                sleep_func(delay)
+                continue
+
+            finished_at = _utc_now()
+            duration = round(time.monotonic() - started_clock, 3)
+            result = {
+                "success": False,
+                "job_id": job_id,
+                "status": "failed",
+                "sources": sources,
+                "record_count": 0,
+                "document_count": 0,
+                "source_errors": {},
+                "attempts": attempt,
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "duration_seconds": duration,
+                "artifacts": {},
+                "error": error,
+            }
+            _update_job_status(base_config, job_id, {
+                **result,
+                "last_finished_at": finished_at,
+            })
+            _append_job_event(base_config, {"event": "failed", "timestamp": finished_at, **result})
+            _notify(notifier, False, duration=duration, error_msg=f"{error}\n\n{traceback.format_exc()}")
+            return result
+
+    raise AssertionError("unreachable")
+
+
+def register_source_jobs(
+    scheduler: Any,
+    config: Dict[str, Any],
+    logger: logging.Logger,
+    notifier: Any = None,
+) -> List[Dict[str, Any]]:
+    """Register configured jobs and return their normalized specs."""
+    timezone_name = config.get("scheduler", {}).get("timezone", "Asia/Shanghai")
+    tz = pytz.timezone(timezone_name)
+    specs = build_job_specs(config)
+    for spec in specs:
+        if spec["trigger"] == "interval":
+            trigger = IntervalTrigger(hours=float(spec["hours"]), timezone=tz)
+        else:
+            trigger = CronTrigger(
+                day_of_week=spec.get("day_of_week"),
+                hour=int(spec.get("hour", 0)),
+                minute=int(spec.get("minute", 0)),
+                timezone=tz,
+            )
+        scheduler.add_job(
+            run_source_job,
+            trigger=trigger,
+            kwargs={
+                "job_id": spec["id"],
+                "source_names": spec["sources"],
+                "config": config,
+                "logger": logger,
+                "notifier": notifier,
+            },
+            id=spec["id"],
+            name=str(spec.get("name") or spec["id"]),
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=int(spec.get("misfire_grace_time", 3600)),
+            replace_existing=True,
+        )
+    return specs
+
+
+def scheduled_task(logger=None, notifier=None, language="zh") -> bool:
+    """Backward-compatible entry point for one run of all enabled sources."""
+    config = load_config()
+    enabled = [
+        name for name in PIPELINE_SOURCES
+        if config.get("sources", {}).get(name, {}).get("enabled", False)
+    ]
+    result = run_source_job(
+        "daily_arxiv_task",
+        enabled or ["arxiv"],
+        config=config,
+        logger=logger,
+        notifier=notifier,
+    )
+    return bool(result["success"])
+
+
+def _status_path(config: Dict[str, Any]) -> Path:
+    return Path(config.get("scheduler", {}).get("status_path", "data/state/scheduler_status.json"))
+
+
+def _task_log_path(config: Dict[str, Any]) -> Path:
+    return Path(config.get("scheduler", {}).get("task_log_path", "logs/scheduler_jobs.jsonl"))
+
+
+def _update_job_status(config: Dict[str, Any], job_id: str, values: Dict[str, Any]) -> None:
+    path = _status_path(config)
+    with _STATE_LOCK:
+        payload: Dict[str, Any] = {}
+        if path.exists():
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                payload = {}
+        jobs = payload.get("jobs") if isinstance(payload.get("jobs"), dict) else {}
+        previous = jobs.get(job_id) if isinstance(jobs.get(job_id), dict) else {}
+        jobs[job_id] = {**previous, **values}
+        payload = {
+            "schema_version": "1.0",
+            "updated_at": _utc_now(),
+            "jobs": jobs,
+        }
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+        temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(temp_path, path)
+
+
+def _append_job_event(config: Dict[str, Any], event: Dict[str, Any]) -> None:
+    path = _task_log_path(config)
+    with _STATE_LOCK:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event, ensure_ascii=False, default=str) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+
+def _notify(notifier: Any, success: bool, **kwargs: Any) -> None:
+    if notifier is None:
+        return
     try:
-        # 执行主任务 / Run main workflow
-        run_daily_task()
-        
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-        
-        print("\n" + "=" * 60)
-        print(text("✅ 任务执行成功！", "✅ Task completed successfully!"))
-        print(text(f"⏱️  耗时: {duration:.2f} 秒", f"⏱️  Duration: {duration:.2f} seconds"))
-        print(text(f"🕐 完成时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')}", f"🕐 Finished at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}"))
-        print("=" * 60 + "\n")
-        
-        if logger:
-            logger.info(text(f"定时任务执行成功，耗时 {duration:.2f} 秒", f"Scheduled task succeeded, took {duration:.2f} seconds"))
-        
-        # 发送成功通知 / Send success notification
-        if notifier:
-            try:
-            # 读取统计信息 / Load stats
-                stats = load_json(Path('data/papers/latest.json'))
-                stats_info = {
-                    'papers_count': len(stats) if stats else 0,
-                    'summaries_count': len(load_json(Path('data/summaries/latest.json')) or {}),
-                    'categories_count': len(set(p.get('primary_category', '') for p in stats)) if stats else 0,
-                    'keywords_count': 50  # 从分析结果获取 / Retrieved from analysis result
-                }
-                notifier.send_notification(success=True, stats=stats_info, duration=duration)
-            except Exception as e:
-                logger.warning(text(f"发送邮件通知失败: {str(e)}", f"Failed to send email notification: {str(e)}"))
-        
-        return True
-        
-    except Exception as e:
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-        
-        print("\n" + "=" * 60)
-        print(text("❌ 任务执行失败！", "❌ Task execution failed!"))
-        print(text(f"⏱️  耗时: {duration:.2f} 秒", f"⏱️  Duration: {duration:.2f} seconds"))
-        print(text(f"🔴 错误: {str(e)}", f"🔴 Error: {str(e)}"))
-        print("=" * 60)
-        print(text("\n详细错误信息:", "\nDetailed error information:"))
-        traceback.print_exc()
-        print()
-        
-        if logger:
-            logger.error(text(f"定时任务执行失败: {str(e)}", f"Scheduled task failed: {str(e)}"), exc_info=True)
-        
-        # 发送失败通知 / Send failure notification
-        if notifier:
-            try:
-                notifier.send_notification(
-                    success=False,
-                    error_msg=f"{str(e)}\n\n{traceback.format_exc()}",
-                    duration=duration
-                )
-            except Exception as email_error:
-                logger.warning(text(f"发送邮件通知失败: {str(email_error)}", f"Failed to send email notification: {str(email_error)}"))
-        
-        return False
+        notifier.send_notification(success=success, **kwargs)
+    except Exception:
+        logging.getLogger("daily_arxiv").warning("Scheduler notification failed", exc_info=True)
 
 
-def main():
-    """主函数 / Main function"""
-    # 加载配置 / Load configuration
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def main() -> None:
+    """Start the blocking multi-source scheduler."""
     load_env()
     config = load_config()
     logger = setup_logging(config)
     text = lambda zh, en: pick_text(config, zh, en)
-    
-    scheduler_config = config.get('scheduler', {})
-    
-    if not scheduler_config.get('enabled', False):
-        logger.warning(text("定时调度未启用，请在 config.yaml 中设置 scheduler.enabled = true", "Scheduler is disabled. Set scheduler.enabled = true in config.yaml"))
-        print(text("\n⚠️  定时调度未启用", "\n⚠️  Scheduler is disabled"))
-        print(text("请在 config/config.yaml 中设置:", "Please set this in config/config.yaml:"))
-        print("  scheduler:")
-        print("    enabled: true")
+    scheduler_config = config.get("scheduler", {})
+    if not scheduler_config.get("enabled", False):
+        logger.warning(text(
+            "调度器未启用；请设置 scheduler.enabled: true",
+            "Scheduler disabled; set scheduler.enabled: true",
+        ))
         return
-    
-    # 获取配置 / Read scheduler config
-    run_time = scheduler_config.get('run_time', '09:00')
-    timezone = scheduler_config.get('timezone', 'Asia/Shanghai')
-    run_on_start = scheduler_config.get('run_on_start', True)
-    
-    # 解析运行时间 / Parse run time
-    try:
-        hour, minute = map(int, run_time.split(':'))
-    except ValueError:
-        logger.error(text(f"无效的运行时间格式: {run_time}，应为 HH:MM 格式", f"Invalid run_time format: {run_time}, expected HH:MM"))
-        print(text(f"❌ 无效的运行时间格式: {run_time}", f"❌ Invalid run_time format: {run_time}"))
-        print(text("请使用 HH:MM 格式，例如: 09:00", "Please use HH:MM format, e.g. 09:00"))
-        return
-    
-    tz = pytz.timezone(timezone)
-    
-    # 创建调度器 / Create scheduler
-    scheduler = BlockingScheduler(timezone=tz)
-    
-    # 添加定时任务 / Register scheduled job
-    trigger = CronTrigger(
-        hour=hour,
-        minute=minute,
-        timezone=tz
-    )
-    
-    # 初始化邮件通知器 / Initialize email notifier
+
     notifier = None
-    notification_config = scheduler_config.get('notification', {})
-    if notification_config.get('enabled', False):
-        email_config = notification_config.get('email', {})
-        email_config['_language'] = config.get('app', {}).get('language', 'zh')
+    notification = scheduler_config.get("notification", {})
+    if notification.get("enabled", False):
+        email_config = copy.deepcopy(notification.get("email", {}))
+        email_config["_language"] = config.get("app", {}).get("language", "zh")
         notifier = EmailNotifier(email_config)
-        logger.info(text("邮件通知已启用", "Email notification enabled"))
-    
-    scheduler.add_job(
-        scheduled_task,
-        trigger=trigger,
-        args=[logger, notifier, config.get('app', {}).get('language', 'zh')],
-        id='daily_arxiv_task',
-        name='Daily arXiv Paper Fetching',
-        max_instances=1,
-        coalesce=True
-    )
-    
-    # 计算下次运行时间 / Calculate next run time
-    next_run = datetime.now(tz).replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if next_run <= datetime.now(tz):
-        from datetime import timedelta
-        next_run += timedelta(days=1)
-    
-    logger.info(text(f"定时调度器已启动，将在每天 {run_time} ({timezone}) 执行任务", f"Scheduler started, will run daily at {run_time} ({timezone})"))
-    print("\n" + "=" * 60)
-    print(text("⏰ Daily arXiv 定时调度器", "⏰ Daily arXiv Scheduler"))
-    print("=" * 60)
-    print(text(f"📅 执行时间: 每天 {run_time}", f"📅 Run Time: daily at {run_time}"))
-    print(text(f"🌍 时区: {timezone}", f"🌍 Timezone: {timezone}"))
-    print(text(f"⏭️  下次运行: {next_run.strftime('%Y-%m-%d %H:%M:%S')}", f"⏭️  Next run: {next_run.strftime('%Y-%m-%d %H:%M:%S')}"))
-    print(text(f"🔄 启动时立即运行: {'是' if run_on_start else '否'}", f"🔄 Run on start: {'yes' if run_on_start else 'no'}"))
-    print("=" * 60)
-    print(text("\n按 Ctrl+C 停止调度器\n", "\nPress Ctrl+C to stop scheduler\n"))
-    
-    # 启动时立即运行一次 / Run once at startup if enabled
-    if run_on_start:
-        logger.info(text("启动时立即执行任务...", "Running task on startup..."))
-        print(text("🚀 启动时立即执行任务...\n", "🚀 Running task on startup...\n"))
-        scheduled_task(logger, notifier, config.get('app', {}).get('language', 'zh'))
-    
+
+    tz = pytz.timezone(scheduler_config.get("timezone", "Asia/Shanghai"))
+    scheduler = BlockingScheduler(timezone=tz)
+    specs = register_source_jobs(scheduler, config, logger, notifier)
+    logger.info(text(
+        f"多源调度器已加载 {len(specs)} 个任务：{', '.join(item['id'] for item in specs)}",
+        f"Loaded {len(specs)} source jobs: {', '.join(item['id'] for item in specs)}",
+    ))
+
+    if scheduler_config.get("run_on_start", False):
+        for spec in specs:
+            run_source_job(
+                spec["id"],
+                spec["sources"],
+                config=config,
+                logger=logger,
+                notifier=notifier,
+            )
+
     try:
-        # 启动调度器 / Start scheduler loop
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
-        logger.info(text("定时调度器已停止", "Scheduler stopped"))
-        print("\n" + "=" * 60)
-        print(text("👋 定时调度器已停止", "👋 Scheduler stopped"))
-        print("=" * 60 + "\n")
+        logger.info(text("多源调度器已停止", "Source scheduler stopped"))
 
 
 if __name__ == "__main__":

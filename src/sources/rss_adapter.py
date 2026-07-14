@@ -116,6 +116,8 @@ class RSSSourceAdapter(BaseSourceAdapter):
                 if not record["title"]:
                     self.logger.warning("Skipping untitled RSS entry from %s", feed_url)
                     continue
+                if not self._matches_content_filters(record, feed_config):
+                    continue
                 dedup_key = record["dedup_key"]
                 if dedup_key in self.state["seen"]:
                     continue
@@ -216,6 +218,41 @@ class RSSSourceAdapter(BaseSourceAdapter):
             return
         retained = sorted(seen.items(), key=lambda item: item[1], reverse=True)[: self.max_seen_items]
         self.state["seen"] = dict(retained)
+
+    def _matches_content_filters(
+        self, record: Dict[str, Any], feed_config: Dict[str, Any]
+    ) -> bool:
+        """Apply optional source/feed keyword filters before an item enters state."""
+        include = [
+            *self._string_list(self.source_config.get("include_keywords")),
+            *self._string_list(feed_config.get("include_keywords")),
+        ]
+        exclude = [
+            *self._string_list(self.source_config.get("exclude_keywords")),
+            *self._string_list(feed_config.get("exclude_keywords")),
+        ]
+        scope = str(
+            feed_config.get("filter_scope")
+            or self.source_config.get("filter_scope")
+            or "all"
+        ).lower()
+        fields = [str(record.get("title", ""))]
+        if scope != "title":
+            fields.extend([
+                str(record.get("content", "")),
+                " ".join(str(tag) for tag in record.get("tags", [])),
+            ])
+        searchable = " ".join(fields).casefold()
+        if exclude and any(term.casefold() in searchable for term in exclude):
+            return False
+        return not include or any(term.casefold() in searchable for term in include)
+
+    @staticmethod
+    def _string_list(value: Any) -> List[str]:
+        if isinstance(value, (list, tuple, set)):
+            return [str(item).strip() for item in value if str(item).strip()]
+        cleaned = str(value or "").strip()
+        return [cleaned] if cleaned else []
 
     @staticmethod
     def _entry_datetime(entry: Dict[str, Any]) -> str:

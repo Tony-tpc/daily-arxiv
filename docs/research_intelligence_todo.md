@@ -666,13 +666,15 @@ src/
 
 ### 11.2 调度与任务编排升级
 
-- [ ] 升级 `scheduler.py` 支持 source-specific jobs
-- [ ] 允许不同抓取频率：
+状态：已完成
+
+- [x] 升级 `scheduler.py` 支持 source-specific jobs
+- [x] 允许不同抓取频率：
   - arXiv：daily
   - news：每 6~12 小时
   - policy：daily / weekly
   - industry_report：weekly
-- [ ] 增加失败重试、任务日志、任务状态文件
+- [x] 增加失败重试、任务日志、任务状态文件
 
 **验收标准**
 

@@ -95,9 +95,27 @@ class DocumentSummarizer:
             return []
 
         iterator = tqdm(documents, desc="摘要文档") if show_progress else documents
-        summarized = [self.summarize_document(document) for document in iterator]
+        reuse_existing = bool(
+            self.config.get("summarization", {}).get("reuse_existing", True)
+        )
+        summarized = [
+            dict(document)
+            if reuse_existing and self._has_reusable_summary(document)
+            else self.summarize_document(document)
+            for document in iterator
+        ]
         self._save_summaries(summarized)
         return summarized
+
+    @staticmethod
+    def _has_reusable_summary(document: Dict[str, Any]) -> bool:
+        """Avoid repeated LLM calls for unchanged documents in incremental jobs."""
+        return bool(
+            document.get("summarized_at")
+            and document.get("summary")
+            and isinstance(document.get("web_card"), dict)
+            and not document.get("summary_error", False)
+        )
 
     def generate_report(self, documents: List[Dict[str, Any]]) -> str:
         """Render a concise mixed-source Markdown report."""

@@ -119,7 +119,7 @@ priority_rules:
 # 多源采集配置 / Multi-source collection settings
 sources:
   arxiv:
-    enabled: false
+    enabled: true
     # 研究领域类别（可以是多个）/ Research categories (multiple allowed)
     categories:
       - "eess.SY"
@@ -202,8 +202,24 @@ sources:
     topic_query: '"peer-to-peer energy trading" OR "P2P energy trading" OR "peer-to-peer electricity market" OR "peer-to-peer electricity trading" OR "peer-to-peer energy market" OR "P2P electricity market"'
 
   rss:
-    enabled: false
-    # 国内试点来源；顶层 RSS 开关启用前不会发起请求。
+    enabled: true
+    # 仅保留与中国能源系统、市场和自主决策相关的国内新闻。
+    filter_scope: "title"
+    include_keywords:
+      - "能源"
+      - "电力"
+      - "电网"
+      - "储能"
+      - "新能源"
+      - "虚拟电厂"
+      - "源网荷储"
+      - "需求响应"
+      - "微电网"
+      - "电力市场"
+      - "能源智能"
+    exclude_keywords:
+      - "机械臂"
+      - "人形机器人"
     feeds:
       - name: "人民网 IT"
         url: "https://www.people.com.cn/rss/it.xml"
@@ -233,7 +249,7 @@ sources:
     max_seen_items: 10000
 
   policy:
-    enabled: false
+    enabled: true
     feeds:
       - name: "国家能源局"
         url: "https://www.nea.gov.cn/"
@@ -287,8 +303,31 @@ sources:
       max_tokens: 900
 
   industry_report:
-    enabled: false
-    feeds: []
+    enabled: true
+    feeds:
+      - name: "国家能源局可靠性和质监中心"
+        url: "https://prpq.nea.gov.cn/ndbg"
+        format: "html"
+        item_selector: "dl.dl_l"
+        link_selector: "dt a[href]"
+        date_selector: "dd span"
+        detail_content_selector: ".article-content"
+        fetch_detail: true
+        institution: "国家能源局电力可靠性管理和工程质量监督中心"
+        report_type: "annual_report"
+        region: "CN"
+        title_keywords_any:
+          - "报告"
+          - "蓝皮书"
+          - "白皮书"
+        title_keywords_exclude:
+          - "预算"
+          - "决算"
+          - "网站工作年度报表"
+        topic_directions:
+          - "中国电力系统"
+          - "电力市场"
+        max_entries: 30
     regions:
       - "CN"
     request_timeout_seconds: 20
@@ -373,14 +412,56 @@ scheduler:
   # 是否启用自动调度 / Enable automatic scheduling
   enabled: true
   
-  # 运行时间（24小时制，HH:MM 格式）/ Run time (24-hour format, HH:MM)
-  run_time: "09:00"
-  
   # 时区 / Timezone
   timezone: "Asia/Shanghai"
   
-  # 启动时是否立即运行一次 / Run once on startup
-  run_on_start: true
+  # 启动时默认只注册任务，避免服务重启触发四类来源同时抓取。
+  run_on_start: false
+
+  # 失败重试采用有上限的指数退避。
+  retry:
+    max_attempts: 3
+    base_delay_seconds: 30
+    max_delay_seconds: 300
+
+  status_path: "data/state/scheduler_status.json"
+  task_log_path: "logs/scheduler_jobs.jsonl"
+
+  # 学术、国内新闻、中国政策、国内行业报告独立调度。
+  jobs:
+    academic_daily:
+      enabled: true
+      name: "学术论文每日采集"
+      sources:
+        - "arxiv"
+        - "openalex_search"
+      trigger: "cron"
+      hour: 9
+      minute: 0
+    news_8h:
+      enabled: true
+      name: "国内能源新闻每八小时采集"
+      sources:
+        - "rss"
+      trigger: "interval"
+      hours: 8
+    policy_daily:
+      enabled: true
+      name: "中国能源政策每日采集"
+      sources:
+        - "policy"
+      trigger: "cron"
+      hour: 10
+      minute: 0
+    industry_weekly:
+      enabled: true
+      name: "国内能源行业报告每周采集"
+      sources:
+        - "industry_report"
+      trigger: "cron"
+      day_of_week: "mon"
+      hour: 11
+      minute: 0
   
   # 邮件通知配置（可选）/ Email notification settings (optional)
   notification:

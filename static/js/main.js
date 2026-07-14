@@ -70,7 +70,14 @@ const I18N = {
         reportPeriod: '报告周期',
         reportGenerated: '生成于',
         noIntelligence: '暂无符合条件的科研情报',
-        signalInsufficient: '历史信号不足，运行多源采集后将在此展示'
+        signalInsufficient: '历史信号不足，运行多源采集后将在此展示',
+        schedulerPending: '待运行',
+        schedulerEmpty: '本轮无新增',
+        schedulerFailed: '失败',
+        schedulerSucceeded: '成功',
+        schedulerPartial: '部分成功',
+        schedulerDisabled: '自动调度未启用',
+        schedulerLoadFailed: '任务状态加载失败'
     },
     en: {
         monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -138,7 +145,14 @@ const I18N = {
         reportPeriod: 'Period',
         reportGenerated: 'Generated',
         noIntelligence: 'No matching intelligence',
-        signalInsufficient: 'Run multi-source collection to build historical signals'
+        signalInsufficient: 'Run multi-source collection to build historical signals',
+        schedulerPending: 'Pending',
+        schedulerEmpty: 'No new records',
+        schedulerFailed: 'Failed',
+        schedulerSucceeded: 'Succeeded',
+        schedulerPartial: 'Partial',
+        schedulerDisabled: 'Scheduler disabled',
+        schedulerLoadFailed: 'Failed to load job status'
     }
 };
 
@@ -391,7 +405,8 @@ async function loadAllData() {
             loadDirectory('news'),
             loadDirectory('industry_report'),
             loadReport(),
-            loadIntelligenceHome()
+            loadIntelligenceHome(),
+            loadSchedulerStatus()
         ]);
         renderPapers(filterPapers(state.allPapers));
         renderFeaturedPapers(state.allPapers.slice(0, 5));
@@ -724,6 +739,40 @@ function renderHomeTrendSignals() {
     container.innerHTML = signals.length
         ? signals.map(item => `<div class="home-trend-signal"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div>`).join('')
         : `<p class="trend-note">${t('signalInsufficient')}</p>`;
+}
+
+async function loadSchedulerStatus() {
+    const container = document.getElementById('scheduler-job-status');
+    if (!container) return;
+    try {
+        const response = await fetch('/api/scheduler/status');
+        if (!response.ok) throw new Error('Failed to load scheduler status');
+        const payload = await response.json();
+        if (!payload.enabled) {
+            container.innerHTML = `<p class="trend-note">${t('schedulerDisabled')}</p>`;
+            return;
+        }
+        const labels = {
+            pending: t('schedulerPending'),
+            running: LANG === 'zh' ? '运行中' : 'Running',
+            empty: t('schedulerEmpty'),
+            failed: t('schedulerFailed'),
+            succeeded: t('schedulerSucceeded'),
+            partial: t('schedulerPartial')
+        };
+        container.innerHTML = (payload.jobs || []).map(job => {
+            const status = job.status || 'pending';
+            const finished = job.last_finished_at || job.finished_at || '';
+            return `<article class="scheduler-job-item scheduler-job-${escapeHtml(status)}">
+                <div><strong>${escapeHtml(job.name || job.id || '')}</strong><span>${escapeHtml(job.schedule || '')}</span></div>
+                <span class="scheduler-status-badge">${escapeHtml(labels[status] || status)}</span>
+                <small>${finished ? formatReportTime(finished) : `${(job.sources || []).length} ${LANG === 'zh' ? '个来源' : 'sources'}`}</small>
+            </article>`;
+        }).join('') || `<p class="trend-note">${t('schedulerPending')}</p>`;
+    } catch (error) {
+        console.warn('加载调度状态失败:', error);
+        container.innerHTML = `<p class="trend-note">${t('schedulerLoadFailed')}</p>`;
+    }
 }
 
 async function loadReport(reportType) {
@@ -1721,6 +1770,9 @@ function initEventListeners() {
     });
     document.getElementById('report-refresh')?.addEventListener('click', () => {
         loadReport();
+    });
+    document.getElementById('scheduler-status-refresh')?.addEventListener('click', () => {
+        loadSchedulerStatus();
     });
 
     document.getElementById('home-filter-apply')?.addEventListener('click', () => {
