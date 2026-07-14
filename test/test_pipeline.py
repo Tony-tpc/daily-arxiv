@@ -59,12 +59,13 @@ class PipelineTests(unittest.TestCase):
                 Mock(run=lambda ctx: _record(calls, 'extract', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'cross_source', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'analyze', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'report', ctx)),
             ]
             run_pipeline(context)
 
         self.assertEqual(calls, [
             'fetch', 'normalize', 'ranking', 'linking', 'summarize', 'export',
-            'extract', 'cross_source', 'analyze',
+            'extract', 'cross_source', 'analyze', 'report',
         ])
 
     def test_fetch_stage_retries_with_fallback_window(self):
@@ -244,6 +245,41 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(context.cross_source_result['direction_count'], 1)
         self.assertEqual(
             context.cross_source_result['directions'][0]['direction'], '虚拟电厂'
+        )
+
+    def test_report_stage_persists_web_ready_report(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.config['reporting'] = {'enabled': True, 'default_type': 'weekly'}
+        context.summarized_documents = [{
+            'id': 'paper-1',
+            'source_type': 'paper',
+            'title': '能源智能体论文',
+            'published_at': '2026-07-14',
+        }]
+        context.analysis_result = {'temporal_trends': {}}
+        generator = Mock()
+        generator.generate.return_value = {'report_id': 'weekly-test'}
+        generator.save.return_value = {
+            'json': 'data/reports/weekly-test.json',
+            'markdown': 'data/reports/weekly-test.md',
+        }
+
+        with patch(
+            'src.pipeline.report_stage.IntelligenceReportGenerator',
+            return_value=generator,
+        ):
+            from src.pipeline import report_stage
+            report_stage.run(context)
+
+        generator.generate.assert_called_once_with(
+            context.summarized_documents,
+            context.analysis_result,
+            report_type='weekly',
+        )
+        self.assertEqual(context.report_result['report_id'], 'weekly-test')
+        self.assertEqual(
+            context.artifacts['intelligence_report_markdown'],
+            'data/reports/weekly-test.md',
         )
 
     def test_extract_stage_keeps_local_tags_when_llm_extraction_fails(self):

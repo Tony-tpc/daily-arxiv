@@ -19,6 +19,7 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 import markdown
 
 from src.ranking.relevance_ranker import RelevanceRanker
+from src.reporting.intelligence_report_generator import IntelligenceReportGenerator
 from src.storage.base import build_storage
 from src.utils import load_config, load_json, get_language
 
@@ -123,10 +124,34 @@ def _load_intelligence_documents() -> list[dict]:
 
     unique_documents = {}
     for document in documents:
+        if not document.get('source_type'):
+            document = _build_document_from_paper(document)
         document_id = str(document.get('id') or document.get('url') or document.get('title') or '')
         if document_id:
             unique_documents[document_id] = document
     return list(unique_documents.values())
+
+
+def _load_latest_report(report_type: str = "weekly") -> dict:
+    """Load a persisted report, or build a read-only preview from current data."""
+    report_directory = project_root / str(
+        config.get('reporting', {}).get('directory', 'data/reports')
+    )
+    candidates = []
+    latest = report_directory / 'latest.json'
+    if latest.exists():
+        candidates.append(latest)
+    candidates.extend(sorted(report_directory.glob(f'{report_type}_*.json'), reverse=True))
+    for path in candidates:
+        payload = load_json(str(path)) or {}
+        if payload and payload.get('report_type') == report_type:
+            return payload
+
+    return IntelligenceReportGenerator(config).generate(
+        _load_intelligence_documents(),
+        load_json('data/analysis/latest.json') or {},
+        report_type=report_type,
+    )
 
 
 def _build_document_from_paper(paper: dict, summary_record: dict | None = None):
@@ -412,6 +437,18 @@ def get_documents():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/reports/latest')
+def get_latest_report():
+    """Return the latest weekly or stage report for the website report reader."""
+    report_type = str(request.args.get('report_type', 'weekly')).strip().lower()
+    if report_type not in {'weekly', 'stage'}:
+        return jsonify({'error': 'report_type 必须是 weekly 或 stage'}), 400
+    try:
+        return jsonify(_load_latest_report(report_type))
+    except (OSError, ValueError) as exc:
+        return jsonify({'error': str(exc)}), 500
 
 
 @app.route('/api/knowledge')

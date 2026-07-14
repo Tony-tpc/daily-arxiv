@@ -63,7 +63,12 @@ const I18N = {
         emptyReportTitle: '暂无行业报告数据',
         emptyReportHint: '配置国内行业报告来源并运行采集任务后，报告将在此展示。',
         relatedIntelligence: '关联情报',
-        duplicateSources: '已合并来源'
+        duplicateSources: '已合并来源',
+        reportLoadFailed: '报告加载失败',
+        reportEmpty: '本周期暂无可展示条目',
+        reportOriginal: '查看原始来源',
+        reportPeriod: '报告周期',
+        reportGenerated: '生成于'
     },
     en: {
         monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -124,7 +129,12 @@ const I18N = {
         emptyReportTitle: 'No industry report data',
         emptyReportHint: 'Reports will appear after sources are configured and collected.',
         relatedIntelligence: 'Related intelligence',
-        duplicateSources: 'Merged sources'
+        duplicateSources: 'Merged sources',
+        reportLoadFailed: 'Failed to load report',
+        reportEmpty: 'No items in this period',
+        reportOriginal: 'Open source',
+        reportPeriod: 'Period',
+        reportGenerated: 'Generated'
     }
 };
 
@@ -164,6 +174,7 @@ const state = {
     },
     allCategories: [],
     analysis: null,
+    report: null,
     history: [],
     knowledgeByPaperId: {},
     facetSchema: [],
@@ -371,7 +382,8 @@ async function loadAllData() {
             loadCategories(),
             loadDirectory('policy'),
             loadDirectory('news'),
-            loadDirectory('industry_report')
+            loadDirectory('industry_report'),
+            loadReport()
         ]);
         renderPapers(filterPapers(state.allPapers));
         renderFeaturedPapers(state.allPapers.slice(0, 5));
@@ -623,6 +635,97 @@ function renderPapers(papers) {
         </div>
     `;
     }).join('');
+}
+
+async function loadReport(reportType) {
+    const selectedType = reportType || document.getElementById('report-type')?.value || 'weekly';
+    showLoading('intelligence-report');
+    try {
+        const response = await fetch(`/api/reports/latest?report_type=${encodeURIComponent(selectedType)}`);
+        if (!response.ok) throw new Error('Failed to load report');
+        state.report = await response.json();
+        renderIntelligenceReport(state.report);
+    } catch (error) {
+        console.error('加载情报报告失败:', error);
+        showError('intelligence-report', t('reportLoadFailed'));
+    }
+}
+
+function renderIntelligenceReport(report) {
+    updateElement('report-title', report.title || '');
+    updateElement(
+        'report-period',
+        `${t('reportPeriod')}：${report.period_start || '—'} — ${report.period_end || '—'} · ${t('reportGenerated')} ${formatReportTime(report.generated_at)}`
+    );
+    const sourceCounts = report.source_counts || {};
+    updateElement('report-document-count', Number(report.document_count || 0));
+    updateElement('report-paper-count', Number(sourceCounts.paper || 0));
+    updateElement('report-policy-count', Number(sourceCounts.policy || 0));
+    updateElement(
+        'report-industry-count',
+        Number(sourceCounts.news || 0) + Number(sourceCounts.industry_report || 0)
+    );
+
+    const container = document.getElementById('intelligence-report');
+    if (!container) return;
+    const sections = report.sections || [];
+    if (!sections.length) {
+        container.innerHTML = `<div class="report-empty">${t('reportEmpty')}</div>`;
+        return;
+    }
+    const icons = {
+        hot_papers: 'fa-file-circle-check',
+        policy_guidance: 'fa-landmark-flag',
+        news_and_industry: 'fa-industry',
+        key_trends: 'fa-arrow-trend-up',
+        research_inspirations: 'fa-lightbulb',
+        next_actions: 'fa-list-check'
+    };
+    container.innerHTML = sections.map((section, index) => {
+        const items = section.items || [];
+        return `<article class="report-section-card report-section-${escapeHtml(section.key || '')}">
+            <header>
+                <span class="report-section-index">${String(index + 1).padStart(2, '0')}</span>
+                <i class="fas ${icons[section.key] || 'fa-file-lines'}"></i>
+                <h2>${escapeHtml(section.title || '')}</h2>
+                <span class="report-section-count">${items.length}</span>
+            </header>
+            <div class="report-section-items">
+                ${items.length ? items.map(renderReportItem).join('') : `<p class="report-empty">${t('reportEmpty')}</p>`}
+            </div>
+        </article>`;
+    }).join('');
+}
+
+function renderReportItem(item) {
+    const score = Number(item.importance_score || 0);
+    const sourceUrl = /^https?:\/\//i.test(item.url || '') ? item.url : '';
+    const sourceTypeLabel = {
+        paper: LANG === 'zh' ? '论文' : 'Paper',
+        policy: LANG === 'zh' ? '政策' : 'Policy',
+        news: LANG === 'zh' ? '新闻' : 'News',
+        industry_report: LANG === 'zh' ? '行业报告' : 'Industry report'
+    }[item.source_type] || '';
+    return `<div class="report-item">
+        <div class="report-item-heading">
+            <h3>${escapeHtml(item.heading || '')}</h3>
+            ${sourceTypeLabel ? `<span class="report-source-chip">${sourceTypeLabel}</span>` : ''}
+            ${score > 0 ? `<span class="report-score">${score.toFixed(1)}</span>` : ''}
+        </div>
+        ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ''}
+        <div class="report-item-footer">
+            ${item.meta ? `<span>${escapeHtml(item.meta)}</span>` : '<span></span>'}
+            ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${t('reportOriginal')}<i class="fas fa-arrow-up-right-from-square"></i></a>` : ''}
+        </div>
+    </div>`;
+}
+
+function formatReportTime(value) {
+    const parsed = new Date(value || '');
+    if (Number.isNaN(parsed.getTime())) return value || '—';
+    return new Intl.DateTimeFormat(LANG === 'zh' ? 'zh-CN' : 'en', {
+        month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    }).format(parsed);
 }
 
 async function loadDirectory(sourceType) {
@@ -1417,6 +1520,13 @@ function initEventListeners() {
             loadDirectory(sourceType);
         });
     });
+
+    document.getElementById('report-type')?.addEventListener('change', event => {
+        loadReport(event.target.value);
+    });
+    document.getElementById('report-refresh')?.addEventListener('click', () => {
+        loadReport();
+    });
 }
 
 function sortPapers(sortBy) {
@@ -1509,5 +1619,6 @@ window.dailyArxiv = {
     searchPapers,
     loadPapers,
     loadDirectory,
+    loadReport,
     toggleTheme
 };

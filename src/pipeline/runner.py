@@ -19,6 +19,7 @@ def run_pipeline(context: PipelineContext) -> PipelineContext:
         'src.pipeline.extract_stage',
         'src.pipeline.cross_source_stage',
         'src.pipeline.analyze_stage',
+        'src.pipeline.report_stage',
     ]
 
     for module_name in stage_modules:

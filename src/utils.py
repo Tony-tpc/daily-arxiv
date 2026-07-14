@@ -88,6 +88,14 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     analysis.setdefault('compare_sources', True)
     analysis.setdefault('entity_tracking', True)
 
+    reporting = normalized.setdefault('reporting', {})
+    reporting.setdefault('enabled', True)
+    reporting.setdefault('default_type', 'weekly')
+    reporting.setdefault('directory', 'data/reports')
+    reporting.setdefault('max_items_per_section', 6)
+    reporting.setdefault('weekly_days', 7)
+    reporting.setdefault('stage_days', 180)
+
     storage = normalized.setdefault('storage', {})
     storage.setdefault('type', 'json')
     storage.setdefault('json_path', 'data/papers')

@@ -438,6 +438,14 @@ analysis:
     weak_threshold: 40
     max_representatives: 3
 
+reporting:
+  enabled: true
+  default_type: "weekly"
+  directory: "data/reports"
+  max_items_per_section: 6
+  weekly_days: 7
+  stage_days: 180
+
 # 日志配置 / Logging settings
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL

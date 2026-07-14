@@ -76,6 +76,10 @@
                     <span>{{ '行业报告' if language == 'zh' else 'Industry Reports' }}</span>
                     <span class="nav-count" id="industry-report-nav-count">0</span>
                 </a>
+                <a href="#reports" class="nav-item" data-section="reports">
+                    <i class="fas fa-book-open-reader"></i>
+                    <span>{{ '情报报告' if language == 'zh' else 'Reports' }}</span>
+                </a>
                 <a href="#analysis" class="nav-item" data-section="analysis">
                     <i class="fas fa-chart-line"></i>
                     <span>{{ '趋势分析' if language == 'zh' else 'Analysis' }}</span>
@@ -313,6 +317,34 @@
                     <select class="filter-select" data-directory-sort="industry_report"><option value="relevance">{{ '按研究价值' if language == 'zh' else 'By relevance' }}</option><option value="date">{{ '按发布日期' if language == 'zh' else 'By date' }}</option><option value="title">{{ '按标题' if language == 'zh' else 'By title' }}</option></select>
                 </div>
                 <div id="industry-report-list" class="papers-list intelligence-list"></div>
+            </section>
+
+            <!-- 情报报告 -->
+            <section id="reports-section" class="content-section intelligence-report-section">
+                <div class="section-header report-page-header">
+                    <div>
+                        <p class="report-eyebrow">{{ 'ENERGY EMBODIED INTELLIGENCE' if language == 'zh' else 'ENERGY EMBODIED INTELLIGENCE' }}</p>
+                        <h1 id="report-title">{{ '中国能源具身智能研究情报周报' if language == 'zh' else 'Energy Embodied Intelligence Weekly' }}</h1>
+                        <p class="section-desc" id="report-period">{{ '正在读取最新报告…' if language == 'zh' else 'Loading the latest report…' }}</p>
+                    </div>
+                    <div class="report-controls" aria-label="{{ '报告类型' if language == 'zh' else 'Report type' }}">
+                        <label for="report-type">{{ '报告类型' if language == 'zh' else 'Report type' }}</label>
+                        <select id="report-type" class="filter-select">
+                            <option value="weekly">{{ '周报' if language == 'zh' else 'Weekly' }}</option>
+                            <option value="stage">{{ '阶段报告' if language == 'zh' else 'Stage report' }}</option>
+                        </select>
+                        <button type="button" id="report-refresh" class="report-refresh-btn"><i class="fas fa-rotate"></i>{{ '刷新' if language == 'zh' else 'Refresh' }}</button>
+                    </div>
+                </div>
+                <div class="report-metrics" aria-label="{{ '报告概览' if language == 'zh' else 'Report overview' }}">
+                    <div><span>{{ '收录文档' if language == 'zh' else 'Documents' }}</span><strong id="report-document-count">0</strong></div>
+                    <div><span>{{ '论文' if language == 'zh' else 'Papers' }}</span><strong id="report-paper-count">0</strong></div>
+                    <div><span>{{ '中国政策' if language == 'zh' else 'Policies' }}</span><strong id="report-policy-count">0</strong></div>
+                    <div><span>{{ '新闻 / 行业' if language == 'zh' else 'News / Industry' }}</span><strong id="report-industry-count">0</strong></div>
+                </div>
+                <div id="intelligence-report" class="intelligence-report-reader">
+                    <div class="loading"><div class="spinner"></div><p>{{ '正在生成可视化报告…' if language == 'zh' else 'Preparing report…' }}</p></div>
+                </div>
             </section>
 
             <!-- 趋势分析部分 -->

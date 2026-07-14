@@ -598,17 +598,19 @@ src/
 
 ### 10.3 研究情报报告生成器
 
-- [ ] 新增文件：`src/reporting/intelligence_report_generator.py`
-- [ ] 支持自动生成周报 / 阶段报告
-- [ ] 固定章节建议包括：
+状态：已完成
+
+- [x] 新增文件：`src/reporting/intelligence_report_generator.py`
+- [x] 支持自动生成周报 / 阶段报告
+- [x] 固定章节建议包括：
   - 热点论文
   - 政策导向
   - 新闻与行业报告
   - 关键趋势
   - 研究启发
   - 后续建议
-- [ ] 输出 Markdown + JSON
-- [ ] 同时提供网页端报告视图，不要求用户手动打开 Markdown 文件
+- [x] 输出 Markdown + JSON
+- [x] 同时提供网页端报告视图，不要求用户手动打开 Markdown 文件
 
 **验收标准**
 
