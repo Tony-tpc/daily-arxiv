@@ -5,6 +5,7 @@ import importlib
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 
 project_root = Path(__file__).parent.parent
@@ -47,11 +48,18 @@ class SourceRegistryTests(unittest.TestCase):
         self.assertEqual(adapter.source_config["days_back"], 3)
         adapter.validate()
 
-    def test_arxiv_adapter_normalize_is_passthrough_for_now(self):
+    def test_arxiv_adapter_delegates_fetch_and_enrichment(self):
         adapter = ArxivSourceAdapter(self.config)
         records = [{"id": "1234.5678", "title": "Example"}]
+        adapter.fetcher = Mock()
+        adapter.fetcher.fetch_papers.return_value = records
+        adapter.openalex_adapter = Mock()
+        adapter.openalex_adapter.enrich_records.return_value = [{**records[0], "citation_count": 8}]
 
-        self.assertEqual(adapter.normalize(records), records)
+        self.assertEqual(adapter.fetch(days_back=2), records)
+        self.assertEqual(adapter.normalize(records)[0]["citation_count"], 8)
+        adapter.fetcher.fetch_papers.assert_called_once_with(days_back=2)
+        adapter.openalex_adapter.enrich_records.assert_called_once_with(records)
 
 
 if __name__ == "__main__":
