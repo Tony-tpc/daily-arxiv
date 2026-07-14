@@ -33,6 +33,8 @@ class WebSchedulerStatusTests(unittest.TestCase):
         news = next(item for item in payload["jobs"] if item["id"] == "news_8h")
         self.assertEqual(news["status"], "succeeded")
         self.assertEqual(news["schedule"], "每 8 小时")
+        industry = next(item for item in payload["jobs"] if item["id"] == "industry_weekly")
+        self.assertEqual(industry["schedule"], "每周 周一 11:00")
 
 
 if __name__ == "__main__":

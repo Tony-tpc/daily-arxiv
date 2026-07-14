@@ -486,6 +486,11 @@ def get_scheduler_status():
             else:
                 time_label = f"{int(spec.get('hour', 0)):02d}:{int(spec.get('minute', 0)):02d}"
                 day = str(spec.get('day_of_week') or '')
+                if language == 'zh':
+                    day = {
+                        'mon': '周一', 'tue': '周二', 'wed': '周三', 'thu': '周四',
+                        'fri': '周五', 'sat': '周六', 'sun': '周日',
+                    }.get(day.lower(), day)
                 schedule = (
                     f"每周 {day} {time_label}" if day and language == 'zh'
                     else f"Weekly {day} {time_label}" if day
