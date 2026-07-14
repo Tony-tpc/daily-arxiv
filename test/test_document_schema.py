@@ -51,6 +51,7 @@ class DocumentSchemaTests(unittest.TestCase):
         document = DocumentSchema.from_dict(payload)
 
         self.assertEqual(document.issuing_body, "NDRC")
+        self.assertEqual(document.impact_areas, [])
         self.assertEqual(document.reading_suggestion.read_priority, "high")
         self.assertEqual(document.provenance.collected_via, "policy_adapter")
 

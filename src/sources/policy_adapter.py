@@ -1,0 +1,233 @@
+"""Policy document collection and structured policy metadata extraction."""
+
+from __future__ import annotations
+
+import json
+import re
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+from src.models.document_schema import SourceType, create_document
+from src.summarizer.llm_factory import LLMClientFactory
+from src.utils import save_json
+
+from .rss_adapter import RSSSourceAdapter
+
+
+class PolicySourceAdapter(RSSSourceAdapter):
+    """Collect configured policy feeds and normalize entries as policy documents."""
+
+    source_name = "policy"
+
+    def __init__(self, config: Dict[str, Any], llm_client: Any = None):
+        self._llm_client = llm_client
+        super().__init__(config)
+        self._feed_config = {
+            str(item.get("url", "")): item
+            for item in self.source_config.get("feeds", [])
+            if isinstance(item, dict)
+        }
+
+    @property
+    def source_config(self) -> Dict[str, Any]:
+        sources = self.config.get("sources", {}) if isinstance(self.config, dict) else {}
+        value = sources.get("policy", {}) if isinstance(sources, dict) else {}
+        return value if isinstance(value, dict) else {}
+
+    def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Extract deterministic and optional LLM policy fields into the schema."""
+        documents = []
+        for record in records:
+            if not str(record.get("title", "")).strip():
+                continue
+            feed_config = self._feed_config.get(str(record.get("feed_url", "")), {})
+            standard = self._extract_standard_fields(record, feed_config)
+            insights = self._extract_llm_insights(record, standard)
+            technology_directions = self._string_list(insights.get("technology_directions"))
+            impact_areas = self._unique(
+                standard["impact_areas"] + self._string_list(insights.get("impact_areas"))
+            )
+            document = create_document(
+                SourceType.POLICY,
+                id=f"policy:{record['dedup_key']}",
+                source_name=standard["issuing_body"],
+                title=str(record["title"]),
+                summary=str(record.get("summary", "")),
+                authors_or_orgs=[standard["issuing_body"]],
+                published_at=str(record.get("published_at", "")),
+                collected_at=str(record.get("collected_at", "")),
+                url=str(record.get("url", "")),
+                raw_text=str(record.get("content", "")),
+                keywords=self._unique(list(record.get("tags", [])) + impact_areas),
+                tags=self._unique(impact_areas + [standard["document_type"], standard["policy_strength"]]),
+                research_direction=technology_directions,
+                importance_score=self._strength_score(standard["policy_strength"]),
+                issuing_body=standard["issuing_body"],
+                policy_level=standard["policy_level"],
+                region=standard["region"],
+                effective_date=standard["effective_date"],
+                document_type=standard["document_type"],
+                impact_areas=impact_areas,
+                policy_strength=standard["policy_strength"],
+                core_policy_direction=self._clean_optional(insights.get("core_policy_direction")),
+                technology_directions=technology_directions,
+                potential_impact=self._clean_optional(insights.get("potential_impact")),
+                provenance={
+                    "collected_via": "policy_adapter",
+                    "source_record_id": str(record.get("entry_id", "")),
+                    "fetch_url": str(record.get("feed_url", "")),
+                    "metadata": {
+                        "dedup_key": record["dedup_key"],
+                        "llm_extracted": bool(insights),
+                    },
+                },
+            )
+            documents.append(document.to_dict())
+        return documents
+
+    def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        payload = {"source": self.source_name, "collected_at": self._now(), "records": records}
+        save_json(payload, str(self.snapshot_dir / f"policy_{timestamp}.json"))
+        save_json(payload, str(self.snapshot_dir / "latest.json"))
+
+    def _extract_standard_fields(
+        self, record: Dict[str, Any], feed_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        text = f"{record.get('title', '')} {record.get('content', '')}"
+        issuing_body = str(
+            feed_config.get("issuing_body")
+            or record.get("source_name")
+            or "Unknown policy issuer"
+        ).strip()
+        document_type = str(feed_config.get("document_type") or self._infer_document_type(text))
+        strength = str(feed_config.get("policy_strength") or self._infer_strength(text, document_type))
+        impact_areas = self._string_list(feed_config.get("impact_areas"))
+        impact_areas.extend(str(tag) for tag in record.get("tags", []))
+        lowered = text.casefold()
+        for topic in self.config.get("tracking_topics", []):
+            if str(topic).casefold() in lowered:
+                impact_areas.append(str(topic))
+        for group in self.config.get("keyword_groups", []):
+            if not isinstance(group, dict):
+                continue
+            if any(str(term).casefold() in lowered for term in group.get("terms", [])):
+                impact_areas.append(str(group.get("name", "")))
+        return {
+            "issuing_body": issuing_body,
+            "document_type": document_type,
+            "published_at": str(record.get("published_at", "")),
+            "effective_date": str(
+                feed_config.get("effective_date") or self._infer_effective_date(text)
+            ),
+            "impact_areas": self._unique(impact_areas),
+            "policy_strength": strength,
+            "policy_level": str(feed_config.get("policy_level", "unspecified")),
+            "region": str(feed_config.get("region") or record.get("region") or "global"),
+        }
+
+    def _extract_llm_insights(
+        self, record: Dict[str, Any], standard: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        extraction_config = self.source_config.get("llm_extraction", {})
+        if not extraction_config.get("enabled", True):
+            return {}
+        try:
+            if self._llm_client is None:
+                self._llm_client = LLMClientFactory.create_client(self.config)
+            prompt = f"""Extract policy intelligence from the document below.
+Return strict JSON only with keys: core_policy_direction (string),
+technology_directions (array of strings), potential_impact (string),
+impact_areas (array of strings). Do not invent facts.
+
+Known metadata: {json.dumps(standard, ensure_ascii=False)}
+Title: {record.get('title', '')}
+Text: {record.get('content', '')[:12000]}
+"""
+            response = self._llm_client.generate(
+                prompt,
+                system_prompt="You extract concise, evidence-grounded policy intelligence.",
+                max_tokens=int(extraction_config.get("max_tokens", 900)),
+            )
+            return self._parse_json_object(response)
+        except Exception as exc:
+            self.logger.warning("Policy LLM extraction failed for %s: %s", record.get("title"), exc)
+            return {}
+
+    @staticmethod
+    def _infer_document_type(text: str) -> str:
+        lowered = text.casefold()
+        candidates = [
+            ("regulation", ["regulation", "rule", "条例", "规定"]),
+            ("law", [" act ", " law ", "法案", "法律"]),
+            ("order", ["order", "命令", "令"]),
+            ("strategy", ["strategy", "roadmap", "战略", "路线图"]),
+            ("plan", ["plan", "规划", "计划"]),
+            ("guideline", ["guideline", "guidance", "指南", "指导意见"]),
+            ("notice", ["notice", "announcement", "通知", "公告"]),
+        ]
+        for document_type, terms in candidates:
+            if any(term in lowered for term in terms):
+                return document_type
+        return "policy_document"
+
+    @staticmethod
+    def _infer_strength(text: str, document_type: str) -> str:
+        lowered = text.casefold()
+        if document_type in {"law", "regulation", "order"} or any(
+            term in lowered for term in ["shall", "must", "mandatory", "应当", "必须"]
+        ):
+            return "high"
+        if document_type in {"strategy", "plan", "guideline"}:
+            return "medium"
+        return "low"
+
+    @staticmethod
+    def _infer_effective_date(text: str) -> str:
+        patterns = [
+            r"(?:effective(?:\s+date|\s+from)?|takes effect(?: on)?)[：:\s]+(\d{4}[-/]\d{1,2}[-/]\d{1,2})",
+            r"(?:生效日期|自)[：:\s]*(\d{4}年\d{1,2}月\d{1,2}日)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match:
+                return match.group(1)
+        return ""
+
+    @staticmethod
+    def _parse_json_object(value: Any) -> Dict[str, Any]:
+        text = str(value or "").strip()
+        fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, flags=re.DOTALL | re.IGNORECASE)
+        if fenced:
+            text = fenced.group(1)
+        else:
+            start, end = text.find("{"), text.rfind("}")
+            if start >= 0 and end > start:
+                text = text[start : end + 1]
+        parsed = json.loads(text)
+        if not isinstance(parsed, dict):
+            raise ValueError("Policy extraction response must be a JSON object")
+        return parsed
+
+    @staticmethod
+    def _string_list(value: Any) -> List[str]:
+        if isinstance(value, str):
+            values = [part.strip() for part in value.split(",")]
+        elif isinstance(value, list):
+            values = [str(part).strip() for part in value]
+        else:
+            values = []
+        return [part for part in values if part]
+
+    @staticmethod
+    def _unique(values: List[str]) -> List[str]:
+        return list(dict.fromkeys(str(value).strip() for value in values if str(value).strip()))
+
+    @staticmethod
+    def _clean_optional(value: Any) -> Optional[str]:
+        cleaned = str(value or "").strip()
+        return cleaned or None
+
+    @staticmethod
+    def _strength_score(value: str) -> float:
+        return {"high": 0.9, "medium": 0.6, "low": 0.3}.get(value, 0.3)

@@ -172,6 +172,14 @@ sources:
     feeds: []
     regions:
       - "CN"
+    request_timeout_seconds: 20
+    state_path: "data/state/policy.json"
+    snapshot_dir: "data/raw/policy"
+    max_entries_per_feed: 100
+    max_seen_items: 10000
+    llm_extraction:
+      enabled: true
+      max_tokens: 900
 
   industry_report:
     enabled: false

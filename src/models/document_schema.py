@@ -72,6 +72,12 @@ class DocumentSchema:
     policy_level: Optional[str] = None
     region: Optional[str] = None
     effective_date: Optional[str] = None
+    document_type: Optional[str] = None
+    impact_areas: List[str] = field(default_factory=list)
+    policy_strength: Optional[str] = None
+    core_policy_direction: Optional[str] = None
+    technology_directions: List[str] = field(default_factory=list)
+    potential_impact: Optional[str] = None
 
     # News-specific fields
     media_name: Optional[str] = None

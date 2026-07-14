@@ -114,6 +114,16 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         rss_config.setdefault('max_entries_per_feed', 100)
         rss_config.setdefault('max_seen_items', 10000)
 
+    policy_config = sources.setdefault('policy', {})
+    if isinstance(policy_config, dict):
+        policy_config.setdefault('feeds', [])
+        policy_config.setdefault('request_timeout_seconds', 20)
+        policy_config.setdefault('state_path', 'data/state/policy.json')
+        policy_config.setdefault('snapshot_dir', 'data/raw/policy')
+        policy_config.setdefault('max_entries_per_feed', 100)
+        policy_config.setdefault('max_seen_items', 10000)
+        policy_config.setdefault('llm_extraction', {'enabled': True, 'max_tokens': 900})
+
     if isinstance(normalized.get('arxiv'), dict):
         normalized['arxiv'].setdefault('enabled', True)
 

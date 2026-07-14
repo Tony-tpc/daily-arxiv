@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Type
 from .arxiv_adapter import ArxivSourceAdapter
 from .base import BaseSourceAdapter
 from .openalex_search_adapter import OpenAlexSearchAdapter
+from .policy_adapter import PolicySourceAdapter
 from .rss_adapter import RSSSourceAdapter
 
 
@@ -49,4 +50,5 @@ def build_source_registry(config: Dict[str, Any]) -> SourceRegistry:
     registry.register("arxiv", ArxivSourceAdapter)
     registry.register("openalex_search", OpenAlexSearchAdapter)
     registry.register("rss", RSSSourceAdapter)
+    registry.register("policy", PolicySourceAdapter)
     return registry

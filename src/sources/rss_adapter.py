@@ -27,8 +27,12 @@ class RSSSourceAdapter(BaseSourceAdapter):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.timeout = float(self.source_config.get("request_timeout_seconds", 20))
-        self.state_path = str(self.source_config.get("state_path", "data/state/rss.json"))
-        self.snapshot_dir = Path(self.source_config.get("snapshot_dir", "data/raw/rss"))
+        self.state_path = str(
+            self.source_config.get("state_path", f"data/state/{self.source_name}.json")
+        )
+        self.snapshot_dir = Path(
+            self.source_config.get("snapshot_dir", f"data/raw/{self.source_name}")
+        )
         self.max_entries_per_feed = int(self.source_config.get("max_entries_per_feed", 100))
         self.max_seen_items = int(self.source_config.get("max_seen_items", 10000))
         self.state = load_json(self.state_path) or {"feeds": {}, "seen": {}}
@@ -163,7 +167,7 @@ class RSSSourceAdapter(BaseSourceAdapter):
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         payload = {"source": self.source_name, "collected_at": self._now(), "records": records}
-        save_json(payload, str(self.snapshot_dir / f"rss_{timestamp}.json"))
+        save_json(payload, str(self.snapshot_dir / f"{self.source_name}_{timestamp}.json"))
         save_json(payload, str(self.snapshot_dir / "latest.json"))
 
     def _raw_entry(
