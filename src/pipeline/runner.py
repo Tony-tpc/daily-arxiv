@@ -13,6 +13,7 @@ def run_pipeline(context: PipelineContext) -> PipelineContext:
         'src.pipeline.fetch_stage',
         'src.pipeline.normalize_stage',
         'src.pipeline.ranking_stage',
+        'src.pipeline.linking_stage',
         'src.pipeline.summarize_stage',
         'src.pipeline.export_stage',
         'src.pipeline.extract_stage',

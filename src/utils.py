@@ -65,6 +65,12 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     }))
     ranking_config.setdefault('thresholds', {'high': 70, 'medium': 45})
 
+    linking_config = normalized.setdefault('linking', {})
+    linking_config.setdefault('enabled', True)
+    linking_config.setdefault('title_similarity_threshold', 0.92)
+    linking_config.setdefault('relation_threshold', 0.35)
+    linking_config.setdefault('max_related_per_document', 8)
+
     outputs = normalized.setdefault('outputs', {})
     outputs.setdefault('markdown', {'enabled': True, 'directory': 'data/markdown'})
     outputs.setdefault('json', {'enabled': True, 'directory': 'data'})
@@ -260,8 +266,8 @@ def get_data_path(config: Dict[str, Any], subdir: str = 'papers') -> str:
     storage_config = config.get('storage', {})
     base_path = storage_config.get('json_path', 'data/papers')
     
-    if subdir == 'summaries':
-        return 'data/summaries'
+    if subdir in {'summaries', 'documents'}:
+        return f'data/{subdir}'
     
     return base_path
 

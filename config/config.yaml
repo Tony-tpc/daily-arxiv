@@ -55,6 +55,13 @@ ranking:
     high: 70
     medium: 45
 
+# 跨来源去重与关联；关联结果直接进入网页卡片。
+linking:
+  enabled: true
+  title_similarity_threshold: 0.92
+  relation_threshold: 0.35
+  max_related_per_document: 8
+
 # 研究主题关键词组（用于标签、摘要、分析，不直接等同于抓取查询）
 # Research keyword groups for analysis and classification, separate from fetch queries.
 keyword_groups:

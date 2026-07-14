@@ -22,8 +22,13 @@ class PipelineContext:
     primary_source_name: str = ""
     source_adapter: Any = None
     source_config: Dict[str, Any] = field(default_factory=dict)
+    source_adapters: Dict[str, Any] = field(default_factory=dict)
+    source_records: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    normalized_by_source: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    source_errors: Dict[str, str] = field(default_factory=dict)
     papers: List[Dict[str, Any]] = field(default_factory=list)
     normalized_records: List[Dict[str, Any]] = field(default_factory=list)
+    linking_result: Dict[str, Any] = field(default_factory=dict)
     summarized_documents: List[Dict[str, Any]] = field(default_factory=list)
     summarized_papers: List[Dict[str, Any]] = field(default_factory=list)
     summary_report: str = ""

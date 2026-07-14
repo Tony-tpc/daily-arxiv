@@ -53,6 +53,7 @@ class PipelineTests(unittest.TestCase):
                 Mock(run=lambda ctx: _record(calls, 'fetch', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'normalize', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'ranking', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'linking', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'summarize', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'export', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'extract', ctx)),
@@ -60,7 +61,7 @@ class PipelineTests(unittest.TestCase):
             ]
             run_pipeline(context)
 
-        self.assertEqual(calls, ['fetch', 'normalize', 'ranking', 'summarize', 'export', 'extract', 'analyze'])
+        self.assertEqual(calls, ['fetch', 'normalize', 'ranking', 'linking', 'summarize', 'export', 'extract', 'analyze'])
 
     def test_fetch_stage_retries_with_fallback_window(self):
         context = create_pipeline_context(self.config, self.logger, self.text)
@@ -81,6 +82,29 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(adapter.fetch.call_args_list[0].kwargs['days_back'], 2)
         self.assertEqual(adapter.fetch.call_args_list[1].kwargs['days_back'], 7)
         self.assertEqual(context.papers, [{'id': 'paper-1'}])
+
+    def test_fetch_stage_collects_every_enabled_source(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        paper_adapter = Mock(source_config={})
+        paper_adapter.fetch.return_value = [{'id': 'paper-1'}]
+        policy_adapter = Mock(source_config={})
+        policy_adapter.fetch.return_value = [{'id': 'policy-1'}]
+        registry = Mock()
+        registry.get_enabled_sources.return_value = ['openalex_search', 'policy']
+        registry.create.side_effect = lambda name: {
+            'openalex_search': paper_adapter,
+            'policy': policy_adapter,
+        }[name]
+
+        with patch('importlib.import_module') as import_module:
+            import_module.return_value = Mock(build_source_registry=Mock(return_value=registry))
+            from src.pipeline import fetch_stage
+            fetch_stage.run(context)
+
+        self.assertEqual(set(context.source_records), {'openalex_search', 'policy'})
+        self.assertEqual([item['id'] for item in context.papers], ['paper-1', 'policy-1'])
+        paper_adapter.fetch.assert_called_once_with()
+        policy_adapter.fetch.assert_called_once_with()
 
     def test_ranking_stage_prioritizes_domestic_energy_policy(self):
         context = create_pipeline_context(self.config, self.logger, self.text)
@@ -137,6 +161,42 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(context.normalized_records, [{'id': 'normalized-1'}])
 
+    def test_normalize_stage_combines_sources_and_canonicalizes_legacy_paper(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        paper_adapter = Mock()
+        paper_adapter.normalize.return_value = [{
+            'id': 'W1',
+            'title': 'Energy paper',
+            'authors': ['Alice'],
+            'published': 2026,
+            'entry_url': 'https://openalex.org/W1',
+            'categories': ['Energy'],
+        }]
+        policy_adapter = Mock()
+        policy_adapter.normalize.return_value = [{
+            'id': 'policy-1',
+            'source_type': 'policy',
+            'source_name': '国家能源局',
+            'title': '政策',
+        }]
+        context.enabled_sources = ['openalex_search', 'policy']
+        context.source_adapters = {
+            'openalex_search': paper_adapter,
+            'policy': policy_adapter,
+        }
+        context.source_records = {
+            'openalex_search': [{'id': 'W1'}],
+            'policy': [{'id': 'policy-1'}],
+        }
+
+        from src.pipeline import normalize_stage
+        normalize_stage.run(context)
+
+        self.assertEqual(len(context.normalized_records), 2)
+        self.assertEqual(context.normalized_records[0]['source_type'], 'paper')
+        self.assertEqual(context.normalized_records[0]['source_name'], 'OpenAlex')
+        self.assertEqual(context.normalized_records[1]['source_type'], 'policy')
+
     def test_analyze_stage_uses_context_records(self):
         context = create_pipeline_context(self.config, self.logger, self.text)
         context.papers = [{'id': 'paper-1', 'raw': True}]
@@ -187,6 +247,30 @@ class PipelineTests(unittest.TestCase):
         normalize_stage.run(context)
 
         context.source_adapter.save_enriched_snapshot.assert_called_once_with(context.normalized_records)
+
+    def test_linking_stage_updates_context_and_persists_snapshot(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.normalized_records = [
+            {
+                'id': 'paper-1', 'source_type': 'paper', 'source_name': 'arXiv',
+                'title': '虚拟电厂研究', 'url': 'https://example.cn/paper',
+                'tags': ['虚拟电厂'],
+            },
+            {
+                'id': 'policy-1', 'source_type': 'policy', 'source_name': '国家能源局',
+                'title': '虚拟电厂政策', 'url': 'https://example.cn/policy',
+                'tags': ['虚拟电厂'],
+            },
+        ]
+
+        with patch('src.pipeline.linking_stage.save_json') as save_json_mock:
+            from src.pipeline import linking_stage
+            linking_stage.run(context)
+
+        self.assertEqual(context.linking_result['relation_count'], 1)
+        self.assertEqual(len(context.normalized_records[0]['related_documents']), 1)
+        save_json_mock.assert_called_once()
+        self.assertEqual(context.artifacts['linked_documents'], 'data/documents/latest.json')
 
 
 def _mark_stop(context):

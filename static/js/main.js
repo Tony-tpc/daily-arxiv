@@ -61,7 +61,9 @@ const I18N = {
         emptyNewsTitle: '暂无国内新闻数据',
         emptyNewsHint: '采集任务运行后，国内能源新闻将在此展示。',
         emptyReportTitle: '暂无行业报告数据',
-        emptyReportHint: '配置国内行业报告来源并运行采集任务后，报告将在此展示。'
+        emptyReportHint: '配置国内行业报告来源并运行采集任务后，报告将在此展示。',
+        relatedIntelligence: '关联情报',
+        duplicateSources: '已合并来源'
     },
     en: {
         monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -120,7 +122,9 @@ const I18N = {
         emptyNewsTitle: 'No China news data',
         emptyNewsHint: 'News will appear after the collection job runs.',
         emptyReportTitle: 'No industry report data',
-        emptyReportHint: 'Reports will appear after sources are configured and collected.'
+        emptyReportHint: 'Reports will appear after sources are configured and collected.',
+        relatedIntelligence: 'Related intelligence',
+        duplicateSources: 'Merged sources'
     }
 };
 
@@ -597,6 +601,7 @@ function renderPapers(papers) {
                 ${renderCompactInfoBar(card, paper)}
             </div>
             ${renderKnowledgePanel(knowledge)}
+            ${renderRelatedDocuments(card)}
             <div class="paper-categories">
                 ${badges.map(cat => 
                     `<span class="category-badge">${escapeHtml(cat)}</span>`
@@ -688,10 +693,33 @@ function renderDirectoryDocuments(sourceType, documents) {
             </div></div>
             ${renderRankingPanel(card)}
             <p class="paper-abstract">${escapeHtml(summary)}</p>
+            ${renderRelatedDocuments(card)}
             <div class="paper-categories">${badges.slice(0, 12).map(tag => `<span class="category-badge">${escapeHtml(tag)}</span>`).join('')}</div>
             <div class="paper-actions"><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="btn-paper btn-primary"><i class="fas fa-arrow-up-right-from-square"></i>${t('originalSource')}</a></div>
         </article>`;
     }).join('');
+}
+
+function renderRelatedDocuments(card) {
+    const related = card.related_documents || [];
+    const duplicateSources = card.duplicate_sources || [];
+    if (!related.length && duplicateSources.length < 2) return '';
+    const typeLabels = LANG === 'zh'
+        ? {paper: '论文', policy: '政策', news: '新闻', industry_report: '行业报告'}
+        : {paper: 'Paper', policy: 'Policy', news: 'News', industry_report: 'Industry report'};
+    const links = related.map(item => `<a class="related-document" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer">
+        <span class="related-type">${typeLabels[item.source_type] || escapeHtml(item.source_type)}</span>
+        <span class="related-title">${escapeHtml(item.title)}</span>
+        <strong>${Math.round(Number(item.score || 0) * 100)}</strong>
+        <small>${escapeHtml(item.reason || '')}</small>
+    </a>`).join('');
+    const merged = duplicateSources.length > 1
+        ? `<div class="merged-sources"><i class="fas fa-code-merge"></i>${t('duplicateSources')}：${duplicateSources.map(escapeHtml).join('、')}</div>`
+        : '';
+    return `<details class="related-panel">
+        <summary><i class="fas fa-link"></i>${t('relatedIntelligence')} <span>${related.length}</span></summary>
+        ${merged}<div class="related-list">${links}</div>
+    </details>`;
 }
 
 function renderWebSuggestionPanel(card) {

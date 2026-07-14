@@ -455,18 +455,20 @@ src/
 
 ### 8.4 加入去重与跨来源关联逻辑
 
-- [ ] 新增文件：`src/linking/deduplicator.py`
-- [ ] 支持跨来源去重规则：
+状态：已完成
+
+- [x] 新增文件：`src/linking/deduplicator.py`
+- [x] 支持跨来源去重规则：
   - DOI
   - title similarity
   - canonical URL
-- [ ] 支持跨来源关联：
+- [x] 支持跨来源关联：
   - 论文 ↔ 政策
   - 论文 ↔ 新闻
   - 论文 ↔ 行业报告
   - 政策 ↔ 新闻
   - 政策 ↔ 行业报告
-- [ ] 生成 `related_documents`
+- [x] 生成 `related_documents`
 
 **验收标准**
 
@@ -664,7 +666,7 @@ src/
 
 - [ ] 为每个 source adapter 编写单元测试
 - [ ] 为统一 schema 编写验证测试
-- [ ] 为跨来源去重与关联编写测试
+- [x] 为跨来源去重与关联编写测试
 - [ ] 为导出器编写 golden-file 测试
 - [ ] 为趋势分析编写历史快照测试
 

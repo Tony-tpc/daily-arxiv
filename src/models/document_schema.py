@@ -69,6 +69,11 @@ class DocumentSchema:
     ranking_penalties: Dict[str, float] = field(default_factory=dict)
     reading_suggestion: ReadingSuggestion = field(default_factory=ReadingSuggestion)
     provenance: Provenance = field(default_factory=Provenance)
+    canonical_url: str = ""
+    duplicate_document_ids: List[str] = field(default_factory=list)
+    duplicate_sources: List[str] = field(default_factory=list)
+    duplicate_count: int = 0
+    related_documents: List[Dict[str, Any]] = field(default_factory=list)
     schema_version: str = SCHEMA_VERSION
 
     # Paper-specific fields
