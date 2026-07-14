@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import uuid
 from abc import ABC, abstractmethod
@@ -57,6 +58,28 @@ class StorageBackend(ABC):
     ) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
+    @abstractmethod
+    def list_snapshots(
+        self,
+        *,
+        date_from: str = "",
+        date_to: str = "",
+        source_type: str = "",
+        topic: str = "",
+    ) -> List[Dict[str, Any]]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def query_history(
+        self,
+        *,
+        date_from: str = "",
+        date_to: str = "",
+        source_type: str = "",
+        topic: str = "",
+    ) -> List[Dict[str, Any]]:
+        raise NotImplementedError
+
 
 class JSONStorage(StorageBackend):
     """Atomic filesystem backend preserving latest.json and immutable snapshots."""
@@ -65,6 +88,7 @@ class JSONStorage(StorageBackend):
         self.root_path = Path(root_path)
         self.snapshots_path = self.root_path / "snapshots"
         self.latest_path = self.root_path / "latest.json"
+        self.manifest_path = self.root_path / "manifest.json"
 
     def save_snapshot(
         self,
@@ -81,16 +105,20 @@ class JSONStorage(StorageBackend):
             source_type=source_type,
             location=str(self.root_path),
         )
+        snapshot_path = self.snapshots_path / f"{info.snapshot_id}.json"
+        persisted_info = SnapshotInfo(
+            **{**info.to_dict(), "location": str(snapshot_path)}
+        )
         payload = {
             "schema_version": "1.0",
-            **info.to_dict(),
+            **persisted_info.to_dict(),
             "metadata": metadata or {},
             "documents": documents,
         }
-        snapshot_path = self.snapshots_path / f"{info.snapshot_id}.json"
         _atomic_json_write(snapshot_path, payload)
         _atomic_json_write(self.latest_path, payload)
-        return SnapshotInfo(**{**info.to_dict(), "location": str(snapshot_path)})
+        self._update_manifest(payload)
+        return persisted_info
 
     def load_latest(self) -> Dict[str, Any]:
         return _load_json(self.latest_path)
@@ -102,6 +130,84 @@ class JSONStorage(StorageBackend):
     def query(self, *, source_type: str = "", topic: str = "") -> List[Dict[str, Any]]:
         documents = self.load_latest().get("documents", [])
         return _filter_documents(documents, source_type=source_type, topic=topic)
+
+    def list_snapshots(
+        self,
+        *,
+        date_from: str = "",
+        date_to: str = "",
+        source_type: str = "",
+        topic: str = "",
+    ) -> List[Dict[str, Any]]:
+        manifest = _load_json(self.manifest_path)
+        entries = manifest.get("snapshots", [])
+        if not entries and self.snapshots_path.exists():
+            manifest = self.rebuild_manifest()
+            entries = manifest.get("snapshots", [])
+        return _filter_snapshot_entries(
+            entries,
+            date_from=date_from,
+            date_to=date_to,
+            source_type=source_type,
+            topic=topic,
+        )
+
+    def query_history(
+        self,
+        *,
+        date_from: str = "",
+        date_to: str = "",
+        source_type: str = "",
+        topic: str = "",
+    ) -> List[Dict[str, Any]]:
+        observations = []
+        for entry in self.list_snapshots(
+            date_from=date_from,
+            date_to=date_to,
+            source_type=source_type,
+            topic=topic,
+        ):
+            payload = self.load_snapshot(entry["snapshot_id"])
+            for document in _filter_documents(
+                payload.get("documents", []), source_type=source_type, topic=topic
+            ):
+                observations.append({
+                    "snapshot_id": entry["snapshot_id"],
+                    "snapshot_date": entry["snapshot_date"],
+                    "created_at": entry["created_at"],
+                    "document": document,
+                })
+        return observations
+
+    def rebuild_manifest(self) -> Dict[str, Any]:
+        """Rebuild the JSON index from durable snapshot files."""
+        entries = []
+        for path in sorted(self.snapshots_path.glob("*.json")):
+            payload = _load_json(path)
+            if payload.get("snapshot_id"):
+                entries.append(_manifest_entry(payload))
+        manifest = {
+            "schema_version": "1.0",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "snapshot_count": len(entries),
+            "snapshots": sorted(entries, key=_snapshot_sort_key, reverse=True),
+        }
+        _atomic_json_write(self.manifest_path, manifest)
+        return manifest
+
+    def _update_manifest(self, payload: Dict[str, Any]) -> None:
+        manifest = _load_json(self.manifest_path)
+        entries = [
+            item for item in manifest.get("snapshots", [])
+            if item.get("snapshot_id") != payload.get("snapshot_id")
+        ]
+        entries.append(_manifest_entry(payload))
+        _atomic_json_write(self.manifest_path, {
+            "schema_version": "1.0",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "snapshot_count": len(entries),
+            "snapshots": sorted(entries, key=_snapshot_sort_key, reverse=True),
+        })
 
 
 class SQLiteStorage(StorageBackend):
@@ -199,6 +305,94 @@ class SQLiteStorage(StorageBackend):
             latest.get("documents", []), source_type=source_type, topic=topic
         )
 
+    def list_snapshots(
+        self,
+        *,
+        date_from: str = "",
+        date_to: str = "",
+        source_type: str = "",
+        topic: str = "",
+    ) -> List[Dict[str, Any]]:
+        clauses = []
+        parameters: List[Any] = []
+        if date_from:
+            clauses.append("s.snapshot_date >= ?")
+            parameters.append(date_from)
+        if date_to:
+            clauses.append("s.snapshot_date <= ?")
+            parameters.append(date_to)
+        if source_type:
+            clauses.append(
+                "(s.source_type = ? OR EXISTS (SELECT 1 FROM documents d "
+                "WHERE d.snapshot_id = s.snapshot_id AND d.source_type = ?))"
+            )
+            parameters.extend([source_type, source_type])
+        if topic:
+            clauses.append(
+                "EXISTS (SELECT 1 FROM documents d WHERE d.snapshot_id = s.snapshot_id "
+                "AND lower(d.topics_text) LIKE ?)"
+            )
+            parameters.append(f"%{topic.casefold()}%")
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT s.* FROM snapshots s" + where
+                + " ORDER BY s.snapshot_date DESC, s.created_at DESC",
+                parameters,
+            ).fetchall()
+        return [
+            {
+                "snapshot_id": row["snapshot_id"],
+                "snapshot_date": row["snapshot_date"],
+                "source_type": row["source_type"],
+                "document_count": row["document_count"],
+                "created_at": row["created_at"],
+                "location": str(self.database_path),
+                "metadata": json.loads(row["metadata_json"] or "{}"),
+            }
+            for row in rows
+        ]
+
+    def query_history(
+        self,
+        *,
+        date_from: str = "",
+        date_to: str = "",
+        source_type: str = "",
+        topic: str = "",
+    ) -> List[Dict[str, Any]]:
+        clauses = []
+        parameters: List[Any] = []
+        if date_from:
+            clauses.append("s.snapshot_date >= ?")
+            parameters.append(date_from)
+        if date_to:
+            clauses.append("s.snapshot_date <= ?")
+            parameters.append(date_to)
+        if source_type:
+            clauses.append("d.source_type = ?")
+            parameters.append(source_type)
+        if topic:
+            clauses.append("lower(d.topics_text) LIKE ?")
+            parameters.append(f"%{topic.casefold()}%")
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT s.snapshot_id, s.snapshot_date, s.created_at, d.payload_json "
+                "FROM snapshots s JOIN documents d ON d.snapshot_id = s.snapshot_id"
+                + where + " ORDER BY s.snapshot_date, s.created_at, d.rowid",
+                parameters,
+            ).fetchall()
+        return [
+            {
+                "snapshot_id": row["snapshot_id"],
+                "snapshot_date": row["snapshot_date"],
+                "created_at": row["created_at"],
+                "document": json.loads(row["payload_json"]),
+            }
+            for row in rows
+        ]
+
     def _initialize(self) -> None:
         with self._connect() as connection:
             connection.executescript(
@@ -226,6 +420,8 @@ class SQLiteStorage(StorageBackend):
                 );
                 CREATE INDEX IF NOT EXISTS idx_documents_source_type
                     ON documents(source_type);
+                CREATE INDEX IF NOT EXISTS idx_snapshots_date
+                    ON snapshots(snapshot_date, created_at);
                 CREATE TABLE IF NOT EXISTS state (
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
@@ -272,6 +468,7 @@ def _snapshot_info(
     resolved_date = snapshot_date or date.today().isoformat()
     types = {str(item.get("source_type") or "unknown") for item in documents}
     resolved_type = source_type or (next(iter(types)) if len(types) == 1 else "mixed")
+    resolved_type = re.sub(r"[^A-Za-z0-9_-]+", "_", resolved_type).strip("_") or "unknown"
     snapshot_id = (
         f"{resolved_date}__{resolved_type}__"
         f"{datetime.now(timezone.utc).strftime('%H%M%S%f')}__{uuid.uuid4().hex[:6]}"
@@ -306,6 +503,57 @@ def _document_topics(document: Dict[str, Any]) -> List[str]:
         raw = document.get(field) or []
         values.extend(raw if isinstance(raw, list) else [raw])
     return [str(value) for value in values if str(value).strip()]
+
+
+def _manifest_entry(payload: Dict[str, Any]) -> Dict[str, Any]:
+    documents = payload.get("documents", [])
+    source_counts: Dict[str, int] = {}
+    topics = []
+    for document in documents:
+        source_type = str(document.get("source_type") or "unknown")
+        source_counts[source_type] = source_counts.get(source_type, 0) + 1
+        topics.extend(_document_topics(document))
+    return {
+        "snapshot_id": payload.get("snapshot_id"),
+        "snapshot_date": payload.get("snapshot_date"),
+        "source_type": payload.get("source_type"),
+        "source_types": sorted(source_counts),
+        "source_counts": source_counts,
+        "document_count": payload.get("document_count", len(documents)),
+        "topics": sorted(set(topics)),
+        "created_at": payload.get("created_at"),
+        "location": payload.get("location"),
+        "metadata": payload.get("metadata", {}),
+    }
+
+
+def _filter_snapshot_entries(
+    entries: List[Dict[str, Any]],
+    *,
+    date_from: str,
+    date_to: str,
+    source_type: str,
+    topic: str,
+) -> List[Dict[str, Any]]:
+    result = []
+    topic_key = topic.casefold()
+    for entry in entries:
+        snapshot_date = str(entry.get("snapshot_date") or "")
+        if date_from and snapshot_date < date_from:
+            continue
+        if date_to and snapshot_date > date_to:
+            continue
+        source_types = entry.get("source_types", [])
+        if source_type and source_type not in source_types and entry.get("source_type") != source_type:
+            continue
+        if topic_key and not any(topic_key in str(value).casefold() for value in entry.get("topics", [])):
+            continue
+        result.append(entry)
+    return sorted(result, key=_snapshot_sort_key, reverse=True)
+
+
+def _snapshot_sort_key(entry: Dict[str, Any]) -> tuple[str, str]:
+    return str(entry.get("snapshot_date") or ""), str(entry.get("created_at") or "")
 
 
 def _atomic_json_write(path: Path, payload: Dict[str, Any]) -> None:
