@@ -64,6 +64,9 @@ class DocumentSchema:
     tag_facets: Dict[str, List[str]] = field(default_factory=dict)
     research_direction: List[str] = field(default_factory=list)
     importance_score: Optional[float] = None
+    ranking_score_breakdown: Dict[str, float] = field(default_factory=dict)
+    ranking_factors: List[str] = field(default_factory=list)
+    ranking_penalties: Dict[str, float] = field(default_factory=dict)
     reading_suggestion: ReadingSuggestion = field(default_factory=ReadingSuggestion)
     provenance: Provenance = field(default_factory=Provenance)
     schema_version: str = SCHEMA_VERSION

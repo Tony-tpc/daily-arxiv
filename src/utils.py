@@ -54,6 +54,17 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     tag_extraction.setdefault('max_tags', 20)
     tag_extraction.setdefault('max_entities', 30)
 
+    ranking_config = normalized.setdefault('ranking', {})
+    ranking_config.setdefault('enabled', True)
+    ranking_config.setdefault('weights', copy.deepcopy({
+        'topic_relevance': 0.40,
+        'novelty': 0.15,
+        'policy_importance': 0.20,
+        'industry_relevance': 0.15,
+        'source_credibility': 0.10,
+    }))
+    ranking_config.setdefault('thresholds', {'high': 70, 'medium': 45})
+
     outputs = normalized.setdefault('outputs', {})
     outputs.setdefault('markdown', {'enabled': True, 'directory': 'data/markdown'})
     outputs.setdefault('json', {'enabled': True, 'directory': 'data'})

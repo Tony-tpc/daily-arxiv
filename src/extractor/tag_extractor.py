@@ -171,10 +171,13 @@ class TagExtractor:
             + self._derive_themes(match_values)
             + self._source_themes(result.get("source_type"))
         )
+        configured_directions = (
+            configured_topics if match_values & ENERGY_CONTEXT_TERMS else []
+        )
         directions = unique(
             _list_values(result.get("research_direction"))
             + self._derive_directions(match_values)
-            + configured_topics
+            + configured_directions
         )
         extracted_facets = {
             "technical_topics": technical,

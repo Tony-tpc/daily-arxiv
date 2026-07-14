@@ -18,6 +18,9 @@ const I18N = {
         sourceLabel: '来源',
         priorityLabel: '优先级',
         recommendationLabel: '建议动作',
+        scoreLabel: '综合分',
+        scoreBreakdown: '查看五维评分',
+        relevanceReason: '推荐依据',
         relatedTopicsLabel: '相关主题',
         citationsLabel: '引用次数',
         primaryTopicLabel: 'OpenAlex 主主题',
@@ -67,6 +70,9 @@ const I18N = {
         sourceLabel: 'Source',
         priorityLabel: 'Priority',
         recommendationLabel: 'Recommended action',
+        scoreLabel: 'Score',
+        scoreBreakdown: 'View score breakdown',
+        relevanceReason: 'Rationale',
         relatedTopicsLabel: 'Related topics',
         citationsLabel: 'Citations',
         primaryTopicLabel: 'OpenAlex primary topic',
@@ -130,6 +136,7 @@ const state = {
     currentPage: 1,
     papersPerPage: 20,
     selectedCategory: '',
+    selectedPriority: '',
     searchQuery: '',
     allPapers: [],
     allCategories: [],
@@ -542,8 +549,9 @@ function renderPapers(papers) {
         const summaryText = card.summary || card.description || paper.summary || paper.abstract || t('noAbstract');
         const badges = card.badges || paper.categories || [];
         const relatedTopics = suggestion.related_topics || [];
+        const priority = normalizePriority(card.read_priority || suggestion.read_priority);
         return `
-        <div class="paper-card fade-in">
+        <div class="paper-card fade-in priority-card-${priority}">
             <div class="paper-header">
                 <div>
                     <h3 class="paper-title">
@@ -561,6 +569,7 @@ function renderPapers(papers) {
                     </div>
                 </div>
             </div>
+            ${renderRankingPanel(card)}
             <p class="paper-abstract">${escapeHtml(summaryText)}</p>
             <div class="paper-meta" style="margin-bottom:0.375rem">
                 ${renderCompactInfoBar(card, paper)}
@@ -609,6 +618,54 @@ function renderWebSuggestionPanel(card) {
 
     if (!blocks.length) return '';
     return `<div class="paper-authors">${blocks.join(' · ')}</div>`;
+}
+
+function renderRankingPanel(card, compact = false) {
+    const suggestion = card.reading_suggestion || {};
+    const priority = normalizePriority(card.read_priority || suggestion.read_priority);
+    const action = card.recommended_action || suggestion.recommended_action || '';
+    const score = Number(card.importance_score);
+    const breakdown = card.ranking_score_breakdown || {};
+    const reason = suggestion.why_relevant || '';
+    const labels = {
+        topic_relevance: LANG === 'zh' ? '主题相关性' : 'Topic relevance',
+        novelty: LANG === 'zh' ? '新颖性' : 'Novelty',
+        policy_importance: LANG === 'zh' ? '政策重要性' : 'Policy importance',
+        industry_relevance: LANG === 'zh' ? '行业相关性' : 'Industry relevance',
+        source_credibility: LANG === 'zh' ? '来源可信度' : 'Source credibility'
+    };
+    const rows = Object.entries(labels)
+        .filter(([key]) => Object.prototype.hasOwnProperty.call(breakdown, key))
+        .map(([key, label]) => {
+            const value = Math.max(0, Math.min(100, Number(breakdown[key]) || 0));
+            return `<div class="score-row">
+                <span>${label}</span>
+                <div class="score-track"><i style="width:${value}%"></i></div>
+                <strong>${Math.round(value)}</strong>
+            </div>`;
+        }).join('');
+
+    return `<div class="ranking-panel ranking-${priority}">
+        <div class="ranking-summary">
+            <span class="priority-pill priority-${priority}">${priorityLabel(priority)}</span>
+            ${action ? `<span class="action-pill"><i class="fas fa-book-open"></i>${escapeHtml(action)}</span>` : ''}
+            ${Number.isFinite(score) ? `<span class="score-pill">${t('scoreLabel')} <strong>${score.toFixed(1)}</strong></span>` : ''}
+        </div>
+        ${!compact && rows ? `<details class="ranking-details">
+            <summary>${t('scoreBreakdown')}</summary>
+            <div class="score-grid">${rows}</div>
+            ${reason ? `<p><strong>${t('relevanceReason')}：</strong>${escapeHtml(reason)}</p>` : ''}
+        </details>` : ''}
+    </div>`;
+}
+
+function normalizePriority(value) {
+    return ['high', 'medium', 'low'].includes(value) ? value : 'low';
+}
+
+function priorityLabel(priority) {
+    if (LANG === 'en') return {high: 'High', medium: 'Medium', low: 'Low'}[priority];
+    return {high: '高优先级', medium: '中优先级', low: '低优先级'}[priority];
 }
 
 function renderOpenAlexPanel(card) {
@@ -775,6 +832,7 @@ function renderFeaturedPapers(papers) {
             <p class="paper-abstract" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                 ${escapeHtml(summaryText)}
             </p>
+            ${renderRankingPanel(card, true)}
             ${renderCompactInfoBar(card, paper)}
             <div class="paper-actions" style="margin-top: 0.5rem;">
                 <a href="${primaryUrl}" target="_blank" class="btn-paper btn-primary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
@@ -1108,6 +1166,14 @@ function filterPapers(papers) {
             paper.categories && paper.categories.includes(state.selectedCategory)
         );
     }
+
+    if (state.selectedPriority) {
+        filtered = filtered.filter(paper => {
+            const card = paper.web_card || {};
+            const suggestion = card.reading_suggestion || {};
+            return (card.read_priority || suggestion.read_priority) === state.selectedPriority;
+        });
+    }
     
     // 按搜索关键词过滤
     if (state.searchQuery) {
@@ -1174,6 +1240,14 @@ function initEventListeners() {
             filterByCategory(e.target.value);
         });
     }
+
+    const priorityFilter = document.getElementById('paper-priority-filter');
+    if (priorityFilter) {
+        priorityFilter.addEventListener('change', (event) => {
+            state.selectedPriority = event.target.value;
+            renderPapers(filterPapers(state.allPapers));
+        });
+    }
     
     // 每页显示数量
     const perPageSelect = document.getElementById('papers-per-page');
@@ -1197,13 +1271,24 @@ function sortPapers(sortBy) {
     const papers = [...state.allPapers];
     
     switch (sortBy) {
+        case 'relevance':
+            papers.sort((a, b) =>
+                Number(b.web_card?.importance_score || 0) -
+                Number(a.web_card?.importance_score || 0)
+            );
+            break;
         case 'date':
             papers.sort((a, b) => new Date(b.published) - new Date(a.published));
             break;
         case 'title':
             papers.sort((a, b) => a.title.localeCompare(b.title));
             break;
-        // Add more sort options as needed
+        case 'citations':
+            papers.sort((a, b) =>
+                Number(b.web_card?.source_metadata?.citation_count || 0) -
+                Number(a.web_card?.source_metadata?.citation_count || 0)
+            );
+            break;
     }
     
     state.allPapers = papers;

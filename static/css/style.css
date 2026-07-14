@@ -601,6 +601,90 @@ body {
     border-left-color: var(--accent-color);
 }
 
+.paper-card.priority-card-high { border-left-color: #dc2626; }
+.paper-card.priority-card-medium { border-left-color: #d97706; }
+.paper-card.priority-card-low { border-left-color: #64748b; }
+
+.ranking-panel {
+    margin: 0.65rem 0;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+}
+
+.ranking-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.priority-pill,
+.action-pill,
+.score-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 750;
+}
+
+.priority-high { background: #fee2e2; color: #991b1b; }
+.priority-medium { background: #fef3c7; color: #92400e; }
+.priority-low { background: #e2e8f0; color: #334155; }
+.action-pill { background: rgba(79, 70, 229, 0.12); color: var(--primary-color); }
+.score-pill { margin-left: auto; background: var(--bg-primary); color: var(--text-primary); }
+
+.ranking-details {
+    margin-top: 0.55rem;
+}
+
+.ranking-details summary {
+    cursor: pointer;
+    color: var(--primary-color);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.score-grid {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
+}
+
+.score-row {
+    display: grid;
+    grid-template-columns: minmax(7rem, 0.8fr) 2fr 2.2rem;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.score-track {
+    overflow: hidden;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.25);
+}
+
+.score-track i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
+}
+
+.ranking-details p {
+    margin: 0.6rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.55;
+}
+
 .paper-header {
     display: flex;
     justify-content: space-between;

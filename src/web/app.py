@@ -17,8 +17,7 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 # from flask_cors import CORS  # 暂时注释，本地开发不需要
 import markdown
 
-from src.exporters.output_templates import build_web_card_payload
-from src.models.document_schema import SourceType, create_document
+from src.ranking.relevance_ranker import RelevanceRanker
 from src.utils import load_config, load_json, get_language
 
 
@@ -36,6 +35,7 @@ app = Flask(
 config = load_config()
 web_config = config.get('web', {})
 language = get_language(config)
+relevance_ranker = RelevanceRanker(config)
 
 WEB_I18N = {
     'zh': {
@@ -96,45 +96,34 @@ def _load_summaries_by_id() -> dict:
 
 def _build_document_from_paper(paper: dict, summary_record: dict | None = None):
     summary_record = summary_record or {}
-    return create_document(
-        SourceType.PAPER,
-        id=paper.get('id', ''),
-        source_name='arXiv',
-        title=paper.get('title', ''),
-        summary=summary_record.get('summary') or paper.get('summary', ''),
-        authors_or_orgs=paper.get('authors', []),
-        published_at=paper.get('published', ''),
-        collected_at=paper.get('fetched_at', ''),
-        url=paper.get('entry_url') or paper.get('pdf_url') or '',
-        raw_text=paper.get('abstract', ''),
-        keywords=paper.get('categories', []),
-        tags=paper.get('categories', []) + paper.get('openalex_topics', []),
-        entities=paper.get('authors', []) + paper.get('openalex_institutions', []),
-        provenance={
-            'collected_via': 'arxiv_fetcher',
-            'source_record_id': paper.get('id', ''),
-            'fetch_url': paper.get('entry_url') or '',
-            'metadata': {
-                'primary_category': paper.get('primary_category'),
-                'updated': paper.get('updated'),
-                'openalex_id': paper.get('openalex_id'),
-                'citation_count': paper.get('citation_count'),
-            },
-        },
-        doi=paper.get('doi'),
-        arxiv_id=paper.get('id'),
-        categories=paper.get('categories', []),
+    document = deepcopy(paper)
+    document.update(summary_record)
+    document.setdefault('source_type', 'paper')
+    document.setdefault('source_name', 'arXiv')
+    document.setdefault('summary', paper.get('summary', ''))
+    document.setdefault('authors_or_orgs', paper.get('authors', []))
+    document.setdefault('published_at', paper.get('published', ''))
+    document.setdefault('collected_at', paper.get('fetched_at', ''))
+    document.setdefault('url', paper.get('entry_url') or paper.get('pdf_url') or '')
+    document.setdefault('raw_text', paper.get('abstract', ''))
+    document.setdefault('keywords', paper.get('categories', []))
+    document.setdefault(
+        'tags',
+        paper.get('categories', []) + paper.get('openalex_topics', []),
     )
+    document.setdefault(
+        'entities',
+        paper.get('authors', []) + paper.get('openalex_institutions', []),
+    )
+    document.setdefault('arxiv_id', paper.get('id'))
+    document.setdefault('categories', paper.get('categories', []))
+    return document
 
 
 def _build_paper_response(paper: dict, summary_record: dict | None = None) -> dict:
     summary_record = summary_record or {}
-    payload = deepcopy(paper)
-    if summary_record.get('summary'):
-        payload['summary'] = summary_record.get('summary')
-    document = _build_document_from_paper(payload, summary_record)
-    payload['web_card'] = build_web_card_payload(document, raw_record=paper)
-    return payload
+    document = _build_document_from_paper(paper, summary_record)
+    return relevance_ranker.rank_document(document)
 
 
 @app.route('/')
@@ -194,15 +183,21 @@ def get_papers():
         # 按类别过滤
         if category:
             papers = [p for p in papers if category in p.get('categories', [])]
+
+        ranked_papers = [
+            _build_paper_response(paper, summary_index.get(paper.get('id')))
+            for paper in papers
+        ]
+        ranked_papers.sort(
+            key=lambda item: float(item.get('importance_score') or 0),
+            reverse=True,
+        )
         
         # 分页
-        total = len(papers)
+        total = len(ranked_papers)
         start = (page - 1) * per_page
         end = start + per_page
-        papers_page = [
-            _build_paper_response(paper, summary_index.get(paper.get('id')))
-            for paper in papers[start:end]
-        ]
+        papers_page = ranked_papers[start:end]
         
         return jsonify({
             'papers': papers_page,

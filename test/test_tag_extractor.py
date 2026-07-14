@@ -73,7 +73,7 @@ class TagExtractorTests(unittest.TestCase):
         result = self.extractor.extract_document(
             {
                 "source_type": "paper",
-                "title": "具身智能机器人机械臂操控与导航",
+                "title": "具身智能机器人机械臂强化学习与导航",
                 "summary": "研究人形机器人的机械臂抓取。",
             }
         )
@@ -82,6 +82,7 @@ class TagExtractorTests(unittest.TestCase):
         self.assertNotIn("机器人", result["entities"])
         self.assertNotIn("机械臂", result["entities"])
         self.assertNotIn("能源系统具身智能", result["research_direction"])
+        self.assertEqual(result["research_direction"], [])
 
     def test_preserves_existing_values_and_updates_web_card(self):
         result = self.extractor.extract_document(

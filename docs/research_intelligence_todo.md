@@ -430,22 +430,22 @@ src/
 
 ### 8.3 增加阅读建议与优先级排序
 
-- [ ] 新增文件：`src/ranking/relevance_ranker.py`
-- [ ] 设计评分维度：
+- [x] 新增文件：`src/ranking/relevance_ranker.py`
+- [x] 设计评分维度：
   - topic relevance
   - novelty
   - policy importance
   - industry relevance
   - source credibility
-- [ ] 输出优先级：
+- [x] 输出优先级：
   - `high`
   - `medium`
   - `low`
-- [ ] 输出建议动作：
+- [x] 输出建议动作：
   - 精读
   - 略读
   - 存档
-- [ ] 在网页列表与详情页直接展示优先级与建议动作
+- [x] 在网页列表与详情页直接展示优先级与建议动作
 
 **验收标准**
 
@@ -731,7 +731,7 @@ src/
 - [x] Task 7：实现 `src/sources/policy_adapter.py`
 - [x] Task 8：实现 `src/sources/industry_report_adapter.py`
 - [x] Task 9：实现 `src/summarizer/document_summarizer.py`
-- [ ] Task 10：实现 `src/ranking/relevance_ranker.py`
+- [x] Task 10：实现 `src/ranking/relevance_ranker.py`
 
 ---
 

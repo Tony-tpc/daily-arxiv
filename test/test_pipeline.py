@@ -82,6 +82,39 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(adapter.fetch.call_args_list[1].kwargs['days_back'], 7)
         self.assertEqual(context.papers, [{'id': 'paper-1'}])
 
+    def test_ranking_stage_prioritizes_domestic_energy_policy(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.normalized_records = [
+            {
+                'id': 'other-1',
+                'source_type': 'news',
+                'source_name': '普通来源',
+                'title': '无关内容',
+            },
+            {
+                'id': 'policy-1',
+                'source_type': 'policy',
+                'source_name': '国家能源局',
+                'title': '虚拟电厂参与需求响应政策',
+                'raw_text': '储能系统参与能源管理。',
+                'url': 'https://www.nea.gov.cn/example',
+                'issuing_body': '国家能源局',
+                'policy_strength': 'high',
+                'policy_level': 'national',
+                'region': 'CN',
+            },
+        ]
+
+        from src.pipeline import ranking_stage
+        ranking_stage.run(context)
+
+        self.assertEqual(context.normalized_records[0]['id'], 'policy-1')
+        self.assertEqual(
+            context.normalized_records[0]['reading_suggestion']['recommended_action'],
+            '精读',
+        )
+        self.assertIn('ranking_score_breakdown', context.normalized_records[1])
+
     def test_summarize_stage_falls_back_to_raw_papers_on_failure(self):
         context = create_pipeline_context(self.config, self.logger, self.text)
         context.papers = [{'id': 'paper-1'}]

@@ -42,6 +42,19 @@ tag_extraction:
   max_tags: 20
   max_entities: 30
 
+# 多源可解释排序；分数和建议动作将直接显示在网页卡片中。
+ranking:
+  enabled: true
+  weights:
+    topic_relevance: 0.40
+    novelty: 0.15
+    policy_importance: 0.20
+    industry_relevance: 0.15
+    source_credibility: 0.10
+  thresholds:
+    high: 70
+    medium: 45
+
 # 研究主题关键词组（用于标签、摘要、分析，不直接等同于抓取查询）
 # Research keyword groups for analysis and classification, separate from fetch queries.
 keyword_groups:
@@ -336,9 +349,9 @@ web:
   host: "0.0.0.0"
   port: 5000
   debug: true
-  title: "Daily arXiv - Research Tracker"
+  title: "中国能源具身智能研究情报"
   # Web 描述 / Web description
-  description: "每日追踪最新的研究论文"
+  description: "聚焦中国能源政策、能源智能体与源网荷储自主决策"
 
 # 调度配置 / Scheduler settings
 scheduler:

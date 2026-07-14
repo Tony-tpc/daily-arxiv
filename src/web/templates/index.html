@@ -210,9 +210,19 @@
                     <div class="filter-group">
                         <label>{{ '排序' if language == 'zh' else 'Sort' }}:</label>
                         <select id="paper-sort" class="filter-select">
+                            <option value="relevance">{{ '按研究价值' if language == 'zh' else 'By relevance' }}</option>
                             <option value="date">{{ '按日期' if language == 'zh' else 'By date' }}</option>
                             <option value="title">{{ '按标题' if language == 'zh' else 'By title' }}</option>
                             <option value="citations">{{ '按引用' if language == 'zh' else 'By citations' }}</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>{{ '优先级' if language == 'zh' else 'Priority' }}:</label>
+                        <select id="paper-priority-filter" class="filter-select">
+                            <option value="">{{ '全部' if language == 'zh' else 'All' }}</option>
+                            <option value="high">{{ '高 · 精读' if language == 'zh' else 'High · Deep read' }}</option>
+                            <option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium · Skim' }}</option>
+                            <option value="low">{{ '低 · 存档' if language == 'zh' else 'Low · Archive' }}</option>
                         </select>
                     </div>
                     <div class="filter-group">
