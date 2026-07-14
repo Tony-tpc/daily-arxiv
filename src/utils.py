@@ -46,7 +46,12 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     research_profile = normalized.setdefault('research_profile', {})
     research_profile.setdefault('topic', '')
     research_profile.setdefault('focus', [])
+    research_profile.setdefault('technical_routes', [])
     research_profile.setdefault('excluded_directions', [])
+    profile_comparison = research_profile.setdefault('comparison', {})
+    profile_comparison.setdefault('strength_threshold', 60)
+    profile_comparison.setdefault('gap_threshold', 30)
+    profile_comparison.setdefault('follow_up_per_type', 3)
 
     tag_extraction = normalized.setdefault('tag_extraction', {})
     tag_extraction.setdefault('enabled', True)

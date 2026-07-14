@@ -18,6 +18,8 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 # from flask_cors import CORS  # 暂时注释，本地开发不需要
 import markdown
 
+from src.analyzer.cross_source_analyzer import CrossSourceAnalyzer
+from src.analyzer.research_profile_analyzer import ResearchProfileAnalyzer
 from src.ranking.relevance_ranker import RelevanceRanker
 from src.reporting.intelligence_report_generator import IntelligenceReportGenerator
 from src.storage.base import build_storage
@@ -147,9 +149,17 @@ def _load_latest_report(report_type: str = "weekly") -> dict:
         if payload and payload.get('report_type') == report_type:
             return payload
 
+    documents = _load_intelligence_documents()
+    analysis = load_json('data/analysis/latest.json') or {}
+    if not analysis.get('cross_source_analysis'):
+        analysis['cross_source_analysis'] = CrossSourceAnalyzer(config).analyze(documents)
+    if not analysis.get('research_profile_analysis'):
+        analysis['research_profile_analysis'] = ResearchProfileAnalyzer(config).analyze(
+            documents, analysis['cross_source_analysis']
+        )
     return IntelligenceReportGenerator(config).generate(
-        _load_intelligence_documents(),
-        load_json('data/analysis/latest.json') or {},
+        documents,
+        analysis,
         report_type=report_type,
     )
 

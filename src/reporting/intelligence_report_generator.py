@@ -198,7 +198,37 @@ def _trend_items(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
     return items[:6]
 
 
-def _inspiration_items(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
+def _inspiration_items(analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+    profile = analysis.get("research_profile_analysis") or {}
+    profile_items: List[Dict[str, Any]] = []
+    for item in profile.get("advantages", [])[:2]:
+        profile_items.append({
+            "heading": f"已有优势｜{item.get('name') or ''}",
+            "body": str(item.get("explanation") or ""),
+            "meta": "自身研究画像",
+        })
+    for item in profile.get("gaps", [])[:2]:
+        profile_items.append({
+            "heading": f"存在差距｜{item.get('name') or ''}",
+            "body": str(item.get("explanation") or ""),
+            "meta": "建议补充外部证据",
+        })
+    for item in profile.get("reinforcement_directions", [])[:2]:
+        profile_items.append({
+            "heading": f"值得补强｜{item.get('direction') or ''}",
+            "body": str(item.get("reason") or ""),
+            "meta": f"{item.get('priority') or 'medium'} priority",
+        })
+    follow_up = profile.get("follow_up") or {}
+    for group in ("papers", "policies", "industry_cases"):
+        for item in follow_up.get(group, [])[:1]:
+            profile_items.append({
+                "heading": f"可跟进｜{item.get('title') or ''}",
+                "body": str(item.get("reason") or ""),
+                "meta": str(item.get("source_type") or ""),
+                "url": str(item.get("url") or ""),
+                "source_type": str(item.get("source_type") or ""),
+            })
     directions = (analysis.get("cross_source_analysis") or {}).get("directions", [])
     templates = {
         "triple_resonance": "优先凝练可验证课题，设计论文方法与中国能源场景的联合验证。",
@@ -207,7 +237,7 @@ def _inspiration_items(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
         "industry_attention": "提炼行业痛点与可复现实验设置，验证其是否具备学术增量。",
         "emerging": "继续积累跨来源证据，暂不作高确定性方向判断。",
     }
-    return [
+    cross_source_items = [
         {
             "heading": str(item.get("direction") or "研究方向"),
             "body": templates.get(str(item.get("judgment_code")), templates["emerging"]),
@@ -215,6 +245,7 @@ def _inspiration_items(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
         }
         for item in directions[:6]
     ]
+    return (profile_items + cross_source_items)[:9]
 
 
 def _recommendation_items(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
@@ -226,6 +257,17 @@ def _recommendation_items(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
             "heading": "优先推进三端共振方向",
             "body": "、".join(str(item.get("direction")) for item in resonance[:3]),
             "meta": "建议进入精读与实验设计",
+        })
+    reinforcement = (
+        analysis.get("research_profile_analysis") or {}
+    ).get("reinforcement_directions", [])
+    if reinforcement:
+        recommendations.append({
+            "heading": "按研究画像补强技术路线",
+            "body": "、".join(
+                str(item.get("direction") or "") for item in reinforcement[:3]
+            ),
+            "meta": "自身研究对比",
         })
     recommendations.extend([
         {

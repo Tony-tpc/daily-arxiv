@@ -32,6 +32,8 @@ class IntelligenceReportGeneratorTests(unittest.TestCase):
         )
         self.assertIn('近 7 天上升主题', report['markdown'])
         self.assertIn('维护能源具身智能边界', report['markdown'])
+        self.assertIn('已有优势｜虚拟电厂自主决策', report['markdown'])
+        self.assertIn('可跟进｜能源智能体论文', report['markdown'])
         rendered = markdown.markdown(report['markdown'])
         self.assertNotIn('href="javascript:', rendered)
         self.assertNotIn('<script', rendered)
@@ -109,6 +111,29 @@ def _analysis():
                 'judgment': '三端共振',
                 'rationale': '论文、政策与产业信号同步增强。',
             }]
+        },
+        'research_profile_analysis': {
+            'advantages': [{
+                'name': '虚拟电厂自主决策',
+                'explanation': '已有优势：覆盖分 80.0，找到 3 条外部证据。',
+            }],
+            'gaps': [{
+                'name': '数字孪生驱动的能源设备感知',
+                'explanation': '存在差距：覆盖分 0.0，找到 0 条外部证据。',
+            }],
+            'reinforcement_directions': [{
+                'direction': '数字孪生驱动的能源设备感知',
+                'reason': '需要补充中国能源场景证据。',
+                'priority': 'high',
+            }],
+            'follow_up': {
+                'papers': [{
+                    'title': '能源智能体论文', 'source_type': 'paper',
+                    'url': 'https://arxiv.org/abs/1', 'reason': '匹配虚拟电厂',
+                }],
+                'policies': [],
+                'industry_cases': [],
+            },
         },
     }
 

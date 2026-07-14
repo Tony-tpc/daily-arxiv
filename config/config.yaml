@@ -20,11 +20,19 @@ research_profile:
     - "能源智能体对物理能源设备的感知、决策与控制"
     - "源网荷储交互中的强化学习与多智能体协同"
     - "虚拟电厂、电力市场和能源设备的自主运行"
+  technical_routes:
+    - "多智能体强化学习与协同控制"
+    - "博弈论、机制设计与电力市场决策"
+    - "数字孪生驱动的能源设备感知与自主运行"
   excluded_directions:
     - "通用机器人操控"
     - "机械臂"
     - "机器人导航"
     - "人形机器人"
+  comparison:
+    strength_threshold: 60
+    gap_threshold: 30
+    follow_up_per_type: 3
 
 # 默认聚焦中国国内政策、行业与科研信息。
 regional_focus:

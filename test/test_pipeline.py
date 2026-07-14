@@ -58,6 +58,7 @@ class PipelineTests(unittest.TestCase):
                 Mock(run=lambda ctx: _record(calls, 'export', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'extract', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'cross_source', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'profile', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'analyze', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'report', ctx)),
             ]
@@ -65,7 +66,7 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(calls, [
             'fetch', 'normalize', 'ranking', 'linking', 'summarize', 'export',
-            'extract', 'cross_source', 'analyze', 'report',
+            'extract', 'cross_source', 'profile', 'analyze', 'report',
         ])
 
     def test_fetch_stage_retries_with_fallback_window(self):
@@ -208,6 +209,7 @@ class PipelineTests(unittest.TestCase):
         context.normalized_records = [{'id': 'paper-1', 'normalized': True}]
         context.summarized_papers = [{'id': 'paper-1', 'summary': 'done'}]
         context.cross_source_result = {'direction_count': 1}
+        context.profile_result = {'status': 'ready'}
 
         analyzer_instance = Mock()
         analyzer_instance.analyze.return_value = {'ok': True}
@@ -225,6 +227,7 @@ class PipelineTests(unittest.TestCase):
             context.summarized_papers,
             history_observations=storage_instance.query_history.return_value,
             cross_source_analysis=context.cross_source_result,
+            research_profile_analysis=context.profile_result,
         )
         query_kwargs = storage_instance.query_history.call_args.kwargs
         self.assertLess(query_kwargs['date_from'], query_kwargs['date_to'])
@@ -246,6 +249,26 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(
             context.cross_source_result['directions'][0]['direction'], '虚拟电厂'
         )
+
+    def test_profile_stage_compares_enriched_documents(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.config['research_profile'] = {
+            'topic': '虚拟电厂自主决策',
+            'technical_routes': ['多智能体强化学习'],
+        }
+        context.summarized_documents = [{
+            'id': 'paper-1',
+            'source_type': 'paper',
+            'title': '虚拟电厂多智能体强化学习',
+            'importance_score': 80,
+        }]
+
+        from src.pipeline import profile_stage
+        profile_stage.run(context)
+
+        self.assertEqual(context.profile_result['status'], 'ready')
+        self.assertEqual(context.profile_result['summary']['dimension_count'], 2)
+        self.assertEqual(context.profile_result['follow_up']['papers'][0]['id'], 'paper-1')
 
     def test_report_stage_persists_web_ready_report(self):
         context = create_pipeline_context(self.config, self.logger, self.text)

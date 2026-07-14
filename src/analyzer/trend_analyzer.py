@@ -68,6 +68,7 @@ class TrendAnalyzer:
         summaries: List[Dict[str, Any]] = None,
         history_observations: List[Dict[str, Any]] | None = None,
         cross_source_analysis: Dict[str, Any] | None = None,
+        research_profile_analysis: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """执行完整的趋势分析
         
@@ -76,6 +77,7 @@ class TrendAnalyzer:
             summaries: 文档总结列表（可选）
             history_observations: 历史 snapshot 中的结构化观测
             cross_source_analysis: 学术—政策—行业方向比较结果
+            research_profile_analysis: 外部情报与自身研究画像比较结果
             
         Returns:
             分析结果字典
@@ -98,6 +100,7 @@ class TrendAnalyzer:
                 'llm_analysis': {},
                 'temporal_trends': self.analyze_temporal(history_observations or []),
                 'cross_source_analysis': cross_source_analysis or {},
+                'research_profile_analysis': research_profile_analysis or {},
                 'generated_at': datetime.now().isoformat(),
             }
         
@@ -130,6 +133,7 @@ class TrendAnalyzer:
             'llm_analysis': llm_analysis,
             'temporal_trends': self.analyze_temporal(history_observations or []),
             'cross_source_analysis': cross_source_analysis or {},
+            'research_profile_analysis': research_profile_analysis or {},
             'generated_at': datetime.now().isoformat()
         }
         
