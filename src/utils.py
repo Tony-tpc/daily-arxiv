@@ -88,6 +88,13 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     analysis.setdefault('compare_sources', True)
     analysis.setdefault('entity_tracking', True)
 
+    storage = normalized.setdefault('storage', {})
+    storage.setdefault('type', 'json')
+    storage.setdefault('json_path', 'data/papers')
+    storage.setdefault('document_json_path', 'data/documents')
+    storage.setdefault('sqlite_path', 'data/arxiv.db')
+    storage.setdefault('retention_days', 30)
+
     for source_name in ['arxiv', 'openalex', 'openalex_search', 'rss', 'policy', 'industry_report']:
         source_config = sources.setdefault(source_name, {})
         if isinstance(source_config, dict):
@@ -272,8 +279,10 @@ def get_data_path(config: Dict[str, Any], subdir: str = 'papers') -> str:
     storage_config = config.get('storage', {})
     base_path = storage_config.get('json_path', 'data/papers')
     
-    if subdir in {'summaries', 'documents'}:
-        return f'data/{subdir}'
+    if subdir == 'summaries':
+        return 'data/summaries'
+    if subdir == 'documents':
+        return storage_config.get('document_json_path', 'data/documents')
     
     return base_path
 

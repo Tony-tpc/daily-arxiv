@@ -6,6 +6,7 @@ Flask Web 应用
 import os
 import sys
 import json
+import sqlite3
 from copy import deepcopy
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 import markdown
 
 from src.ranking.relevance_ranker import RelevanceRanker
+from src.storage.base import build_storage
 from src.utils import load_config, load_json, get_language
 
 
@@ -98,7 +100,16 @@ def _load_summaries_by_id() -> dict:
 def _load_intelligence_documents() -> list[dict]:
     """Load the latest canonical mixed-source snapshot without duplicating records."""
     documents: list[dict] = []
-    for candidate in ('data/documents/latest.json', 'data/summaries/latest.json'):
+    try:
+        storage_payload = build_storage(config).load_latest()
+        documents = [
+            item for item in storage_payload.get('documents', []) if isinstance(item, dict)
+        ]
+    except (OSError, ValueError, sqlite3.Error):
+        documents = []
+    for candidate in ('data/summaries/latest.json',):
+        if documents:
+            break
         payload = load_json(candidate) or {}
         candidate_documents = (
             payload.get('documents')

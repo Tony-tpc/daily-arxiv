@@ -394,6 +394,9 @@ storage:
   
   # JSON 存储路径 / JSON storage path
   json_path: "data/papers"
+
+  # 统一文档 snapshot 存储路径 / Canonical document snapshots
+  document_json_path: "data/documents"
   
   # SQLite 数据库路径 / SQLite database path
   sqlite_path: "data/arxiv.db"

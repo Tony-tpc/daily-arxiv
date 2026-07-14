@@ -39,6 +39,10 @@ class ConfigNormalizationTests(unittest.TestCase):
             normalized["outputs"]["zotero"]["base_url"],
             "http://localhost:23119/api",
         )
+        self.assertEqual(normalized["storage"]["type"], "json")
+        self.assertEqual(
+            normalized["storage"]["document_json_path"], "data/documents"
+        )
 
     def test_normalize_backfills_top_level_arxiv_from_sources(self):
         config = {

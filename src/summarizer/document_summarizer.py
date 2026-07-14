@@ -11,7 +11,8 @@ from tqdm import tqdm
 
 from src.exporters.output_templates import build_web_card_payload
 from src.sources.structured_metadata import parse_json_object, string_list, unique
-from src.utils import get_data_path, get_date_string, load_json, save_json
+from src.storage.base import build_storage
+from src.utils import get_data_path, get_date_string, save_json
 
 from .llm_factory import LLMClientFactory
 
@@ -222,15 +223,11 @@ class DocumentSummarizer:
             str(data_path / "latest.json"),
         )
         documents_path = Path(get_data_path(self.config, "documents"))
-        documents_path.mkdir(parents=True, exist_ok=True)
-        latest_documents_path = documents_path / "latest.json"
-        linked_payload = load_json(str(latest_documents_path)) or {}
-        linked_payload.update({
-            "date": date_string,
-            "count": len(documents),
-            "documents": documents,
-        })
-        save_json(linked_payload, str(latest_documents_path))
+        build_storage(self.config, json_path=documents_path).save_snapshot(
+            documents,
+            snapshot_date=date_string,
+            metadata={"stage": "summarized"},
+        )
 
     def _provider_name(self) -> str:
         getter = getattr(self.llm_client, "get_provider_name", None)

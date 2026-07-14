@@ -127,7 +127,7 @@ class DocumentSummarizerTests(unittest.TestCase):
         self.client.get_provider_name.return_value = "Mock"
         with tempfile.TemporaryDirectory() as temp_dir, patch(
             "src.summarizer.document_summarizer.get_data_path",
-            return_value=temp_dir,
+            side_effect=lambda config, subdir: str(Path(temp_dir, subdir)),
         ):
             results = self.summarizer.summarize_documents(
                 [
@@ -141,7 +141,9 @@ class DocumentSummarizerTests(unittest.TestCase):
                 ],
                 show_progress=False,
             )
-            latest = json.loads(Path(temp_dir, "latest.json").read_text(encoding="utf-8"))
+            latest = json.loads(
+                Path(temp_dir, "summaries", "latest.json").read_text(encoding="utf-8")
+            )
 
         self.assertEqual(len(results), 1)
         self.assertEqual(latest["documents"], latest["papers"])

@@ -263,14 +263,19 @@ class PipelineTests(unittest.TestCase):
             },
         ]
 
-        with patch('src.pipeline.linking_stage.save_json') as save_json_mock:
+        backend = Mock()
+        backend.save_snapshot.return_value = Mock(location='data/documents/snapshots/one.json')
+        with patch('src.pipeline.linking_stage.build_storage', return_value=backend):
             from src.pipeline import linking_stage
             linking_stage.run(context)
 
         self.assertEqual(context.linking_result['relation_count'], 1)
         self.assertEqual(len(context.normalized_records[0]['related_documents']), 1)
-        save_json_mock.assert_called_once()
-        self.assertEqual(context.artifacts['linked_documents'], 'data/documents/latest.json')
+        backend.save_snapshot.assert_called_once()
+        self.assertEqual(
+            context.artifacts['linked_documents'],
+            'data/documents/snapshots/one.json',
+        )
 
     def test_export_stage_runs_obsidian_without_summary_report(self):
         context = create_pipeline_context(self.config, self.logger, self.text)

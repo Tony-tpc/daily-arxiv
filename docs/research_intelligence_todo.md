@@ -526,10 +526,12 @@ src/
 
 ### 9.3 存储层抽象
 
-- [ ] 新增文件：`src/storage/base.py`
-- [ ] 定义 JSON storage / SQLite storage 抽象
-- [ ] 封装当前 `latest.json + snapshot.json` 模式
-- [ ] 如果保留 sqlite 配置，则实现 SQLite backend；否则删除无效配置
+状态：已完成
+
+- [x] 新增文件：`src/storage/base.py`
+- [x] 定义 JSON storage / SQLite storage 抽象
+- [x] 封装当前 `latest.json + snapshot.json` 模式
+- [x] 如果保留 sqlite 配置，则实现 SQLite backend；否则删除无效配置
 
 **验收标准**
 
