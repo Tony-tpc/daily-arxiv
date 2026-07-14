@@ -558,14 +558,16 @@ src/
 
 ### 10.1 将 Trend Analyzer 升级为时序趋势分析器
 
-- [ ] 重构 `src/analyzer/trend_analyzer.py`
-- [ ] 新增能力：
+状态：已完成
+
+- [x] 重构 `src/analyzer/trend_analyzer.py`
+- [x] 新增能力：
   - topic momentum
   - entity frequency change
   - new topic emergence
   - topic decline
   - cross-source comparison
-- [ ] 支持输出近 7 / 30 / 60 天趋势变化
+- [x] 支持输出近 7 / 30 / 60 天趋势变化
 
 **验收标准**
 

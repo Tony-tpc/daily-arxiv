@@ -1,7 +1,7 @@
 """
 趋势分析器 / Trend analyzer
 
-分析论文集合，生成 / Analyze paper sets and generate:
+分析多源科研情报集合，生成 / Analyze multi-source intelligence and generate:
 1. 词云图
 2. 研究热点分析
 3. 趋势预测
@@ -11,7 +11,7 @@ import logging
 import json
 from typing import List, Dict, Any
 from pathlib import Path
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from collections import Counter
 import re
 
@@ -62,24 +62,41 @@ class TrendAnalyzer:
             'work', 'results', 'result', 'performance', 'model', 'models'
         ])
     
-    def analyze(self, papers: List[Dict[str, Any]], summaries: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def analyze(
+        self,
+        papers: List[Dict[str, Any]],
+        summaries: List[Dict[str, Any]] = None,
+        history_observations: List[Dict[str, Any]] | None = None,
+    ) -> Dict[str, Any]:
         """执行完整的趋势分析
         
         Args:
-            papers: 论文列表
-            summaries: 论文总结列表（可选）
+            papers: 规范化情报文档列表（参数名为兼容旧接口而保留）
+            summaries: 文档总结列表（可选）
+            history_observations: 历史 snapshot 中的结构化观测
             
         Returns:
             分析结果字典
         """
         self.logger.info("=" * 60)
         self.logger.info(self.text("🔍 开始趋势分析", "🔍 Starting trend analysis"))
-        self.logger.info(self.text(f"分析论文数量: {len(papers)}", f"Number of papers analyzed: {len(papers)}"))
+        self.logger.info(self.text(f"分析文档数量: {len(papers)}", f"Number of documents analyzed: {len(papers)}"))
         self.logger.info("=" * 60)
         
         if not papers:
-            self.logger.warning(self.text("没有论文可分析", "No papers available for analysis"))
-            return {}
+            self.logger.warning(self.text("没有当前文档，仍将分析历史趋势", "No current documents; analyzing history only"))
+            return {
+                'date': get_date_string(),
+                'paper_count': 0,
+                'document_count': 0,
+                'keywords': [],
+                'topics': [],
+                'statistics': {},
+                'wordcloud_path': '',
+                'llm_analysis': {},
+                'temporal_trends': self.analyze_temporal(history_observations or []),
+                'generated_at': datetime.now().isoformat(),
+            }
         
         # 1. 提取关键词和主题 / Extract keywords and topics
         self.logger.info(self.text("\n步骤 1: 提取关键词和主题...", "\nStep 1: Extracting keywords and topics..."))
@@ -102,11 +119,13 @@ class TrendAnalyzer:
         analysis_result = {
             'date': get_date_string(),
             'paper_count': len(papers),
+            'document_count': len(papers),
             'keywords': keywords,
             'topics': topics,
             'statistics': statistics,
             'wordcloud_path': wordcloud_path,
             'llm_analysis': llm_analysis,
+            'temporal_trends': self.analyze_temporal(history_observations or []),
             'generated_at': datetime.now().isoformat()
         }
         
@@ -118,6 +137,44 @@ class TrendAnalyzer:
         self.logger.info("=" * 60)
         
         return analysis_result
+
+    def analyze_temporal(
+        self,
+        observations: List[Dict[str, Any]],
+        *,
+        as_of: str | date | None = None,
+    ) -> Dict[str, Any]:
+        """Compare topic/entity/source signals over configured 7/30/60-day windows."""
+        normalized = _normalize_observations(observations)
+        resolved_as_of = _as_date(as_of) if as_of else (
+            max((item["date"] for item in normalized), default=date.today())
+        )
+        if resolved_as_of is None:
+            raise ValueError(f"Invalid as_of date: {as_of}")
+        configured_windows = self.config.get("analysis", {}).get(
+            "trend_window_days", [7, 30, 60]
+        )
+        windows = {}
+        for raw_days in configured_windows:
+            days = max(1, int(raw_days))
+            current_start = resolved_as_of - timedelta(days=days - 1)
+            previous_end = current_start - timedelta(days=1)
+            previous_start = previous_end - timedelta(days=days - 1)
+            current = [
+                item for item in normalized if current_start <= item["date"] <= resolved_as_of
+            ]
+            previous = [
+                item for item in normalized if previous_start <= item["date"] <= previous_end
+            ]
+            windows[str(days)] = _compare_periods(current, previous, days)
+
+        return {
+            "as_of": resolved_as_of.isoformat(),
+            "window_days": [int(value) for value in configured_windows],
+            "observation_count": len(normalized),
+            "timeline": _build_timeline(normalized),
+            "windows": windows,
+        }
     
     def _extract_keywords(self, papers: List[Dict[str, Any]], top_n: int = 50) -> List[Dict[str, Any]]:
         """提取关键词（使用 TF-IDF）
@@ -129,22 +186,25 @@ class TrendAnalyzer:
         Returns:
             关键词列表，包含词和权重
         """
-        # 合并所有论文的标题和摘要 / Merge titles and abstracts
-        texts = []
-        for paper in papers:
-            text = paper['title'] + ' ' + paper['abstract']
-            texts.append(text)
+        texts = [_document_text(paper) for paper in papers]
+        texts = [text for text in texts if text.strip()]
+        if not texts:
+            return []
         
         # 使用 TF-IDF 提取关键词 / Extract keywords with TF-IDF
         vectorizer = TfidfVectorizer(
             max_features=top_n,
             stop_words=list(self.stop_words),
             ngram_range=(1, 2),  # 包括单词和二元组
-            min_df=2,  # 至少出现在2篇论文中
-            max_df=0.8  # 最多出现在80%的论文中
+            min_df=2 if len(texts) > 2 else 1,
+            max_df=0.8 if len(texts) > 2 else 1.0,
         )
-        
-        tfidf_matrix = vectorizer.fit_transform(texts)
+
+        try:
+            tfidf_matrix = vectorizer.fit_transform(texts)
+        except ValueError as exc:
+            self.logger.warning(self.text(f"关键词提取已跳过: {exc}", f"Keyword extraction skipped: {exc}"))
+            return []
         feature_names = vectorizer.get_feature_names_out()
         
         # 计算每个词的平均 TF-IDF 分数 / Compute average TF-IDF score per term
@@ -172,26 +232,31 @@ class TrendAnalyzer:
         Returns:
             主题列表
         """
-        # 合并所有论文的标题和摘要
-        texts = []
-        for paper in papers:
-            text = paper['title'] + ' ' + paper['abstract']
-            texts.append(text)
+        texts = [_document_text(paper) for paper in papers]
+        texts = [text for text in texts if text.strip()]
+        if not texts:
+            return []
         
         # 使用 CountVectorizer
         vectorizer = CountVectorizer(
             max_features=1000,
             stop_words=list(self.stop_words),
-            min_df=2,
-            max_df=0.8
+            min_df=2 if len(texts) > 2 else 1,
+            max_df=0.8 if len(texts) > 2 else 1.0,
         )
-        
-        doc_term_matrix = vectorizer.fit_transform(texts)
+
+        try:
+            doc_term_matrix = vectorizer.fit_transform(texts)
+        except ValueError as exc:
+            self.logger.warning(self.text(f"主题提取已跳过: {exc}", f"Topic extraction skipped: {exc}"))
+            return []
         feature_names = vectorizer.get_feature_names_out()
+        if not len(feature_names):
+            return []
         
         # 使用 LDA 提取主题 / Extract topics with LDA
         lda = LatentDirichletAllocation(
-            n_components=n_topics,
+            n_components=min(n_topics, len(texts), len(feature_names)),
             random_state=42,
             max_iter=20
         )
@@ -226,10 +291,9 @@ class TrendAnalyzer:
             词云图片路径
         """
         # 合并所有文本 / Merge all texts
-        text = ' '.join([
-            paper['title'] + ' ' + paper['abstract']
-            for paper in papers
-        ])
+        text = ' '.join(_document_text(paper) for paper in papers).strip()
+        if not text:
+            return ''
         
         # 清理文本 / Clean text
         text = re.sub(r'[^\w\s]', ' ', text.lower())
@@ -282,21 +346,19 @@ class TrendAnalyzer:
         # 类别统计 / Category stats
         category_counts = Counter()
         for paper in papers:
-            for category in paper.get('categories', []):
+            for category in _document_categories(paper):
                 category_counts[category] += 1
         
         # 作者统计 / Author stats
         author_counts = Counter()
         for paper in papers:
-            for author in paper.get('authors', []):
+            for author in _document_authors(paper):
                 author_counts[author] += 1
         
         # 高频词统计 / High-frequency words
         word_counts = Counter()
         for paper in papers:
-            title_words = paper['title'].lower().split()
-            abstract_words = paper['abstract'].lower().split()
-            for word in title_words + abstract_words:
+            for word in _document_text(paper).lower().split():
                 word = re.sub(r'[^\w]', '', word)
                 if len(word) > 3 and word not in self.stop_words:
                     word_counts[word] += 1
@@ -304,7 +366,7 @@ class TrendAnalyzer:
         # 时间分布 / Time distribution
         time_distribution = Counter()
         for paper in papers:
-            published = paper.get('published', '')
+            published = paper.get('published_at') or paper.get('published', '')
             if published:
                 if isinstance(published, int):
                     date = str(published)
@@ -316,6 +378,7 @@ class TrendAnalyzer:
         
         statistics = {
             'total_papers': len(papers),
+            'total_documents': len(papers),
             'total_authors': len(author_counts),
             'total_categories': len(category_counts),
             'category_distribution': dict(category_counts.most_common(10)),
@@ -351,7 +414,7 @@ class TrendAnalyzer:
                 'research_ideas': pick_text(self.config, '需要 LLM 客户端', 'LLM client is required')
             }
         
-        # 准备论文摘要信息 / Prepare paper summary block
+        # 准备文档摘要信息 / Prepare document summary block
         papers_summary = []
         for i, paper in enumerate(papers[:30], 1):  # 限制在前30篇 / Limit to first 30 papers
             summary_text = ""
@@ -363,9 +426,14 @@ class TrendAnalyzer:
                         f"\n  Key innovation: {summary.get('key_innovation', '')}\n  Main method: {summary.get('main_method', '')}"
                     )
             
+            categories = _document_categories(paper)[:3]
+            source_type = str(paper.get('source_type') or 'paper')
             papers_summary.append(
-                f"{i}. {paper['title']}\n"
-                + self.text(f"  类别: {', '.join(paper['categories'][:3])}", f"  Categories: {', '.join(paper['categories'][:3])}")
+                f"{i}. {paper.get('title', 'Untitled')}\n"
+                + self.text(
+                    f"  来源类型: {source_type}；主题: {', '.join(categories)}",
+                    f"  Source type: {source_type}; topics: {', '.join(categories)}",
+                )
                 + f"{summary_text}"
             )
         
@@ -435,9 +503,9 @@ class TrendAnalyzer:
             提示词字符串
         """
         if self.language == 'en':
-            return f"""As a senior AI research expert, perform an in-depth analysis based on the latest {paper_count} arXiv papers below.
+            return f"""As a senior energy embodied-intelligence research expert, perform an in-depth analysis based on the latest {paper_count} research, policy, news, and industry documents below.
 
-    ## Paper List (Top 30):
+    ## Intelligence Document List (Top 30):
     {papers_summary}
 
     ## High-frequency Keywords:
@@ -455,7 +523,7 @@ class TrendAnalyzer:
     Identify trends in technical development, including:
     - Dominant methods and architectures
     - Emerging new techniques
-    - Evolution patterns observed from the papers
+    - Evolution patterns observed across research, policy, and industry sources
 
     ### 3. Future Directions
     Based on the current landscape, forecast likely directions in the next 6-12 months, including:
@@ -474,16 +542,17 @@ class TrendAnalyzer:
     Provide one concise summary paragraph (3-6 sentences) that synthesizes the overall landscape.
 
     Please ensure the analysis is:
-    - Grounded in actual paper content
+    - Grounded in actual document content
+    - Focused on energy-oriented embodied intelligence, not robot-arm engineering
     - Insightful and in-depth
     - Actionable for research planning
     - Forward-looking and innovation-focused
 
     Output in Markdown with clear headings and lists."""
 
-        return f"""作为一位资深的 AI 研究专家，请基于以下 {paper_count} 篇最新的 arXiv 论文进行深入分析。
+        return f"""作为一位资深的能源具身智能研究专家，请基于以下 {paper_count} 篇最新论文、中国政策、国内新闻与行业报告进行深入分析。
 
-    ## 论文列表（前30篇）：
+    ## 情报文档列表（前30篇）：
     {papers_summary}
 
     ## 高频关键词：
@@ -501,7 +570,7 @@ class TrendAnalyzer:
     识别技术发展的趋势，包括：
     - 主流的技术方法和架构
     - 正在兴起的新技术
-    - 从论文中观察到的技术演进路径
+    - 从论文、政策和产业信息中观察到的演进路径
 
     ### 3. 未来发展方向 (Future Directions)
     基于当前研究状况，预测未来6-12个月可能的研究方向，包括：
@@ -520,7 +589,8 @@ class TrendAnalyzer:
     用 1 段简洁总结（3-6 句）概括整体研究图景和关键判断。
 
     请确保分析：
-    - 基于实际论文内容
+    - 基于实际文档内容，并区分来源类型
+    - 聚焦能源场景中的感知—决策—行动闭环，不扩展为机械臂工程综述
     - 具有深度和洞察力
     - 提供可操作的研究方向
     - 突出创新性和前瞻性
@@ -762,6 +832,192 @@ class TrendAnalyzer:
         self.logger.info("\n" + "=" * 80)
         self.logger.info(self.text(f"📸 词云图: {analysis.get('wordcloud_path')}", f"📸 Word cloud: {analysis.get('wordcloud_path')}"))
         self.logger.info("=" * 80 + "\n")
+
+
+def _normalize_observations(
+    observations: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Keep the latest stage for each document/date to prevent double counting."""
+    unique: Dict[tuple[str, str], Dict[str, Any]] = {}
+    for observation in observations:
+        document = observation.get("document") or observation
+        if not isinstance(document, dict):
+            continue
+        observation_date = _as_date(
+            observation.get("snapshot_date")
+            or document.get("published_at")
+            or document.get("published")
+        )
+        if observation_date is None:
+            continue
+        document_id = str(
+            document.get("id") or document.get("url") or document.get("title") or ""
+        )
+        if not document_id:
+            continue
+        normalized = {
+            "date": observation_date,
+            "document_id": document_id,
+            "created_at": str(observation.get("created_at") or ""),
+            "document": document,
+        }
+        key = (observation_date.isoformat(), document_id)
+        existing = unique.get(key)
+        if existing is None or normalized["created_at"] >= existing["created_at"]:
+            unique[key] = normalized
+    return sorted(unique.values(), key=lambda item: (item["date"], item["document_id"]))
+
+
+def _document_text(document: Dict[str, Any]) -> str:
+    """Return canonical searchable text across papers and intelligence documents."""
+    parts = [
+        document.get("title"),
+        document.get("raw_text"),
+        document.get("abstract"),
+        document.get("description"),
+    ]
+    summary = document.get("summary")
+    if isinstance(summary, dict):
+        parts.extend(str(value) for value in summary.values())
+    elif summary:
+        parts.append(summary)
+    return " ".join(str(part).strip() for part in parts if str(part or "").strip())
+
+
+def _document_categories(document: Dict[str, Any]) -> List[str]:
+    values: List[Any] = []
+    for field in ("categories", "research_direction", "themes", "tags"):
+        raw = document.get(field) or []
+        values.extend(raw if isinstance(raw, list) else [raw])
+    return list(dict.fromkeys(str(value).strip() for value in values if str(value).strip()))
+
+
+def _document_authors(document: Dict[str, Any]) -> List[str]:
+    raw = document.get("authors_or_orgs") or document.get("authors") or []
+    values = raw if isinstance(raw, list) else [raw]
+    return [str(value).strip() for value in values if str(value).strip()]
+
+
+def _compare_periods(
+    current: List[Dict[str, Any]], previous: List[Dict[str, Any]], days: int
+) -> Dict[str, Any]:
+    current_topics = _signal_counter(current, _topics)
+    previous_topics = _signal_counter(previous, _topics)
+    current_entities = _signal_counter(current, _entities)
+    previous_entities = _signal_counter(previous, _entities)
+    topic_momentum = _counter_changes(current_topics, previous_topics)
+    entity_changes = _counter_changes(current_entities, previous_entities)
+    return {
+        "days": days,
+        "current_document_count": len(current),
+        "previous_document_count": len(previous),
+        "topic_momentum": topic_momentum,
+        "entity_frequency_change": entity_changes,
+        "new_topic_emergence": [
+            item for item in topic_momentum if item["previous_count"] == 0 and item["current_count"] > 0
+        ],
+        "topic_decline": [
+            item for item in topic_momentum if item["current_count"] < item["previous_count"]
+        ],
+        "cross_source_comparison": _source_comparison(current),
+    }
+
+
+def _counter_changes(current: Counter, previous: Counter) -> List[Dict[str, Any]]:
+    changes = []
+    for name in current.keys() | previous.keys():
+        current_count = int(current.get(name, 0))
+        previous_count = int(previous.get(name, 0))
+        delta = current_count - previous_count
+        if previous_count == 0:
+            growth_rate = 1.0 if current_count else 0.0
+            status = "new" if current_count else "stable"
+        else:
+            growth_rate = delta / previous_count
+            status = "rising" if delta > 0 else "declining" if delta < 0 else "stable"
+        changes.append({
+            "name": name,
+            "current_count": current_count,
+            "previous_count": previous_count,
+            "delta": delta,
+            "growth_rate": round(growth_rate, 3),
+            "status": status,
+        })
+    return sorted(
+        changes,
+        key=lambda item: (-abs(item["delta"]), -item["current_count"], item["name"]),
+    )
+
+
+def _build_timeline(observations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    grouped: Dict[date, List[Dict[str, Any]]] = {}
+    for observation in observations:
+        grouped.setdefault(observation["date"], []).append(observation)
+    timeline = []
+    for observation_date, items in sorted(grouped.items()):
+        timeline.append({
+            "date": observation_date.isoformat(),
+            "document_count": len(items),
+            "topic_counts": dict(_signal_counter(items, _topics).most_common()),
+            "entity_counts": dict(_signal_counter(items, _entities).most_common()),
+            "source_counts": dict(_source_counts(items).most_common()),
+        })
+    return timeline
+
+
+def _source_comparison(observations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    topic_counts: Dict[str, Counter] = {}
+    for observation in observations:
+        source_type = str(observation["document"].get("source_type") or "unknown")
+        topic_counts.setdefault(source_type, Counter()).update(set(_topics(observation["document"])))
+    return {
+        "source_counts": dict(_source_counts(observations).most_common()),
+        "topic_counts_by_source": {
+            source_type: dict(counter.most_common())
+            for source_type, counter in sorted(topic_counts.items())
+        },
+    }
+
+
+def _source_counts(observations: List[Dict[str, Any]]) -> Counter:
+    return Counter(
+        str(item["document"].get("source_type") or "unknown") for item in observations
+    )
+
+
+def _signal_counter(observations: List[Dict[str, Any]], extractor) -> Counter:
+    counter = Counter()
+    for observation in observations:
+        counter.update(set(extractor(observation["document"])))
+    return counter
+
+
+def _topics(document: Dict[str, Any]) -> List[str]:
+    values = []
+    for field in ("research_direction", "themes", "tags"):
+        raw = document.get(field) or []
+        values.extend(raw if isinstance(raw, list) else [raw])
+    return [str(value).strip() for value in values if str(value).strip()]
+
+
+def _entities(document: Dict[str, Any]) -> List[str]:
+    raw = document.get("entities") or document.get("authors_or_orgs") or []
+    values = raw if isinstance(raw, list) else [raw]
+    return [str(value).strip() for value in values if str(value).strip()]
+
+
+def _as_date(value: Any) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text[:10])
+    except ValueError:
+        return None
 
 
 def main():

@@ -205,13 +205,22 @@ class PipelineTests(unittest.TestCase):
 
         analyzer_instance = Mock()
         analyzer_instance.analyze.return_value = {'ok': True}
+        storage_instance = Mock()
+        storage_instance.query_history.return_value = [{'snapshot_date': '2026-07-14'}]
 
         with patch('src.summarizer.llm_factory.LLMClientFactory.create_client', return_value=Mock()), \
-             patch('src.analyzer.trend_analyzer.TrendAnalyzer', return_value=analyzer_instance):
+             patch('src.analyzer.trend_analyzer.TrendAnalyzer', return_value=analyzer_instance), \
+             patch('src.storage.base.build_storage', return_value=storage_instance):
             from src.pipeline import analyze_stage
             analyze_stage.run(context)
 
-        analyzer_instance.analyze.assert_called_once_with(context.normalized_records, context.summarized_papers)
+        analyzer_instance.analyze.assert_called_once_with(
+            context.normalized_records,
+            context.summarized_papers,
+            history_observations=storage_instance.query_history.return_value,
+        )
+        query_kwargs = storage_instance.query_history.call_args.kwargs
+        self.assertLess(query_kwargs['date_from'], query_kwargs['date_to'])
 
     def test_extract_stage_keeps_local_tags_when_llm_extraction_fails(self):
         context = create_pipeline_context(self.config, self.logger, self.text)
