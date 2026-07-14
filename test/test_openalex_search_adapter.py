@@ -68,6 +68,11 @@ class OpenAlexSearchAdapterTests(unittest.TestCase):
         self.assertEqual(records[0]["impact_bracket"], "high")
         self.assertEqual(records[0]["openalex_institutions"], ["Tsinghua University"])
 
+        normalized = adapter.normalize(records)
+        self.assertEqual(normalized[0]["source_type"], "paper")
+        self.assertEqual(normalized[0]["source_name"], "OpenAlex")
+        self.assertEqual(normalized[0]["schema_version"], "1.0")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -56,6 +56,54 @@ class IncrementalPipelineTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in result.normalized_records], ["paper-legacy", "news-1"])
         self.assertEqual(result.artifacts["incremental_baseline"], "summaries/latest")
 
+    @patch("src.pipeline.normalize_stage.build_storage")
+    def test_incremental_baseline_upgrades_legacy_papers_and_excludes_robots(
+        self, build_storage
+    ):
+        build_storage.return_value.load_latest.return_value = {
+            "snapshot_id": "legacy-baseline",
+            "documents": [
+                {
+                    "id": "W1",
+                    "title": '&lt;span class="word"&gt;Energy Agent Coordination',
+                    "categories": ["Energy systems"],
+                    "entry_url": "https://openalex.org/W1",
+                },
+                {
+                    "id": "W2",
+                    "title": "Power dispatch robots",
+                    "categories": ["Energy systems"],
+                    "entry_url": "https://openalex.org/W2",
+                },
+            ],
+        }
+        adapter = Mock()
+        adapter.normalize.return_value = [
+            {"id": "policy-1", "source_type": "policy", "title": "New policy"}
+        ]
+        context = PipelineContext(
+            config={
+                "runtime": {"merge_with_latest": True},
+                "negative_keywords": ["robot"],
+            },
+            logger=logging.getLogger("test.incremental.legacy"),
+            text=lambda zh, en: zh,
+            enabled_sources=["policy"],
+            source_adapters={"policy": adapter},
+            source_records={"policy": [{"title": "raw"}]},
+        )
+
+        result = run(context)
+
+        self.assertEqual(
+            [item["id"] for item in result.normalized_records],
+            ["W1", "policy-1"],
+        )
+        paper = result.normalized_records[0]
+        self.assertEqual(paper["source_type"], "paper")
+        self.assertEqual(paper["title"], "Energy Agent Coordination")
+        self.assertEqual(paper["schema_version"], "1.0")
+
 
 if __name__ == "__main__":
     unittest.main()

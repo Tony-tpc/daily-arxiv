@@ -11,6 +11,7 @@ import httpx
 from src.utils import get_date_string, save_json
 
 from .base import BaseSourceAdapter
+from .paper_normalizer import extract_arxiv_id, normalize_paper_records
 
 
 class OpenAlexSearchAdapter(BaseSourceAdapter):
@@ -154,7 +155,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         return results
 
     def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        return records
+        return normalize_paper_records(records, self.source_name, self.config)
 
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         import os
@@ -206,7 +207,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
 
     def _work_to_record(self, work: Dict[str, Any]) -> Dict[str, Any]:
         ids = work.get("ids", {}) or {}
-        arxiv_id = ids.get("arxiv")
+        arxiv_id = extract_arxiv_id(ids.get("arxiv"))
         entry_url = f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else ""
 
         authors = []

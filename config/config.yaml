@@ -107,7 +107,15 @@ keyword_groups:
       - "源网荷储"
 
 # 负向关键词 / Negative keywords
-negative_keywords: []
+negative_keywords:
+  - "robot"
+  - "robotics"
+  - "robot arm"
+  - "manipulator"
+  - "humanoid"
+  - "机器人"
+  - "机械臂"
+  - "人形机器人"
 
 # 优先级规则 / Priority rules
 priority_rules:

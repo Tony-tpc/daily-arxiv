@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from src.sources.paper_normalizer import (
+    clean_paper_title,
+    is_excluded_paper,
+    normalize_paper_record,
+)
 from src.storage.base import build_storage
 from src.utils import get_data_path, load_json
 
@@ -29,11 +34,13 @@ def run(context: PipelineContext) -> PipelineContext:
                     if hasattr(adapter, 'normalize')
                     else list(raw_records)
                 )
-                canonical = [
-                    _canonicalize_record(record, source_name)
-                    for record in (normalized or [])
-                    if isinstance(record, dict)
-                ]
+                canonical = []
+                for record in normalized or []:
+                    if not isinstance(record, dict):
+                        continue
+                    document = _canonicalize_record(record, source_name, context.config)
+                    if document is not None:
+                        canonical.append(document)
                 context.normalized_by_source[source_name] = canonical
                 context.normalized_records.extend(canonical)
                 if hasattr(adapter, 'save_enriched_snapshot'):
@@ -61,11 +68,9 @@ def run(context: PipelineContext) -> PipelineContext:
     if context.normalized_records and runtime_config.get('merge_with_latest', False):
         try:
             latest = build_storage(context.config).load_latest()
-            existing = [
-                dict(item)
-                for item in latest.get('documents', [])
-                if isinstance(item, dict)
-            ]
+            existing = _normalize_existing_documents(
+                latest.get('documents', []), context.config
+            )
             baseline_id = str(latest.get('snapshot_id') or 'latest')
             if not existing:
                 summaries_path = f"{get_data_path(context.config, 'summaries')}/latest.json"
@@ -76,9 +81,9 @@ def run(context: PipelineContext) -> PipelineContext:
                     or summary_payload.get('papers')
                     or []
                 )
-                existing = [
-                    dict(item) for item in fallback_documents if isinstance(item, dict)
-                ]
+                existing = _normalize_existing_documents(
+                    fallback_documents, context.config
+                )
                 baseline_id = 'summaries/latest'
             if existing:
                 context.normalized_records = existing + context.normalized_records
@@ -98,55 +103,55 @@ def run(context: PipelineContext) -> PipelineContext:
     return context
 
 
-def _canonicalize_record(record: Dict[str, Any], source_name: str) -> Dict[str, Any]:
+def _canonicalize_record(
+    record: Dict[str, Any],
+    source_name: str,
+    config: Dict[str, Any],
+) -> Dict[str, Any] | None:
     """Backfill canonical fields for legacy paper adapters."""
-    result = dict(record)
-    if result.get('source_type'):
-        return result
-
-    if source_name not in {'arxiv', 'openalex_search'}:
-        return result
-
-    record_id = str(result.get('id') or result.get('doi') or result.get('entry_url') or '')
-    authors = _string_list(result.get('authors'))
-    categories = _string_list(result.get('categories'))
-    topics = _string_list(result.get('openalex_topics'))
-    institutions = _string_list(result.get('openalex_institutions'))
-    entry_url = str(result.get('entry_url') or result.get('pdf_url') or '')
-    arxiv_id = record_id if source_name == 'arxiv' or 'arxiv.org' in entry_url else None
-
-    result.update({
-        'id': record_id,
-        'source_type': 'paper',
-        'source_name': 'arXiv' if source_name == 'arxiv' else 'OpenAlex',
-        'summary': str(result.get('summary') or ''),
-        'authors_or_orgs': authors,
-        'published_at': str(result.get('published') or ''),
-        'collected_at': str(result.get('fetched_at') or ''),
-        'url': entry_url,
-        'raw_text': str(result.get('abstract') or ''),
-        'keywords': _unique(categories + topics),
-        'tags': _unique(categories + topics),
-        'entities': _unique(authors + institutions),
-        'categories': categories,
-        'arxiv_id': arxiv_id,
-        'doi': result.get('doi') or None,
-        'provenance': result.get('provenance') or {
-            'collected_via': source_name,
-            'source_record_id': record_id,
-            'fetch_url': entry_url,
-            'metadata': {},
-        },
-    })
-    return result
+    if source_name in {'arxiv', 'openalex_search'}:
+        return normalize_paper_record(record, source_name, config)
+    return dict(record)
 
 
-def _string_list(value: Any) -> List[str]:
-    if isinstance(value, (list, tuple, set)):
-        return [str(item).strip() for item in value if str(item).strip()]
-    cleaned = str(value or '').strip()
-    return [cleaned] if cleaned else []
+def _normalize_existing_documents(
+    documents: Any,
+    config: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Upgrade legacy papers in an incremental baseline before deduplication."""
+    normalized: List[Dict[str, Any]] = []
+    for raw in documents if isinstance(documents, list) else []:
+        if not isinstance(raw, dict):
+            continue
+        document = dict(raw)
+        source_type = str(document.get('source_type') or '')
+        legacy_paper = not source_type and _looks_like_legacy_paper(document)
+        if source_type == 'paper' or legacy_paper:
+            inferred_source = _infer_paper_source(document)
+            upgraded = normalize_paper_record(document, inferred_source, config)
+            if upgraded is not None:
+                normalized.append(upgraded)
+                continue
+            if is_excluded_paper(document, config):
+                continue
+            if source_type == 'paper':
+                document['title'] = clean_paper_title(document.get('title'))
+                normalized.append(document)
+            continue
+        normalized.append(document)
+    return normalized
 
 
-def _unique(values: List[str]) -> List[str]:
-    return list(dict.fromkeys(value for value in values if value))
+def _looks_like_legacy_paper(document: Dict[str, Any]) -> bool:
+    return bool(
+        {'arxiv_id', 'doi', 'categories', 'openalex_id', 'entry_url'}
+        & set(document)
+    )
+
+
+def _infer_paper_source(document: Dict[str, Any]) -> str:
+    source_name = str(document.get('source_name') or '').casefold()
+    url = str(document.get('url') or document.get('entry_url') or '').casefold()
+    if 'arxiv' in source_name or 'arxiv.org' in url or document.get('arxiv_id'):
+        return 'arxiv'
+    return 'openalex_search'

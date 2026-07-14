@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 
 from src.crawler.arxiv_fetcher import ArxivFetcher
 from src.sources.openalex_adapter import OpenAlexAdapter
+from src.sources.paper_normalizer import normalize_paper_records
 from src.utils import get_data_path, get_date_string, save_json
 
 from pathlib import Path
@@ -40,7 +41,8 @@ class ArxivSourceAdapter(BaseSourceAdapter):
         return self.fetcher.fetch_papers(days_back=days_back)
 
     def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        return self.openalex_adapter.enrich_records(records)
+        enriched = self.openalex_adapter.enrich_records(records)
+        return normalize_paper_records(enriched, self.source_name, self.config)
 
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         self.fetcher._save_papers(records)

@@ -57,7 +57,11 @@ class SourceRegistryTests(unittest.TestCase):
         adapter.openalex_adapter.enrich_records.return_value = [{**records[0], "citation_count": 8}]
 
         self.assertEqual(adapter.fetch(days_back=2), records)
-        self.assertEqual(adapter.normalize(records)[0]["citation_count"], 8)
+        normalized = adapter.normalize(records)
+        self.assertEqual(normalized[0]["citation_count"], 8)
+        self.assertEqual(normalized[0]["source_type"], "paper")
+        self.assertEqual(normalized[0]["schema_version"], "1.0")
+        self.assertEqual(normalized[0]["arxiv_id"], "1234.5678")
         adapter.fetcher.fetch_papers.assert_called_once_with(days_back=2)
         adapter.openalex_adapter.enrich_records.assert_called_once_with(records)
 

@@ -7,6 +7,7 @@ tracking_topics:
   - "源网荷储"
   - "电力市场"
 regional_focus: ["CN"]
+negative_keywords: ["robot", "robotics", "robot arm", "manipulator", "humanoid", "机器人", "机械臂", "人形机器人"]
 
 research_profile:
   topic: "能源系统中的具身智能与自主决策"
