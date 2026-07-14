@@ -42,6 +42,7 @@ web_config = config.get('web', {})
 language = get_language(config)
 relevance_ranker = RelevanceRanker(config)
 DIRECTORY_SOURCE_TYPES = {"policy", "news", "industry_report"}
+INTELLIGENCE_SOURCE_TYPES = {"paper", *DIRECTORY_SOURCE_TYPES}
 
 WEB_I18N = {
     'zh': {
@@ -162,6 +163,90 @@ def _load_latest_report(report_type: str = "weekly") -> dict:
         analysis,
         report_type=report_type,
     )
+
+
+def _query_intelligence_documents(
+    *,
+    source_type: str = "",
+    topic: str = "",
+    priority: str = "",
+    search: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    sort_by: str = "relevance",
+) -> list[dict]:
+    """Filter and rank the canonical mixed-source collection for web controls."""
+    documents = [
+        relevance_ranker.rank_document(document)
+        for document in _load_intelligence_documents()
+        if not source_type or str(document.get('source_type') or '').lower() == source_type
+    ]
+    if priority in {'high', 'medium', 'low'}:
+        documents = [
+            document for document in documents
+            if document.get('reading_suggestion', {}).get('read_priority') == priority
+        ]
+    search_key = search.casefold()
+    topic_key = topic.casefold()
+    if search_key:
+        documents = [
+            document for document in documents
+            if search_key in _document_filter_text(document)
+        ]
+    if topic_key:
+        documents = [
+            document for document in documents
+            if topic_key in ' '.join(
+                _list_field(document.get(field))
+                for field in ('tags', 'themes', 'research_direction', 'topic_directions')
+            ).casefold()
+        ]
+    if date_from:
+        documents = [
+            document for document in documents
+            if _document_date(document) and _document_date(document) >= date_from
+        ]
+    if date_to:
+        documents = [
+            document for document in documents
+            if _document_date(document) and _document_date(document) <= date_to
+        ]
+
+    if sort_by == 'date':
+        documents.sort(key=_document_date, reverse=True)
+    elif sort_by == 'title':
+        documents.sort(key=lambda item: str(item.get('title') or '').casefold())
+    else:
+        documents.sort(
+            key=lambda item: float(item.get('importance_score') or 0), reverse=True
+        )
+    return documents
+
+
+def _document_filter_text(document: dict) -> str:
+    return ' '.join(
+        str(value or '')
+        for value in (
+            document.get('title'), document.get('summary'), document.get('raw_text'),
+            document.get('abstract'), _list_field(document.get('authors_or_orgs')),
+            _list_field(document.get('tags')), _list_field(document.get('entities')),
+        )
+    ).casefold()
+
+
+def _list_field(value) -> str:
+    if isinstance(value, (list, tuple, set)):
+        return ' '.join(str(item) for item in value)
+    return str(value or '')
+
+
+def _document_date(document: dict) -> str:
+    return str(
+        document.get('published_at')
+        or document.get('published')
+        or document.get('effective_date')
+        or ''
+    )[:10]
 
 
 def _build_document_from_paper(paper: dict, summary_record: dict | None = None):
@@ -399,41 +484,15 @@ def get_documents():
         search = str(request.args.get('search', '')).strip().casefold()
         sort_by = str(request.args.get('sort', 'relevance')).strip().lower()
 
-        documents = [
-            relevance_ranker.rank_document(document)
-            for document in _load_intelligence_documents()
-            if str(document.get('source_type') or '').lower() == source_type
-        ]
-        if priority in {'high', 'medium', 'low'}:
-            documents = [
-                document for document in documents
-                if document.get('reading_suggestion', {}).get('read_priority') == priority
-            ]
-        if search:
-            documents = [
-                document for document in documents
-                if search in ' '.join(
-                    str(value or '')
-                    for value in (
-                        document.get('title'),
-                        document.get('summary'),
-                        document.get('raw_text'),
-                        ' '.join(document.get('authors_or_orgs') or []),
-                        ' '.join(document.get('tags') or []),
-                    )
-                ).casefold()
-            ]
-
-        if sort_by == 'date':
-            documents.sort(
-                key=lambda item: str(item.get('published_at') or ''), reverse=True
-            )
-        elif sort_by == 'title':
-            documents.sort(key=lambda item: str(item.get('title') or '').casefold())
-        else:
-            documents.sort(
-                key=lambda item: float(item.get('importance_score') or 0), reverse=True
-            )
+        documents = _query_intelligence_documents(
+            source_type=source_type,
+            topic=str(request.args.get('topic', '')).strip(),
+            priority=priority,
+            search=search,
+            date_from=str(request.args.get('date_from', '')).strip(),
+            date_to=str(request.args.get('date_to', '')).strip(),
+            sort_by=sort_by,
+        )
 
         total = len(documents)
         start = (page - 1) * per_page
@@ -447,6 +506,51 @@ def get_documents():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/intelligence')
+def get_intelligence():
+    """Return the unified paper-policy-news-industry reading queue."""
+    try:
+        source_type = str(request.args.get('source_type', '')).strip().lower()
+        if source_type == 'all':
+            source_type = ''
+        if source_type and source_type not in INTELLIGENCE_SOURCE_TYPES:
+            return jsonify({'error': '不支持的 source_type'}), 400
+        page = max(1, request.args.get('page', 1, type=int))
+        per_page = min(100, max(1, request.args.get('per_page', 8, type=int)))
+        documents = _query_intelligence_documents(
+            source_type=source_type,
+            topic=str(request.args.get('topic', '')).strip(),
+            priority=str(request.args.get('priority', '')).strip().lower(),
+            search=str(request.args.get('search', '')).strip(),
+            date_from=str(request.args.get('date_from', '')).strip(),
+            date_to=str(request.args.get('date_to', '')).strip(),
+            sort_by=str(request.args.get('sort', 'relevance')).strip().lower(),
+        )
+        source_counts = {}
+        for document in documents:
+            key = str(document.get('source_type') or 'unknown')
+            source_counts[key] = source_counts.get(key, 0) + 1
+        total = len(documents)
+        start = (page - 1) * per_page
+        return jsonify({
+            'documents': documents[start:start + per_page],
+            'total': total,
+            'source_counts': source_counts,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total + per_page - 1) // per_page,
+            'filters': {
+                'source_type': source_type or 'all',
+                'topic': str(request.args.get('topic', '')).strip(),
+                'priority': str(request.args.get('priority', '')).strip(),
+                'date_from': str(request.args.get('date_from', '')).strip(),
+                'date_to': str(request.args.get('date_to', '')).strip(),
+            },
+        })
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
 
 
 @app.route('/api/reports/latest')

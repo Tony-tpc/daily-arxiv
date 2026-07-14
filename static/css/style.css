@@ -2031,3 +2031,206 @@ body {
         flex-basis: 100%;
     }
 }
+
+/* ==================== 多源科研情报首页 ==================== */
+.intelligence-home-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.8fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.intelligence-reading-card {
+    margin: 0;
+}
+
+.intelligence-signal-column {
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+}
+
+.intelligence-signal-column .content-card {
+    margin: 0;
+}
+
+.intelligence-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.intelligence-filter-grid input,
+.filter-input {
+    min-width: 0;
+    min-height: 42px;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.84rem;
+}
+
+.directory-filter {
+    flex-wrap: wrap;
+}
+
+.directory-filter .filter-input {
+    flex: 1 1 150px;
+}
+
+.today-recommendations {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.recommendation-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0.95rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+}
+
+.recommendation-card header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.recommendation-card h3 {
+    display: -webkit-box;
+    flex: 1;
+    margin: 0;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 760;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.recommendation-card p {
+    display: -webkit-box;
+    margin: 0.6rem 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.recommendation-card footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: auto;
+    color: var(--text-tertiary);
+    font-size: 0.72rem;
+}
+
+.recommendation-card footer a {
+    color: var(--primary-color);
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.source-snapshot {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.source-snapshot-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    padding: 0.7rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+}
+
+.source-snapshot-item i {
+    width: 1.2rem;
+    color: var(--primary-color);
+    text-align: center;
+}
+
+.source-snapshot-item span {
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.source-snapshot-item strong {
+    font-size: 1.05rem;
+}
+
+.home-trend-signals {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.home-trend-signal {
+    padding-left: 0.7rem;
+    border-left: 3px solid var(--primary-color);
+}
+
+.home-trend-signal strong,
+.home-trend-signal span {
+    display: block;
+}
+
+.home-trend-signal strong {
+    color: var(--text-primary);
+    font-size: 0.84rem;
+}
+
+.home-trend-signal span {
+    margin-top: 0.15rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.45;
+}
+
+.chart-pair-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.chart-pair-grid .content-card {
+    min-width: 0;
+}
+
+@media (max-width: 1080px) {
+    .intelligence-home-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .intelligence-signal-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .intelligence-filter-grid,
+    .today-recommendations,
+    .intelligence-signal-column,
+    .chart-pair-grid {
+        grid-template-columns: 1fr;
+    }
+}

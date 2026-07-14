@@ -68,7 +68,9 @@ const I18N = {
         reportEmpty: '本周期暂无可展示条目',
         reportOriginal: '查看原始来源',
         reportPeriod: '报告周期',
-        reportGenerated: '生成于'
+        reportGenerated: '生成于',
+        noIntelligence: '暂无符合条件的科研情报',
+        signalInsufficient: '历史信号不足，运行多源采集后将在此展示'
     },
     en: {
         monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -134,7 +136,9 @@ const I18N = {
         reportEmpty: 'No items in this period',
         reportOriginal: 'Open source',
         reportPeriod: 'Period',
-        reportGenerated: 'Generated'
+        reportGenerated: 'Generated',
+        noIntelligence: 'No matching intelligence',
+        signalInsufficient: 'Run multi-source collection to build historical signals'
     }
 };
 
@@ -168,10 +172,11 @@ const state = {
     searchQuery: '',
     allPapers: [],
     directories: {
-        policy: {documents: [], total: 0, search: '', priority: '', sort: 'relevance'},
-        news: {documents: [], total: 0, search: '', priority: '', sort: 'relevance'},
-        industry_report: {documents: [], total: 0, search: '', priority: '', sort: 'relevance'}
+        policy: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance'},
+        news: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance'},
+        industry_report: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance'}
     },
+    homeFilters: {sourceType: 'all', topic: '', priority: '', dateFrom: '', dateTo: ''},
     allCategories: [],
     analysis: null,
     report: null,
@@ -180,6 +185,8 @@ const state = {
     facetSchema: [],
     categoryChart: null,
     trendChart: null,
+    sourceComparisonChart: null,
+    entityTrendChart: null,
     currentDate: new Date(),
     theme: localStorage.getItem('theme') || 'light'
 };
@@ -383,13 +390,15 @@ async function loadAllData() {
             loadDirectory('policy'),
             loadDirectory('news'),
             loadDirectory('industry_report'),
-            loadReport()
+            loadReport(),
+            loadIntelligenceHome()
         ]);
         renderPapers(filterPapers(state.allPapers));
         renderFeaturedPapers(state.allPapers.slice(0, 5));
         renderResearchTrendModules();
         renderResearchMatrix();
         renderComparisonTable();
+        renderHomeTrendSignals();
     } catch (error) {
         console.error('加载数据失败:', error);
     }
@@ -484,6 +493,7 @@ async function loadAnalysis() {
         renderAnalysisContent('future-content', llmAnalysis.future_directions_html || llmAnalysis.future_directions);
         renderAnalysisContent('ideas-content', llmAnalysis.research_ideas_html || llmAnalysis.research_ideas);
         renderResearchTrendModules();
+        renderHomeTrendSignals();
         
     } catch (error) {
         console.error('加载分析数据失败:', error);
@@ -637,6 +647,85 @@ function renderPapers(papers) {
     }).join('');
 }
 
+async function loadIntelligenceHome() {
+    showLoading('today-recommendations');
+    const filters = state.homeFilters;
+    const params = new URLSearchParams({
+        source_type: filters.sourceType,
+        topic: filters.topic,
+        priority: filters.priority,
+        date_from: filters.dateFrom,
+        date_to: filters.dateTo,
+        sort: 'relevance',
+        per_page: 8
+    });
+    try {
+        const response = await fetch(`/api/intelligence?${params}`);
+        if (!response.ok) throw new Error('Failed to load intelligence');
+        const payload = await response.json();
+        updateElement('intelligence-result-count', `${payload.total || 0} ${LANG === 'zh' ? '条' : 'items'}`);
+        renderTodayRecommendations(payload.documents || []);
+        renderSourceSnapshot(payload.source_counts || {});
+    } catch (error) {
+        console.error('加载科研情报首页失败:', error);
+        showError('today-recommendations', t('noIntelligence'));
+    }
+}
+
+function renderTodayRecommendations(documents) {
+    const container = document.getElementById('today-recommendations');
+    if (!container) return;
+    if (!documents.length) {
+        container.innerHTML = `<p class="trend-note">${t('noIntelligence')}</p>`;
+        return;
+    }
+    const labels = LANG === 'zh'
+        ? {paper: '论文', policy: '政策', news: '新闻', industry_report: '行业报告'}
+        : {paper: 'Paper', policy: 'Policy', news: 'News', industry_report: 'Industry report'};
+    container.innerHTML = documents.map(document => {
+        const card = document.web_card || document;
+        const suggestion = card.reading_suggestion || document.reading_suggestion || {};
+        const url = card.links?.source_url || card.links?.primary_url || document.url || document.entry_url || '';
+        const safeUrl = /^https?:\/\//i.test(url) ? url : '';
+        const sourceType = card.source_type || document.source_type || 'paper';
+        return `<article class="recommendation-card">
+            <header><span class="report-source-chip">${labels[sourceType] || escapeHtml(sourceType)}</span><h3>${escapeHtml(card.title || document.title || '')}</h3><span class="report-score">${Number(card.importance_score || document.importance_score || 0).toFixed(1)}</span></header>
+            <p>${escapeHtml(suggestion.why_relevant || card.summary || document.summary || document.abstract || '')}</p>
+            <footer><span>${escapeHtml(suggestion.recommended_action || '')}</span>${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${t('originalSource')} <i class="fas fa-arrow-up-right-from-square"></i></a>` : ''}</footer>
+        </article>`;
+    }).join('');
+}
+
+function renderSourceSnapshot(counts) {
+    const container = document.getElementById('source-snapshot');
+    if (!container) return;
+    const items = [
+        ['paper', 'papers', 'fa-file-lines', LANG === 'zh' ? '论文' : 'Papers'],
+        ['policy', 'policies', 'fa-landmark', LANG === 'zh' ? '中国政策' : 'China policies'],
+        ['news', 'news', 'fa-newspaper', LANG === 'zh' ? '国内新闻' : 'China news'],
+        ['industry_report', 'industry-reports', 'fa-industry', LANG === 'zh' ? '行业报告' : 'Industry reports']
+    ];
+    container.innerHTML = items.map(([type, section, icon, label]) => `<button type="button" class="source-snapshot-item" data-home-section="${section}"><i class="fas ${icon}"></i><span>${label}</span><strong>${Number(counts[type] || 0)}</strong></button>`).join('');
+    container.querySelectorAll('[data-home-section]').forEach(button => {
+        button.addEventListener('click', () => navigateToSection(button.dataset.homeSection));
+    });
+}
+
+function renderHomeTrendSignals() {
+    const container = document.getElementById('home-trend-signals');
+    if (!container) return;
+    const sevenDay = state.analysis?.temporal_trends?.windows?.['7'] || {};
+    const rising = (sevenDay.topic_momentum || []).filter(item => ['new', 'rising'].includes(item.status)).slice(0, 3);
+    const directions = (state.analysis?.cross_source_analysis?.directions || []).slice(0, 2);
+    const signals = rising.map(item => ({
+        title: item.name,
+        body: `${LANG === 'zh' ? '近 7 天变化' : '7-day change'} ${Number(item.delta || 0) >= 0 ? '+' : ''}${Number(item.delta || 0)}`
+    })).concat(directions.map(item => ({title: item.direction, body: item.judgment || item.rationale || ''})));
+    container.innerHTML = signals.length
+        ? signals.map(item => `<div class="home-trend-signal"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div>`).join('')
+        : `<p class="trend-note">${t('signalInsufficient')}</p>`;
+}
+
 async function loadReport(reportType) {
     const selectedType = reportType || document.getElementById('report-type')?.value || 'weekly';
     showLoading('intelligence-report');
@@ -738,7 +827,10 @@ async function loadDirectory(sourceType) {
         page: 1,
         per_page: 100,
         search: directory.search,
+        topic: directory.topic,
         priority: directory.priority,
+        date_from: directory.dateFrom,
+        date_to: directory.dateTo,
         sort: directory.sort
     });
     try {
@@ -1177,6 +1269,8 @@ function renderAnalysisContent(elementId, content) {
 function renderResearchTrendModules() {
     renderCategoryChart();
     renderTrendTimeline();
+    renderSourceComparisonChart();
+    renderEntityTrendChart();
 }
 
 function renderCategoryChart() {
@@ -1212,17 +1306,42 @@ function renderTrendTimeline() {
     const keywordStrip = document.getElementById('trend-keyword-strip');
     if (!canvas || typeof Chart === 'undefined') return;
 
-    const snapshots = state.history.length
-        ? state.history
-        : [{
-            date: state.analysis?.date || '',
-            paper_count: state.analysis?.paper_count || state.allPapers.length,
-            keywords: state.analysis?.keywords || [],
-            categories: state.analysis?.statistics?.category_distribution || {}
-        }];
-
+    const temporalTimeline = state.analysis?.temporal_trends?.timeline || [];
+    const snapshots = temporalTimeline.length
+        ? temporalTimeline
+        : state.history.length
+            ? state.history.map(item => ({
+                ...item,
+                document_count: item.paper_count || 0,
+                topic_counts: item.categories || {}
+            }))
+            : [{
+                date: state.analysis?.date || '',
+                document_count: state.analysis?.document_count || state.analysis?.paper_count || state.allPapers.length,
+                topic_counts: state.analysis?.statistics?.category_distribution || {}
+            }];
     const usableSnapshots = snapshots.filter(snapshot => snapshot.date);
     if (!usableSnapshots.length) return;
+
+    const topicTotals = {};
+    usableSnapshots.forEach(snapshot => {
+        Object.entries(snapshot.topic_counts || {}).forEach(([topic, count]) => {
+            topicTotals[topic] = (topicTotals[topic] || 0) + Number(count || 0);
+        });
+    });
+    const topTopics = Object.entries(topicTotals)
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 3)
+        .map(([topic]) => topic);
+    const colors = ['#06b6d4', '#f59e0b', '#10b981'];
+    const topicDatasets = topTopics.map((topic, index) => ({
+        label: topic,
+        data: usableSnapshots.map(snapshot => Number(snapshot.topic_counts?.[topic] || 0)),
+        borderColor: colors[index],
+        backgroundColor: `${colors[index]}20`,
+        fill: false,
+        tension: 0.35
+    }));
 
     if (state.trendChart) state.trendChart.destroy();
     state.trendChart = new Chart(canvas, {
@@ -1231,21 +1350,14 @@ function renderTrendTimeline() {
             labels: usableSnapshots.map(snapshot => snapshot.date),
             datasets: [
                 {
-                    label: t('paperCount'),
-                    data: usableSnapshots.map(snapshot => snapshot.paper_count || 0),
+                    label: LANG === 'zh' ? '文档数量' : 'Documents',
+                    data: usableSnapshots.map(snapshot => snapshot.document_count || 0),
                     borderColor: '#4f46e5',
                     backgroundColor: 'rgba(79, 70, 229, 0.12)',
                     fill: true,
                     tension: 0.35
                 },
-                {
-                    label: t('categoryCount'),
-                    data: usableSnapshots.map(snapshot => Object.keys(snapshot.categories || {}).length),
-                    borderColor: '#06b6d4',
-                    backgroundColor: 'rgba(6, 182, 212, 0.12)',
-                    fill: true,
-                    tension: 0.35
-                }
+                ...topicDatasets
             ]
         },
         options: {
@@ -1257,8 +1369,8 @@ function renderTrendTimeline() {
                     callbacks: {
                         afterBody: context => {
                             const snapshot = usableSnapshots[context[0].dataIndex];
-                            const keywords = (snapshot.keywords || []).slice(0, 5).map(item => item.keyword || item.value || item);
-                            return keywords.length ? `${LANG === 'zh' ? '关键词' : 'Keywords'}: ${keywords.join(', ')}` : '';
+                            const topics = Object.entries(snapshot.topic_counts || {}).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([topic]) => topic);
+                            return topics.length ? `${LANG === 'zh' ? '主题' : 'Topics'}: ${topics.join(', ')}` : '';
                         }
                     }
                 }
@@ -1268,11 +1380,66 @@ function renderTrendTimeline() {
 
     if (keywordStrip) {
         const latest = usableSnapshots[usableSnapshots.length - 1];
-        const keywords = (latest.keywords || state.analysis?.keywords || []).slice(0, 12);
-        keywordStrip.innerHTML = keywords.length
-            ? keywords.map(item => `<span class="trend-keyword">${escapeHtml(item.keyword || item.value || item)}</span>`).join('')
+        const topics = Object.entries(latest.topic_counts || {}).sort((a, b) => b[1] - a[1]).slice(0, 12);
+        keywordStrip.innerHTML = topics.length
+            ? topics.map(([topic]) => `<span class="trend-keyword">${escapeHtml(topic)}</span>`).join('')
             : `<span class="trend-note">${t('timelineHint')}</span>`;
     }
+}
+
+function renderSourceComparisonChart() {
+    const canvas = document.getElementById('source-comparison-chart');
+    const empty = document.getElementById('source-comparison-empty');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const timeline = state.analysis?.temporal_trends?.timeline || [];
+    const latestCounts = timeline.length ? timeline[timeline.length - 1].source_counts || {} : {};
+    const windowCounts = state.analysis?.temporal_trends?.windows?.['7']?.cross_source_comparison?.source_counts || {};
+    const counts = Object.keys(latestCounts).length ? latestCounts : windowCounts;
+    const entries = Object.entries(counts);
+    if (!entries.length) {
+        if (empty) empty.textContent = t('signalInsufficient');
+        return;
+    }
+    if (empty) empty.textContent = '';
+    if (state.sourceComparisonChart) state.sourceComparisonChart.destroy();
+    const labels = LANG === 'zh'
+        ? {paper: '论文', policy: '政策', news: '新闻', industry_report: '行业报告', unknown: '其他'}
+        : {paper: 'Paper', policy: 'Policy', news: 'News', industry_report: 'Industry report', unknown: 'Other'};
+    state.sourceComparisonChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: entries.map(([name]) => labels[name] || name),
+            datasets: [{label: LANG === 'zh' ? '文档数' : 'Documents', data: entries.map(([, count]) => count), backgroundColor: ['#4f46e5', '#f59e0b', '#06b6d4', '#10b981']}]
+        },
+        options: {responsive: true, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}, plugins: {legend: {display: false}}}
+    });
+}
+
+function renderEntityTrendChart() {
+    const canvas = document.getElementById('entity-trend-chart');
+    const empty = document.getElementById('entity-trend-empty');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const timeline = state.analysis?.temporal_trends?.timeline || [];
+    const totals = {};
+    timeline.forEach(snapshot => Object.entries(snapshot.entity_counts || {}).forEach(([entity, count]) => {
+        totals[entity] = (totals[entity] || 0) + Number(count || 0);
+    }));
+    const entities = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([entity]) => entity);
+    if (!timeline.length || !entities.length) {
+        if (empty) empty.textContent = t('signalInsufficient');
+        return;
+    }
+    if (empty) empty.textContent = '';
+    if (state.entityTrendChart) state.entityTrendChart.destroy();
+    const colors = ['#4f46e5', '#06b6d4', '#f59e0b', '#10b981', '#f43f5e'];
+    state.entityTrendChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: timeline.map(item => item.date),
+            datasets: entities.map((entity, index) => ({label: entity, data: timeline.map(item => Number(item.entity_counts?.[entity] || 0)), borderColor: colors[index], tension: 0.3}))
+        },
+        options: {responsive: true, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}, plugins: {legend: {position: 'bottom'}}}
+    });
 }
 
 function renderResearchMatrix() {
@@ -1513,6 +1680,34 @@ function initEventListeners() {
         });
     });
 
+    document.querySelectorAll('[data-directory-topic]').forEach(input => {
+        let topicTimeout;
+        input.addEventListener('input', event => {
+            clearTimeout(topicTimeout);
+            topicTimeout = setTimeout(() => {
+                const sourceType = event.target.dataset.directoryTopic;
+                state.directories[sourceType].topic = event.target.value;
+                loadDirectory(sourceType);
+            }, 300);
+        });
+    });
+
+    document.querySelectorAll('[data-directory-date-from]').forEach(input => {
+        input.addEventListener('change', event => {
+            const sourceType = event.target.dataset.directoryDateFrom;
+            state.directories[sourceType].dateFrom = event.target.value;
+            loadDirectory(sourceType);
+        });
+    });
+
+    document.querySelectorAll('[data-directory-date-to]').forEach(input => {
+        input.addEventListener('change', event => {
+            const sourceType = event.target.dataset.directoryDateTo;
+            state.directories[sourceType].dateTo = event.target.value;
+            loadDirectory(sourceType);
+        });
+    });
+
     document.querySelectorAll('[data-directory-sort]').forEach(select => {
         select.addEventListener('change', event => {
             const sourceType = event.target.dataset.directorySort;
@@ -1526,6 +1721,17 @@ function initEventListeners() {
     });
     document.getElementById('report-refresh')?.addEventListener('click', () => {
         loadReport();
+    });
+
+    document.getElementById('home-filter-apply')?.addEventListener('click', () => {
+        state.homeFilters = {
+            sourceType: document.getElementById('home-source-filter')?.value || 'all',
+            topic: document.getElementById('home-topic-filter')?.value || '',
+            priority: document.getElementById('home-priority-filter')?.value || '',
+            dateFrom: document.getElementById('home-date-from')?.value || '',
+            dateTo: document.getElementById('home-date-to')?.value || ''
+        };
+        loadIntelligenceHome();
     });
 }
 
@@ -1620,5 +1826,6 @@ window.dailyArxiv = {
     loadPapers,
     loadDirectory,
     loadReport,
+    loadIntelligenceHome,
     toggleTheme
 };

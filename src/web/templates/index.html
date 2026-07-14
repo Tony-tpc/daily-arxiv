@@ -166,6 +166,48 @@
                     </div>
                 </div>
 
+                <!-- 研究情报首页 -->
+                <div class="intelligence-home-grid">
+                    <div class="content-card intelligence-reading-card">
+                        <div class="card-header">
+                            <div class="header-left"><i class="fas fa-bookmark"></i><h2>{{ '今日建议阅读' if language == 'zh' else 'Recommended Today' }}</h2></div>
+                            <span class="update-time" id="intelligence-result-count">0 {{ '条' if language == 'zh' else 'items' }}</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="intelligence-filter-grid" aria-label="{{ '科研情报筛选' if language == 'zh' else 'Intelligence filters' }}">
+                                <select id="home-source-filter" class="filter-select" aria-label="{{ '来源类型' if language == 'zh' else 'Source type' }}">
+                                    <option value="all">{{ '全部来源' if language == 'zh' else 'All sources' }}</option>
+                                    <option value="paper">{{ '论文' if language == 'zh' else 'Papers' }}</option>
+                                    <option value="policy">{{ '中国政策' if language == 'zh' else 'China policies' }}</option>
+                                    <option value="news">{{ '国内新闻' if language == 'zh' else 'China news' }}</option>
+                                    <option value="industry_report">{{ '行业报告' if language == 'zh' else 'Industry reports' }}</option>
+                                </select>
+                                <input id="home-topic-filter" type="search" placeholder="{{ '主题：如虚拟电厂' if language == 'zh' else 'Topic, e.g. virtual power plant' }}" aria-label="{{ '主题' if language == 'zh' else 'Topic' }}">
+                                <select id="home-priority-filter" class="filter-select" aria-label="{{ '阅读优先级' if language == 'zh' else 'Reading priority' }}">
+                                    <option value="">{{ '全部优先级' if language == 'zh' else 'All priorities' }}</option>
+                                    <option value="high">{{ '高 · 精读' if language == 'zh' else 'High · Deep read' }}</option>
+                                    <option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium · Skim' }}</option>
+                                    <option value="low">{{ '低 · 存档' if language == 'zh' else 'Low · Archive' }}</option>
+                                </select>
+                                <input id="home-date-from" type="date" aria-label="{{ '开始日期' if language == 'zh' else 'Start date' }}">
+                                <input id="home-date-to" type="date" aria-label="{{ '结束日期' if language == 'zh' else 'End date' }}">
+                                <button type="button" id="home-filter-apply" class="report-refresh-btn"><i class="fas fa-filter"></i>{{ '应用筛选' if language == 'zh' else 'Apply' }}</button>
+                            </div>
+                            <div id="today-recommendations" class="today-recommendations"><div class="loading"><div class="spinner"></div></div></div>
+                        </div>
+                    </div>
+                    <aside class="intelligence-signal-column">
+                        <div class="content-card">
+                            <div class="card-header"><div class="header-left"><i class="fas fa-layer-group"></i><h2>{{ '多源情报速览' if language == 'zh' else 'Source Snapshot' }}</h2></div></div>
+                            <div class="card-body source-snapshot" id="source-snapshot"></div>
+                        </div>
+                        <div class="content-card">
+                            <div class="card-header"><div class="header-left"><i class="fas fa-bolt"></i><h2>{{ '趋势信号' if language == 'zh' else 'Trend Signals' }}</h2></div></div>
+                            <div class="card-body home-trend-signals" id="home-trend-signals"></div>
+                        </div>
+                    </aside>
+                </div>
+
                 <!-- 词云图 -->
                 <div class="content-card">
                     <div class="card-header">
@@ -279,6 +321,9 @@
                 </div>
                 <div class="filter-bar directory-filter" data-source-type="policy">
                     <div class="search-box"><i class="fas fa-search"></i><input type="search" data-directory-search="policy" placeholder="{{ '搜索政策标题、机构或主题...' if language == 'zh' else 'Search policies...' }}"></div>
+                    <input class="filter-input" type="search" data-directory-topic="policy" placeholder="{{ '主题筛选' if language == 'zh' else 'Topic' }}">
+                    <input class="filter-input" type="date" data-directory-date-from="policy" aria-label="{{ '政策开始日期' if language == 'zh' else 'Policy start date' }}">
+                    <input class="filter-input" type="date" data-directory-date-to="policy" aria-label="{{ '政策结束日期' if language == 'zh' else 'Policy end date' }}">
                     <select class="filter-select" data-directory-priority="policy"><option value="">{{ '全部优先级' if language == 'zh' else 'All priorities' }}</option><option value="high">{{ '高 · 精读' if language == 'zh' else 'High' }}</option><option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium' }}</option><option value="low">{{ '低 · 存档' if language == 'zh' else 'Low' }}</option></select>
                     <select class="filter-select" data-directory-sort="policy"><option value="relevance">{{ '按研究价值' if language == 'zh' else 'By relevance' }}</option><option value="date">{{ '按发布日期' if language == 'zh' else 'By date' }}</option><option value="title">{{ '按标题' if language == 'zh' else 'By title' }}</option></select>
                 </div>
@@ -296,6 +341,9 @@
                 </div>
                 <div class="filter-bar directory-filter" data-source-type="news">
                     <div class="search-box"><i class="fas fa-search"></i><input type="search" data-directory-search="news" placeholder="{{ '搜索新闻标题、媒体或主题...' if language == 'zh' else 'Search news...' }}"></div>
+                    <input class="filter-input" type="search" data-directory-topic="news" placeholder="{{ '主题筛选' if language == 'zh' else 'Topic' }}">
+                    <input class="filter-input" type="date" data-directory-date-from="news" aria-label="{{ '新闻开始日期' if language == 'zh' else 'News start date' }}">
+                    <input class="filter-input" type="date" data-directory-date-to="news" aria-label="{{ '新闻结束日期' if language == 'zh' else 'News end date' }}">
                     <select class="filter-select" data-directory-priority="news"><option value="">{{ '全部优先级' if language == 'zh' else 'All priorities' }}</option><option value="high">{{ '高 · 精读' if language == 'zh' else 'High' }}</option><option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium' }}</option><option value="low">{{ '低 · 存档' if language == 'zh' else 'Low' }}</option></select>
                     <select class="filter-select" data-directory-sort="news"><option value="relevance">{{ '按研究价值' if language == 'zh' else 'By relevance' }}</option><option value="date">{{ '按发布日期' if language == 'zh' else 'By date' }}</option><option value="title">{{ '按标题' if language == 'zh' else 'By title' }}</option></select>
                 </div>
@@ -313,6 +361,9 @@
                 </div>
                 <div class="filter-bar directory-filter" data-source-type="industry_report">
                     <div class="search-box"><i class="fas fa-search"></i><input type="search" data-directory-search="industry_report" placeholder="{{ '搜索报告标题、机构或主题...' if language == 'zh' else 'Search reports...' }}"></div>
+                    <input class="filter-input" type="search" data-directory-topic="industry_report" placeholder="{{ '主题筛选' if language == 'zh' else 'Topic' }}">
+                    <input class="filter-input" type="date" data-directory-date-from="industry_report" aria-label="{{ '报告开始日期' if language == 'zh' else 'Report start date' }}">
+                    <input class="filter-input" type="date" data-directory-date-to="industry_report" aria-label="{{ '报告结束日期' if language == 'zh' else 'Report end date' }}">
                     <select class="filter-select" data-directory-priority="industry_report"><option value="">{{ '全部优先级' if language == 'zh' else 'All priorities' }}</option><option value="high">{{ '高 · 精读' if language == 'zh' else 'High' }}</option><option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium' }}</option><option value="low">{{ '低 · 存档' if language == 'zh' else 'Low' }}</option></select>
                     <select class="filter-select" data-directory-sort="industry_report"><option value="relevance">{{ '按研究价值' if language == 'zh' else 'By relevance' }}</option><option value="date">{{ '按发布日期' if language == 'zh' else 'By date' }}</option><option value="title">{{ '按标题' if language == 'zh' else 'By title' }}</option></select>
                 </div>
@@ -469,6 +520,17 @@
                     <div class="card-body">
                         <canvas id="trend-chart"></canvas>
                         <div class="trend-keyword-strip" id="trend-keyword-strip"></div>
+                    </div>
+                </div>
+
+                <div class="chart-pair-grid">
+                    <div class="content-card">
+                        <div class="card-header"><div class="header-left"><i class="fas fa-scale-balanced"></i><h2>{{ '来源对比' if language == 'zh' else 'Source Comparison' }}</h2></div></div>
+                        <div class="card-body"><canvas id="source-comparison-chart"></canvas><p id="source-comparison-empty" class="trend-note"></p></div>
+                    </div>
+                    <div class="content-card">
+                        <div class="card-header"><div class="header-left"><i class="fas fa-building-circle-check"></i><h2>{{ '实体变化' if language == 'zh' else 'Entity Trends' }}</h2></div></div>
+                        <div class="card-body"><canvas id="entity-trend-chart"></canvas><p id="entity-trend-empty" class="trend-note"></p></div>
                     </div>
                 </div>
 
