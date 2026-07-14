@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Core Python code lives in `src/`. The stage-based workflow is under `src/pipeline/`, paper sources under `src/sources/`, LLM integrations under `src/summarizer/`, and output, analysis, notification, and web components in their corresponding packages. `main.py` runs the paper-processing pipeline; `scheduler.py` provides scheduled execution. Flask templates and browser assets live in `src/web/templates/` and `static/`. Tests are in `test/`, documentation in `docs/`, deployment scripts and systemd units in `deploy/`, and generated reports or analysis artifacts in `data/`.
+Core Python code lives in `src/`. The stage-based workflow is under `src/pipeline/`, multi-source adapters under `src/sources/`, LLM integrations under `src/summarizer/`, and output, analysis, notification, and web components in their corresponding packages. `main.py` runs the processing pipeline; `scheduler.py` provides source-specific execution. Flask templates and browser assets live in `src/web/templates/` and `static/`. Tests are in `test/`, documentation in `docs/`, deployment scripts and systemd units in `deploy/`, and generated reports or analysis artifacts in `data/`.
 
 ## Build, Test, and Development Commands
 
@@ -29,4 +29,4 @@ Recent history follows Conventional Commit prefixes, especially `feat:` and `fix
 
 ## Configuration & Security
 
-Copy `.env.example` to `.env` and keep secrets local. Make portable defaults in `config/config.yaml`, document new keys in `docs/config_guide.md`, and avoid committing machine-specific paths.
+Copy `.env.example` to `.env` and keep secrets local. Make portable defaults in `config/config.yaml`, document new source keys in `docs/source_config_guide.md`, and avoid committing machine-specific paths. Keep the product scope on Chinese energy policy, domestic energy intelligence, and agents operating physical energy systems; do not broaden it to robot arms or general-purpose robotics.

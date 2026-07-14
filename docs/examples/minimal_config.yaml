@@ -1,0 +1,96 @@
+app:
+  language: "zh"
+
+tracking_topics:
+  - "虚拟电厂"
+  - "能源智能体"
+  - "源网荷储"
+  - "电力市场"
+regional_focus: ["CN"]
+
+research_profile:
+  topic: "能源系统中的具身智能与自主决策"
+  focus:
+    - "能源智能体对物理能源设备的感知、决策与控制"
+  excluded_directions: ["机械臂", "人形机器人", "通用机器人操控"]
+
+sources:
+  arxiv:
+    enabled: true
+    categories: ["eess.SY", "cs.MA", "cs.LG"]
+    keyword_groups:
+      - name: "energy_agent"
+        terms: ["virtual power plant", "energy agent", "source grid load storage"]
+    max_results: 10
+    days_back: 30
+  openalex_search:
+    enabled: false
+  rss:
+    enabled: true
+    filter_scope: "title"
+    include_keywords: ["能源", "电力", "电网", "储能", "虚拟电厂"]
+    exclude_keywords: ["机械臂", "人形机器人"]
+    feeds:
+      - name: "人民网财经"
+        url: "https://www.people.com.cn/rss/finance.xml"
+        region: "CN"
+  policy:
+    enabled: true
+    feeds:
+      - name: "国家能源局"
+        url: "https://www.nea.gov.cn/"
+        format: "html"
+        item_selector: ".index_list02 li"
+        link_selector: "a[href]"
+        date_selector: "span"
+        detail_content_selector: ".article-content"
+        issuing_body: "国家能源局"
+        region: "CN"
+        max_entries: 10
+  industry_report:
+    enabled: true
+    feeds:
+      - name: "国家能源局可靠性和质监中心"
+        url: "https://prpq.nea.gov.cn/ndbg"
+        format: "html"
+        item_selector: "dl.dl_l"
+        link_selector: "dt a[href]"
+        date_selector: "dd span"
+        detail_content_selector: ".article-content"
+        institution: "国家能源局电力可靠性管理和工程质量监督中心"
+        title_keywords_any: ["报告", "蓝皮书", "白皮书"]
+        region: "CN"
+        max_entries: 10
+
+llm:
+  provider: "deepseek"
+  deepseek:
+    api_key: ""
+    model: "deepseek-chat"
+    base_url: "https://api.deepseek.com/v1"
+
+storage:
+  type: "json"
+  document_json_path: "data/documents"
+
+outputs:
+  markdown: {enabled: true, directory: "data/markdown"}
+  obsidian: {enabled: false, vault_path: "data/obsidian", use_markdown_links: true}
+  zotero: {enabled: false, export_directory: "data/zotero"}
+
+analysis:
+  trend_window_days: [7, 30, 60]
+reporting:
+  enabled: true
+  default_type: "weekly"
+  directory: "data/reports"
+
+scheduler:
+  enabled: true
+  timezone: "Asia/Shanghai"
+  run_on_start: false
+  jobs:
+    academic_daily: {enabled: true, sources: ["arxiv"], trigger: "cron", hour: 9, minute: 0}
+    news_8h: {enabled: true, sources: ["rss"], trigger: "interval", hours: 8}
+    policy_daily: {enabled: true, sources: ["policy"], trigger: "cron", hour: 10, minute: 0}
+    industry_weekly: {enabled: true, sources: ["industry_report"], trigger: "cron", day_of_week: "mon", hour: 11, minute: 0}

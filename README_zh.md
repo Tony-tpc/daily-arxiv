@@ -6,7 +6,20 @@
 
 [English](README.md) | **中文文档**
 
-每日自动追踪 arXiv 上最新的 AI 研究论文，使用 LLM 进行智能总结，并生成研究趋势分析报告。
+面向中国能源方向具身智能的多源研究情报系统：自动汇集学术论文、中国政策、国内新闻和行业报告，生成中文摘要、阅读建议、跨来源关联与趋势报告。这里的“具身智能”指能源智能体对源网荷储等物理能源系统的感知、决策与控制，不聚焦机器人或机械臂。
+
+## 当前多源工作流
+
+Web 侧栏将“论文列表”“中国政策”“国内新闻”“行业报告”作为同级目录，并提供来源、主题、优先级和日期筛选。默认配置只把中国政策、国内媒体和中国能源行业机构纳入非学术来源；`scheduler.py` 分别按每日、每 8 小时和每周频率执行增量采集。
+
+```bash
+python main.py
+python src/web/app.py
+python scheduler.py
+python -m unittest discover -s test -p "test_*.py"
+```
+
+配置与扩展入口见 [多源架构](docs/multi_source_architecture.md)、[数据源配置](docs/source_config_guide.md)、[Obsidian 导出](docs/obsidian_export_guide.md)、[Zotero 集成](docs/zotero_integration_guide.md)和[情报报告](docs/intelligence_report_guide.md)。最小示例位于 `docs/examples/`。
 
 ## ✨ 功能特性
 
@@ -122,53 +135,13 @@ EMAIL_PASSWORD=your-app-password
 
 ### 5. 配置 config.yaml
 
-编辑 `config/config.yaml`：
-
-```yaml
-# 应用语言（部署级）：zh 或 en
-app:
-  language: "zh"
-
-# 研究领域
-arxiv:
-  categories:
-    - "cs.AI"  # 人工智能
-    - "cs.LG"  # 机器学习
-  
-  keywords:
-    - "large language model"
-    - "transformer"
-  
-  max_results: 20
-
-# LLM 提供商
-llm:
-  provider: "vllm"  # openai, gemini, claude, deepseek, vllm
-
-# 调度配置
-scheduler:
-  enabled: true
-  run_time: "09:00"
-  timezone: "Asia/Shanghai"
-```
+编辑 `config/config.yaml`，或从 `docs/examples/minimal_config.yaml` 起步。保留 `regional_focus: ["CN"]`，在 `sources` 下分别配置四类适配器，API Key 只放 `.env`。`scheduler.jobs` 为论文、新闻、政策和报告设置独立频率；HTML 选择器与验证方法见 `docs/source_config_guide.md`。
 
 ### 6. 运行测试
 
 ```bash
-# 测试论文抓取
-python test/test_fetcher.py
-
-# 测试 LLM 总结
-python test/test_summarizer.py
-
-# 测试趋势分析
-python test/test_analyzer.py
-
-# 测试 Web 服务
-python test/test_web.py
-
-# 测试调度器
-python test/test_scheduler.py
+python -m unittest discover -s test -p "test_*.py"
+node --check static/js/main.js
 ```
 
 ### 7. 运行完整流程

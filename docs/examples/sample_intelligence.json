@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-07-14T12:00:00+08:00",
+  "scope": {
+    "region": "CN",
+    "topic": "能源系统中的具身智能与自主决策",
+    "excluded_directions": ["机械臂", "人形机器人"]
+  },
+  "documents": [
+    {
+      "id": "paper-energy-agent-example",
+      "source_type": "paper",
+      "source_name": "arXiv",
+      "title": "Multi-Agent Decision Making for Integrated Energy Systems (Example)",
+      "url": "https://arxiv.org/",
+      "summary": "研究能源智能体在源网荷储系统中的协同决策。",
+      "tags": ["能源智能体", "多智能体强化学习"],
+      "reading_suggestion": {
+        "why_relevant": "直接研究物理能源系统中的感知、决策与控制闭环。",
+        "read_priority": "high",
+        "recommended_action": "精读",
+        "related_topics": ["源网荷储", "协同控制"]
+      }
+    },
+    {
+      "id": "policy-cn-example",
+      "source_type": "policy",
+      "source_name": "国家能源局",
+      "title": "能源领域节能降碳行动计划（示例）",
+      "url": "https://www.nea.gov.cn/",
+      "region": "CN",
+      "summary": "推动能源系统数字化、智能化与协同优化。",
+      "tags": ["能源智能化", "源网荷储"],
+      "reading_suggestion": {
+        "why_relevant": "为能源智能体的应用边界和示范场景提供政策信号。",
+        "read_priority": "high",
+        "recommended_action": "精读",
+        "related_topics": ["虚拟电厂", "需求响应"]
+      }
+    },
+    {
+      "id": "news-cn-example",
+      "source_type": "news",
+      "source_name": "国内能源媒体",
+      "title": "虚拟电厂参与电力市场试点扩围（示例）",
+      "url": "https://example.cn/energy-news",
+      "region": "CN",
+      "summary": "多地推进虚拟电厂聚合资源参与市场交易。",
+      "tags": ["虚拟电厂", "电力市场"]
+    },
+    {
+      "id": "report-cn-example",
+      "source_type": "industry_report",
+      "source_name": "中国能源行业机构",
+      "title": "中国电力系统发展报告（示例）",
+      "url": "https://prpq.nea.gov.cn/ndbg",
+      "region": "CN",
+      "summary": "报告梳理新型电力系统运行与可靠性变化。",
+      "tags": ["新型电力系统", "可靠性"]
+    }
+  ],
+  "trend_signals": {
+    "window_days": 30,
+    "emerging_topics": ["虚拟电厂", "能源智能体"],
+    "cross_source_resonance": ["源网荷储协同决策"]
+  }
+}

@@ -7,7 +7,20 @@
 
 **English Document** | [中文文档](README_zh.md)
 
-Automatically track the latest AI research papers on arXiv each day, use LLMs for intelligent summarization, and generate research trend analysis reports.
+A China-focused, multi-source research-intelligence system for embodied intelligence in energy: it collects papers, Chinese policy, domestic news, and industry reports, then produces Chinese summaries, reading guidance, cross-source links, and trend reports. “Embodied intelligence” here means energy agents sensing, deciding, and controlling physical source-grid-load-storage systems—not robotics or robot arms.
+
+## Current Multi-Source Workflow
+
+The web sidebar exposes Papers, Chinese Policy, Domestic News, and Industry Reports as peer directories with source, topic, priority, and date filters. Non-academic defaults are restricted to Chinese government, domestic media, and Chinese energy-industry sources. `scheduler.py` runs isolated incremental jobs daily, every eight hours, or weekly.
+
+```bash
+python main.py
+python src/web/app.py
+python scheduler.py
+python -m unittest discover -s test -p "test_*.py"
+```
+
+See the [architecture](docs/multi_source_architecture.md), [source configuration](docs/source_config_guide.md), [Obsidian export](docs/obsidian_export_guide.md), [Zotero integration](docs/zotero_integration_guide.md), and [intelligence reporting](docs/intelligence_report_guide.md) guides. A minimal configuration and representative output are under `docs/examples/`.
 
 ## ✨ Features
 
@@ -123,53 +136,13 @@ EMAIL_PASSWORD=your-app-password
 
 ### 5. Configure `config.yaml`
 
-Edit `config/config.yaml`:
-
-```yaml
-# App language (deployment-level): zh or en
-app:
-  language: "en"
-
-# Research fields
-arxiv:
-  categories:
-    - "cs.AI"  # Artificial Intelligence
-    - "cs.LG"  # Machine Learning
-  
-  keywords:
-    - "large language model"
-    - "transformer"
-  
-  max_results: 20
-
-# LLM provider
-llm:
-  provider: "vllm"  # openai, gemini, claude, deepseek, vllm
-
-# Scheduler settings
-scheduler:
-  enabled: true
-  run_time: "09:00"
-  timezone: "Asia/Shanghai"
-```
+Edit `config/config.yaml` or start from `docs/examples/minimal_config.yaml`. Keep `regional_focus: ["CN"]`, define each adapter under `sources`, and keep API keys in `.env`. The source-specific jobs under `scheduler.jobs` control independent paper, news, policy, and report frequencies. See `docs/source_config_guide.md` for selectors and validation.
 
 ### 6. Run tests
 
 ```bash
-# Test paper fetching
-python test/test_fetcher.py
-
-# Test LLM summarization
-python test/test_summarizer.py
-
-# Test trend analysis
-python test/test_analyzer.py
-
-# Test web service
-python test/test_web.py
-
-# Test scheduler
-python test/test_scheduler.py
+python -m unittest discover -s test -p "test_*.py"
+node --check static/js/main.js
 ```
 
 ### 7. Execute the full workflow

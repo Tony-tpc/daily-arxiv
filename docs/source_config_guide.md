@@ -1,0 +1,43 @@
+# 中国能源数据源配置指南
+
+## 配置原则
+
+所有来源位于 `config/config.yaml` 的 `sources` 下。学术层使用 arXiv/OpenAlex；政策、新闻和行业报告只配置中国官方机构、国内媒体或中国能源行业机构。`regional_focus: ["CN"]` 是排序与分析边界，不替代来源审核。标题过滤应排除“机械臂”“人形机器人”等非能源方向内容。
+
+## 来源类型
+
+| Key | 用途 | 关键配置 |
+|---|---|---|
+| `arxiv` | 能源系统与多智能体论文 | `categories`、`keyword_groups`、`days_back` |
+| `openalex_search` | 主题检索与引用信息 | `topic_query`、`recent_days`、`max_results` |
+| `rss` | 国内能源新闻 | `feeds`、`include_keywords`、`exclude_keywords` |
+| `policy` | 中国政策文件 | HTML selectors、`issuing_body`、`policy_level` |
+| `industry_report` | 中国能源行业报告 | selectors、`institution`、标题白/黑名单 |
+
+HTML 列表来源的最小定义如下：
+
+```yaml
+sources:
+  policy:
+    enabled: true
+    feeds:
+      - name: "国家能源局"
+        url: "https://www.nea.gov.cn/"
+        format: "html"
+        item_selector: ".index_list02 li"
+        link_selector: "a[href]"
+        date_selector: "span"
+        detail_content_selector: ".article-content"
+        issuing_body: "国家能源局"
+        region: "CN"
+```
+
+选择器变更会导致空结果而不是写入脏数据。修改后运行对应测试，例如 `python -m unittest test.test_policy_adapter`，并用临时 state 路径做一次小规模抓取。不要删除 `state_path`：它保存 ETag、Last-Modified 和已见条目，避免重复采集。
+
+## 调度与安全
+
+`scheduler.jobs` 将论文、新闻、政策、报告隔离成独立任务。新闻间隔必须在 6–12 小时；默认 8 小时。政策每日、行业报告每周。每个任务有有界指数退避，状态写入 `data/state/scheduler_status.json`，事件写入 `logs/scheduler_jobs.jsonl`。
+
+API Key 只放 `.env`。新增站点前确认公开访问条款、请求频率与 robots 规则；设置合理 timeout 和 `max_entries`，不得绕过登录、验证码或访问控制。
+
+可从 `docs/examples/minimal_config.yaml` 起步；执行前备份 `config/config.yaml`，再将示例复制到该路径。
