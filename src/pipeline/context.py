@@ -24,6 +24,7 @@ class PipelineContext:
     source_config: Dict[str, Any] = field(default_factory=dict)
     papers: List[Dict[str, Any]] = field(default_factory=list)
     normalized_records: List[Dict[str, Any]] = field(default_factory=list)
+    summarized_documents: List[Dict[str, Any]] = field(default_factory=list)
     summarized_papers: List[Dict[str, Any]] = field(default_factory=list)
     summary_report: str = ""
     knowledge_result: Dict[str, Any] = field(default_factory=dict)

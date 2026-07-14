@@ -48,6 +48,10 @@ class DocumentSchema:
     source_name: str
     title: str
     summary: str = ""
+    core_viewpoints: List[str] = field(default_factory=list)
+    research_relevance: str = ""
+    worth_reading: Optional[bool] = None
+    follow_up_suggestions: List[str] = field(default_factory=list)
     authors_or_orgs: List[str] = field(default_factory=list)
     published_at: str = ""
     collected_at: str = ""

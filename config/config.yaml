@@ -17,6 +17,11 @@ tracking_topics:
 regional_focus:
   - "CN"
 
+# 统一文档摘要配置（论文、政策、新闻和行业报告）
+summarization:
+  max_input_chars: 12000
+  max_tokens: 1400
+
 # 研究主题关键词组（用于标签、摘要、分析，不直接等同于抓取查询）
 # Research keyword groups for analysis and classification, separate from fetch queries.
 keyword_groups:

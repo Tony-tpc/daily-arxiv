@@ -80,6 +80,10 @@ class OutputTemplateTests(unittest.TestCase):
             source_name="arXiv",
             title="Paper Title",
             summary="Normalized summary",
+            core_viewpoints=["Point one"],
+            research_relevance="Direct match",
+            worth_reading=True,
+            follow_up_suggestions=["Read methods"],
             raw_text="Fallback abstract",
             authors_or_orgs=["Alice", "Bob", "Carol", "Dave"],
             arxiv_id="2501.00001",
@@ -109,6 +113,10 @@ class OutputTemplateTests(unittest.TestCase):
         self.assertEqual(payload["links"]["pdf_url"], "https://arxiv.org/pdf/2501.00001")
         self.assertEqual(payload["author_line"], "Alice, Bob, Carol et al.")
         self.assertEqual(payload["badges"], ["cs.AI", "energy"])
+        self.assertEqual(payload["core_viewpoints"], ["Point one"])
+        self.assertEqual(payload["research_relevance"], "Direct match")
+        self.assertTrue(payload["worth_reading"])
+        self.assertEqual(payload["follow_up_suggestions"], ["Read methods"])
         self.assertEqual(payload["source_metadata"]["citation_count"], 42)
         self.assertEqual(payload["source_metadata"]["openalex_primary_topic"], "Energy systems")
 

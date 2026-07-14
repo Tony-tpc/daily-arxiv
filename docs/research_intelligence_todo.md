@@ -382,20 +382,20 @@ src/
 
 ### 8.1 将 Paper Summarizer 升级为 Document Summarizer
 
-- [ ] 新增文件：`src/summarizer/document_summarizer.py`
-- [ ] 将 `paper_summarizer.py` 的共性逻辑抽离复用
-- [ ] 为不同来源设计不同 prompt：
+- [x] 新增文件：`src/summarizer/document_summarizer.py`
+- [x] 将 `paper_summarizer.py` 的共性逻辑抽离复用
+- [x] 为不同来源设计不同 prompt：
   - paper prompt
   - policy prompt
   - news prompt
   - industry_report prompt
-- [ ] 输出统一结构：
+- [x] 输出统一结构：
   - 中文概括
   - 核心观点
   - 与研究方向关系
   - 是否值得阅读
   - 后续建议
-- [ ] 为网页卡片预留直接展示字段，避免前端再二次拼接长文本
+- [x] 为网页卡片预留直接展示字段，避免前端再二次拼接长文本
 
 **验收标准**
 
@@ -714,15 +714,15 @@ src/
 
 如果下一步立即开始开发，建议先做以下 10 个任务：
 
-- [ ] Task 1：创建 `src/models/document_schema.py`
-- [ ] Task 2：创建 `src/sources/base.py` 与 `src/sources/registry.py`
-- [ ] Task 3：将 arXiv 获取逻辑迁移到 `ArxivSourceAdapter`
-- [ ] Task 4：重构 `config/config.yaml` 为多源结构
-- [ ] Task 5：拆分 `main.py` 为 stage-based pipeline
-- [ ] Task 6：实现 `src/sources/rss_adapter.py`
-- [ ] Task 7：实现 `src/sources/policy_adapter.py`
-- [ ] Task 8：实现 `src/sources/industry_report_adapter.py`
-- [ ] Task 9：实现 `src/summarizer/document_summarizer.py`
+- [x] Task 1：创建 `src/models/document_schema.py`
+- [x] Task 2：创建 `src/sources/base.py` 与 `src/sources/registry.py`
+- [x] Task 3：将 arXiv 获取逻辑迁移到 `ArxivSourceAdapter`
+- [x] Task 4：重构 `config/config.yaml` 为多源结构
+- [x] Task 5：拆分 `main.py` 为 stage-based pipeline
+- [x] Task 6：实现 `src/sources/rss_adapter.py`
+- [x] Task 7：实现 `src/sources/policy_adapter.py`
+- [x] Task 8：实现 `src/sources/industry_report_adapter.py`
+- [x] Task 9：实现 `src/summarizer/document_summarizer.py`
 - [ ] Task 10：实现 `src/ranking/relevance_ranker.py`
 
 ---

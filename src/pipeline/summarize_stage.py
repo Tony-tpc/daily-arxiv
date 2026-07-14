@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from src.summarizer.paper_summarizer import PaperSummarizer
+from src.summarizer.document_summarizer import DocumentSummarizer
+
+# Keep the historical patch/import seam while the pipeline moves to documents.
+PaperSummarizer = DocumentSummarizer
 
 from .context import PipelineContext
 
 
 def run(context: PipelineContext) -> PipelineContext:
-    """Summarize fetched papers while preserving current fallback behavior."""
+    """Summarize normalized documents while preserving the legacy result field."""
     if context.stop_requested:
         return context
 
@@ -16,13 +19,15 @@ def run(context: PipelineContext) -> PipelineContext:
     try:
         summarizer = PaperSummarizer(context.config)
         records = context.normalized_records or context.papers
-        context.summarized_papers = summarizer.summarize_papers(records)
-        context.summary_report = summarizer.generate_daily_report(context.summarized_papers)
+        context.summarized_documents = summarizer.summarize_documents(records)
+        context.summarized_papers = context.summarized_documents
+        context.summary_report = summarizer.generate_report(context.summarized_documents)
         context.artifacts['summary_report'] = f"data/summaries/report_{{date}}.md"
     except Exception as exc:
         context.logger.error(context.text(f"论文总结失败: {str(exc)}", f"Paper summarization failed: {str(exc)}"))
         context.logger.info(context.text("继续执行后续步骤...", "Continuing with following steps..."))
-        context.summarized_papers = list(context.normalized_records or context.papers)
+        context.summarized_documents = list(context.normalized_records or context.papers)
+        context.summarized_papers = context.summarized_documents
         context.summary_report = ""
 
     return context
