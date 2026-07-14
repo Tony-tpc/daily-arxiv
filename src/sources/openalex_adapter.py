@@ -103,18 +103,22 @@ class OpenAlexAdapter:
     def _resolve_work(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         doi = self._normalize_doi(record.get("doi"))
         if doi:
-            work = self._lookup_by_doi(doi)
-            if work:
-                return work
+            # A DOI is an authoritative identifier. Falling back to fuzzy
+            # searches after a cached DOI miss creates duplicate requests and
+            # can attach metadata for a similarly titled, different work.
+            return self._lookup_by_doi(doi)
 
-        arxiv_id = str(record.get("id") or "").strip()
+        arxiv_id = str(record.get("arxiv_id") or record.get("id") or "").strip()
         if arxiv_id:
-            work = self._search_by_arxiv_id(arxiv_id)
-            if work:
-                return work
             arxiv_doi = self._arxiv_id_to_doi(arxiv_id)
             if arxiv_doi:
                 work = self._lookup_by_doi(arxiv_doi)
+                if work:
+                    return work
+            else:
+                # Legacy arXiv identifiers cannot be converted to the modern
+                # DataCite DOI form, so retain an external-id search for them.
+                work = self._search_by_arxiv_id(arxiv_id)
                 if work:
                     return work
 
@@ -126,6 +130,8 @@ class OpenAlexAdapter:
     def _lookup_by_doi(self, doi: str) -> Optional[Dict[str, Any]]:
         cache_key = f"doi:{doi.lower()}"
         cached = self._get_cached(cache_key)
+        if cached == self.MISS:
+            return None
         if cached is not None:
             return cached
 
@@ -137,6 +143,8 @@ class OpenAlexAdapter:
     def _search_by_arxiv_id(self, arxiv_id: str) -> Optional[Dict[str, Any]]:
         cache_key = f"arxiv:{arxiv_id.lower()}"
         cached = self._get_cached(cache_key)
+        if cached == self.MISS:
+            return None
         if cached is not None:
             return cached
 
@@ -156,6 +164,8 @@ class OpenAlexAdapter:
         normalized_title = self._normalize_title(title)
         cache_key = f"title:{hashlib.sha256(normalized_title.encode('utf-8')).hexdigest()}"
         cached = self._get_cached(cache_key)
+        if cached == self.MISS:
+            return None
         if cached is not None:
             return cached
 
