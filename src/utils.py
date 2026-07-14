@@ -105,6 +105,15 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         openalex_search_config.setdefault('max_results', 20)
         openalex_search_config.setdefault('recent_days', 180)
 
+    rss_config = sources.setdefault('rss', {})
+    if isinstance(rss_config, dict):
+        rss_config.setdefault('feeds', [])
+        rss_config.setdefault('request_timeout_seconds', 20)
+        rss_config.setdefault('state_path', 'data/state/rss.json')
+        rss_config.setdefault('snapshot_dir', 'data/raw/rss')
+        rss_config.setdefault('max_entries_per_feed', 100)
+        rss_config.setdefault('max_seen_items', 10000)
+
     if isinstance(normalized.get('arxiv'), dict):
         normalized['arxiv'].setdefault('enabled', True)
 

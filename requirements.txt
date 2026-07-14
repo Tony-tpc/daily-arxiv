@@ -1,5 +1,6 @@
 # 核心依赖
 arxiv==2.1.0                    # arXiv API 客户端
+feedparser==6.0.10              # RSS / Atom feed 解析
 pyyaml==6.0.1                   # YAML 配置文件解析
 python-dotenv==1.0.0            # 环境变量管理
 

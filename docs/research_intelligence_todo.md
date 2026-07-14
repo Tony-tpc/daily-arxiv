@@ -311,11 +311,13 @@ src/
 
 ### 7.3 新增 RSS / News 基础采集器
 
-- [ ] 新增文件：`src/sources/rss_adapter.py`
-- [ ] 支持标准 RSS / Atom feed
-- [ ] 支持记录 ETag / Last-Modified
-- [ ] 支持 URL + title hash 去重
-- [ ] 先接入 3~5 个试点来源：
+- 状态：已完成
+
+- [x] 新增文件：`src/sources/rss_adapter.py`
+- [x] 支持标准 RSS / Atom feed
+- [x] 支持记录 ETag / Last-Modified
+- [x] 支持 URL + title hash 去重
+- [x] 先接入 3~5 个试点来源：
   - 政府部门官网
   - 行业协会网站
   - 技术媒体

@@ -138,9 +138,34 @@ sources:
 
   rss:
     enabled: false
-    feeds: []
+    # Pilot sources stay inactive until the top-level RSS switch is enabled.
+    feeds:
+      - name: "U.S. Department of Energy"
+        url: "https://www.energy.gov/rss.xml"
+        source_category: "government"
+        region: "US"
+      - name: "IEEE Spectrum"
+        url: "https://spectrum.ieee.org/feeds/feed.rss"
+        source_category: "industry_association"
+        region: "global"
+      - name: "TechCrunch"
+        url: "https://techcrunch.com/feed/"
+        source_category: "technology_media"
+        region: "global"
+      - name: "MIT News - Energy"
+        url: "https://news.mit.edu/rss/topic/energy"
+        source_category: "research_institute"
+        region: "US"
+      - name: "Nature Energy"
+        url: "https://www.nature.com/nenergy.rss"
+        source_category: "news_media"
+        region: "global"
     request_timeout_seconds: 20
     deduplication: "url_and_title_hash"
+    state_path: "data/state/rss.json"
+    snapshot_dir: "data/raw/rss"
+    max_entries_per_feed: 100
+    max_seen_items: 10000
 
   policy:
     enabled: false
