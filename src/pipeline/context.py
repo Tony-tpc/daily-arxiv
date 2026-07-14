@@ -33,6 +33,7 @@ class PipelineContext:
     summarized_papers: List[Dict[str, Any]] = field(default_factory=list)
     summary_report: str = ""
     knowledge_result: Dict[str, Any] = field(default_factory=dict)
+    cross_source_result: Dict[str, Any] = field(default_factory=dict)
     analysis_result: Dict[str, Any] = field(default_factory=dict)
     artifacts: Dict[str, str] = field(default_factory=dict)
     stop_requested: bool = False

@@ -17,6 +17,7 @@ def run_pipeline(context: PipelineContext) -> PipelineContext:
         'src.pipeline.summarize_stage',
         'src.pipeline.export_stage',
         'src.pipeline.extract_stage',
+        'src.pipeline.cross_source_stage',
         'src.pipeline.analyze_stage',
     ]
 

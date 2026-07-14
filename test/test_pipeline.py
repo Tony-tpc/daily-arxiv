@@ -57,11 +57,15 @@ class PipelineTests(unittest.TestCase):
                 Mock(run=lambda ctx: _record(calls, 'summarize', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'export', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'extract', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'cross_source', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'analyze', ctx)),
             ]
             run_pipeline(context)
 
-        self.assertEqual(calls, ['fetch', 'normalize', 'ranking', 'linking', 'summarize', 'export', 'extract', 'analyze'])
+        self.assertEqual(calls, [
+            'fetch', 'normalize', 'ranking', 'linking', 'summarize', 'export',
+            'extract', 'cross_source', 'analyze',
+        ])
 
     def test_fetch_stage_retries_with_fallback_window(self):
         context = create_pipeline_context(self.config, self.logger, self.text)
@@ -202,6 +206,7 @@ class PipelineTests(unittest.TestCase):
         context.papers = [{'id': 'paper-1', 'raw': True}]
         context.normalized_records = [{'id': 'paper-1', 'normalized': True}]
         context.summarized_papers = [{'id': 'paper-1', 'summary': 'done'}]
+        context.cross_source_result = {'direction_count': 1}
 
         analyzer_instance = Mock()
         analyzer_instance.analyze.return_value = {'ok': True}
@@ -218,9 +223,28 @@ class PipelineTests(unittest.TestCase):
             context.normalized_records,
             context.summarized_papers,
             history_observations=storage_instance.query_history.return_value,
+            cross_source_analysis=context.cross_source_result,
         )
         query_kwargs = storage_instance.query_history.call_args.kwargs
         self.assertLess(query_kwargs['date_from'], query_kwargs['date_to'])
+
+    def test_cross_source_stage_uses_enriched_documents(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.normalized_records = [{'id': 'raw'}]
+        context.summarized_documents = [{
+            'id': 'paper-1',
+            'source_type': 'paper',
+            'research_direction': ['虚拟电厂'],
+            'importance_score': 80,
+        }]
+
+        from src.pipeline import cross_source_stage
+        cross_source_stage.run(context)
+
+        self.assertEqual(context.cross_source_result['direction_count'], 1)
+        self.assertEqual(
+            context.cross_source_result['directions'][0]['direction'], '虚拟电厂'
+        )
 
     def test_extract_stage_keeps_local_tags_when_llm_extraction_fails(self):
         context = create_pipeline_context(self.config, self.logger, self.text)

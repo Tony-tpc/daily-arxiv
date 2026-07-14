@@ -41,6 +41,7 @@ def run(context: PipelineContext) -> PipelineContext:
             input_records,
             summarized_records,
             history_observations=history_observations,
+            cross_source_analysis=context.cross_source_result,
         )
         if context.analysis_result:
             analyzer.print_analysis_summary(context.analysis_result)

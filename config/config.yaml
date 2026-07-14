@@ -432,6 +432,11 @@ analysis:
     - 60
   compare_sources: true
   entity_tracking: true
+  cross_source:
+    strong_threshold: 60
+    resonance_threshold: 55
+    weak_threshold: 40
+    max_representatives: 3
 
 # 日志配置 / Logging settings
 logging:
