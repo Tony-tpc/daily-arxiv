@@ -67,7 +67,7 @@ class RSSSourceAdapter(BaseSourceAdapter):
         records: List[Dict[str, Any]] = []
         now = self._now()
 
-        for feed_config in self.source_config.get("feeds", []):
+        for feed_config in self._configured_feeds():
             if not feed_config.get("enabled", True):
                 continue
             feed_url = str(feed_config["url"]).strip()
@@ -123,12 +123,17 @@ class RSSSourceAdapter(BaseSourceAdapter):
                 records.append(record)
 
         self._prune_seen()
-        if records:
+        if records and kwargs.get("save_snapshot", True):
             self.save_raw_snapshot(records)
         # Commit deduplication state only after the raw records are durable;
         # otherwise a snapshot failure could make entries disappear forever.
-        save_json(self.state, self.state_path)
+        if kwargs.get("persist_state", True):
+            save_json(self.state, self.state_path)
         return records
+
+    def _configured_feeds(self) -> List[Dict[str, Any]]:
+        """Return feed-like sources handled by this transport."""
+        return [item for item in self.source_config.get("feeds", []) if isinstance(item, dict)]
 
     def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Map feed entries to the unified news schema."""

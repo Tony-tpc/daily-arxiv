@@ -38,6 +38,7 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         normalized['arxiv'] = copy.deepcopy(source_arxiv)
 
     normalized.setdefault('tracking_topics', [])
+    normalized.setdefault('regional_focus', ['CN'])
     normalized.setdefault('keyword_groups', [])
     normalized.setdefault('negative_keywords', [])
     normalized.setdefault('priority_rules', [])

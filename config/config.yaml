@@ -13,6 +13,10 @@ tracking_topics:
   - "embodied intelligence"
   - "energy systems"
 
+# 默认聚焦中国国内政策、行业与科研信息。
+regional_focus:
+  - "CN"
+
 # 研究主题关键词组（用于标签、摘要、分析，不直接等同于抓取查询）
 # Research keyword groups for analysis and classification, separate from fetch queries.
 keyword_groups:
@@ -138,28 +142,28 @@ sources:
 
   rss:
     enabled: false
-    # Pilot sources stay inactive until the top-level RSS switch is enabled.
+    # 国内试点来源；顶层 RSS 开关启用前不会发起请求。
     feeds:
-      - name: "U.S. Department of Energy"
-        url: "https://www.energy.gov/rss.xml"
-        source_category: "government"
-        region: "US"
-      - name: "IEEE Spectrum"
-        url: "https://spectrum.ieee.org/feeds/feed.rss"
-        source_category: "industry_association"
-        region: "global"
-      - name: "TechCrunch"
-        url: "https://techcrunch.com/feed/"
+      - name: "人民网 IT"
+        url: "https://www.people.com.cn/rss/it.xml"
         source_category: "technology_media"
-        region: "global"
-      - name: "MIT News - Energy"
-        url: "https://news.mit.edu/rss/topic/energy"
-        source_category: "research_institute"
-        region: "US"
-      - name: "Nature Energy"
-        url: "https://www.nature.com/nenergy.rss"
+        region: "CN"
+      - name: "人民网财经"
+        url: "https://www.people.com.cn/rss/finance.xml"
         source_category: "news_media"
-        region: "global"
+        region: "CN"
+      - name: "中国新闻网财经"
+        url: "https://www.chinanews.com.cn/rss/finance.xml"
+        source_category: "news_media"
+        region: "CN"
+      - name: "经济观察网产业"
+        url: "https://www.eeo.com.cn/industry/rss.xml"
+        source_category: "industry_media"
+        region: "CN"
+      - name: "中国新闻网时政"
+        url: "https://www.chinanews.com.cn/rss/china.xml"
+        source_category: "policy_news"
+        region: "CN"
     request_timeout_seconds: 20
     deduplication: "url_and_title_hash"
     state_path: "data/state/rss.json"
@@ -169,7 +173,47 @@ sources:
 
   policy:
     enabled: false
-    feeds: []
+    feeds:
+      - name: "国家能源局"
+        url: "https://www.nea.gov.cn/"
+        format: "html"
+        item_selector: ".index_list02 li"
+        link_selector: "a[href]"
+        date_selector: "span"
+        detail_content_selector: ".article-content"
+        fetch_detail: true
+        issuing_body: "国家能源局"
+        policy_level: "national"
+        region: "CN"
+        max_entries: 40
+      - name: "国家发展改革委通知"
+        url: "https://www.ndrc.gov.cn/xxgk/zcfb/tz/"
+        format: "html"
+        item_selector: ".list > ul > li"
+        link_selector: "a[href]"
+        date_selector: "span"
+        detail_content_selector: ".article_con"
+        fetch_detail: true
+        issuing_body: "国家发展和改革委员会"
+        document_type: "notice"
+        policy_strength: "medium"
+        policy_level: "national"
+        region: "CN"
+        max_entries: 30
+      - name: "国家发展改革委规范性文件"
+        url: "https://www.ndrc.gov.cn/xxgk/zcfb/ghxwj/"
+        format: "html"
+        item_selector: ".list > ul > li"
+        link_selector: "a[href]"
+        date_selector: "span"
+        detail_content_selector: ".article_con"
+        fetch_detail: true
+        issuing_body: "国家发展和改革委员会"
+        document_type: "regulation"
+        policy_strength: "high"
+        policy_level: "national"
+        region: "CN"
+        max_entries: 30
     regions:
       - "CN"
     request_timeout_seconds: 20

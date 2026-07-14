@@ -60,6 +60,43 @@ class PolicySourceAdapterTests(unittest.TestCase):
         self.assertEqual(document["potential_impact"], "More aggregator participation")
         self.assertTrue(document["provenance"]["metadata"]["llm_extracted"])
 
+    @patch("src.sources.policy_adapter.save_json")
+    @patch("src.sources.rss_adapter.load_json", return_value=None)
+    @patch("src.sources.rss_adapter.httpx.Client")
+    def test_fetch_collects_official_html_listing_and_deduplicates(
+        self, client_class, _load_json, _save_json
+    ):
+        self.config["sources"]["policy"]["feeds"] = [
+            {
+                "name": "国家能源局",
+                "url": "https://policy.example/list",
+                "format": "html",
+                "item_selector": ".policy-list li",
+                "link_selector": "a[href]",
+                "date_selector": "span",
+                "detail_content_selector": ".article-content",
+                "issuing_body": "国家能源局",
+                "region": "CN",
+            }
+        ]
+        listing = self._response(
+            b'<ul class="policy-list"><li><a href="/one">Policy one</a><span>2026/07/10</span></li></ul>',
+            headers={"ETag": '"cn-v1"'},
+        )
+        detail = self._response(b'<main class="article-content"><p>Binding energy policy.</p></main>')
+        client = client_class.return_value
+        client.get.side_effect = [listing, detail, listing]
+        adapter = PolicySourceAdapter(self.config)
+
+        first = adapter.fetch()
+        second = adapter.fetch()
+
+        self.assertEqual(len(first), 1)
+        self.assertEqual(second, [])
+        self.assertEqual(first[0]["content"], "Binding energy policy.")
+        self.assertEqual(first[0]["published_at"], "2026-07-10")
+        self.assertEqual(client.get.call_args_list[2].kwargs["headers"]["If-None-Match"], '"cn-v1"')
+
     @staticmethod
     def _record():
         return {
@@ -76,6 +113,15 @@ class PolicySourceAdapterTests(unittest.TestCase):
             "region": "CN",
             "tags": ["power system"],
         }
+
+    @staticmethod
+    def _response(content, status_code=200, headers=None):
+        response = Mock()
+        response.content = content
+        response.status_code = status_code
+        response.headers = headers or {}
+        response.raise_for_status.return_value = None
+        return response
 
 
 if __name__ == "__main__":
