@@ -33,7 +33,14 @@ class DocumentSummarizerTests(unittest.TestCase):
         self.client = Mock(model="mock-model")
         self.client.generate.return_value = _response()
         self.config = {
-            "tracking_topics": ["virtual power plant", "embodied intelligence"],
+            "tracking_topics": [
+                "virtual power plant",
+                "embodied intelligence for energy systems",
+            ],
+            "research_profile": {
+                "focus": ["能源智能体与物理能源设备交互"],
+                "excluded_directions": ["机器人操控", "机械臂"],
+            },
             "summarization": {"max_input_chars": 2000, "max_tokens": 600},
         }
         self.summarizer = DocumentSummarizer(self.config, llm_client=self.client)
@@ -59,6 +66,7 @@ class DocumentSummarizerTests(unittest.TestCase):
                 prompt = self.client.generate.call_args.kwargs["prompt"]
                 self.assertIn(expected_term, prompt)
                 self.assertIn("virtual power plant", prompt)
+                self.assertIn("机械臂", prompt)
 
     def test_returns_web_ready_structured_fields(self):
         result = self.summarizer.summarize_document(

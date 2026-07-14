@@ -120,6 +120,30 @@ class PipelineTests(unittest.TestCase):
 
         analyzer_instance.analyze.assert_called_once_with(context.normalized_records, context.summarized_papers)
 
+    def test_extract_stage_keeps_local_tags_when_llm_extraction_fails(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.summarized_documents = [
+            {
+                'id': 'policy-1',
+                'source_type': 'policy',
+                'title': '国家能源局推动虚拟电厂参与需求响应',
+                'raw_text': '北京开展储能系统示范。',
+                'issuing_body': '国家能源局',
+            }
+        ]
+
+        with patch(
+            'src.pipeline.extract_stage.KnowledgeExtractor',
+            side_effect=RuntimeError('llm unavailable'),
+        ):
+            from src.pipeline import extract_stage
+            extract_stage.run(context)
+
+        document = context.summarized_documents[0]
+        self.assertIn('虚拟电厂', document['tags'])
+        self.assertIn('国家能源局', document['entities'])
+        self.assertEqual(context.knowledge_result['tag_extraction']['mode'], 'deterministic')
+
     def test_normalize_stage_persists_normalized_snapshot(self):
         context = create_pipeline_context(self.config, self.logger, self.text)
         context.papers = [{'id': 'paper-1'}]

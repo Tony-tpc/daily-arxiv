@@ -136,11 +136,16 @@ class DocumentSummarizer:
         source_instruction = SOURCE_INSTRUCTIONS[source_type]
         topics = self.config.get("tracking_topics", [])
         topic_text = "、".join(str(topic) for topic in topics) or "未配置"
+        profile = self.config.get("research_profile", {})
+        profile_focus = "、".join(str(item) for item in profile.get("focus", [])) or "未配置"
+        exclusions = "、".join(str(item) for item in profile.get("excluded_directions", [])) or "无"
         organizations = "、".join(document.get("authors_or_orgs", [])) or "未知"
         return (
             f"分析类型：{source_type}\n"
             f"专项要求：{source_instruction}\n"
             f"关注研究方向：{topic_text}\n"
+            f"研究边界：{profile_focus}\n"
+            f"排除方向：{exclusions}\n"
             f"标题：{document.get('title', '')}\n"
             f"作者或机构：{organizations}\n"
             f"发布日期：{document.get('published_at', '')}\n"

@@ -10,8 +10,21 @@ tracking_topics:
   - "virtual power plant"
   - "reinforcement learning"
   - "game theory"
-  - "embodied intelligence"
+  - "embodied intelligence for energy systems"
   - "energy systems"
+
+# 研究边界：聚焦能源系统中的具身智能，不跟踪通用机器人与机械臂方向。
+research_profile:
+  topic: "能源系统中的具身智能与自主决策"
+  focus:
+    - "能源智能体对物理能源设备的感知、决策与控制"
+    - "源网荷储交互中的强化学习与多智能体协同"
+    - "虚拟电厂、电力市场和能源设备的自主运行"
+  excluded_directions:
+    - "通用机器人操控"
+    - "机械臂"
+    - "机器人导航"
+    - "人形机器人"
 
 # 默认聚焦中国国内政策、行业与科研信息。
 regional_focus:
@@ -21,6 +34,13 @@ regional_focus:
 summarization:
   max_input_chars: 12000
   max_tokens: 1400
+
+# 本地显式标签层；不依赖 LLM，可直接为网页筛选控件提供数据。
+tag_extraction:
+  enabled: true
+  include_configured_topics: true
+  max_tags: 20
+  max_entities: 30
 
 # 研究主题关键词组（用于标签、摘要、分析，不直接等同于抓取查询）
 # Research keyword groups for analysis and classification, separate from fetch queries.
@@ -49,6 +69,14 @@ keyword_groups:
       - "auction"
       - "bidding"
       - "market mechanism"
+  - name: "energy_embodied_intelligence"
+    terms:
+      - "能源具身智能"
+      - "能源智能体"
+      - "embodied intelligence for energy systems"
+      - "autonomous energy agent"
+      - "physical energy equipment"
+      - "源网荷储"
 
 # 负向关键词 / Negative keywords
 negative_keywords: []

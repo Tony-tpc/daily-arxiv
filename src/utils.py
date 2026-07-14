@@ -43,6 +43,17 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     normalized.setdefault('negative_keywords', [])
     normalized.setdefault('priority_rules', [])
 
+    research_profile = normalized.setdefault('research_profile', {})
+    research_profile.setdefault('topic', '')
+    research_profile.setdefault('focus', [])
+    research_profile.setdefault('excluded_directions', [])
+
+    tag_extraction = normalized.setdefault('tag_extraction', {})
+    tag_extraction.setdefault('enabled', True)
+    tag_extraction.setdefault('include_configured_topics', True)
+    tag_extraction.setdefault('max_tags', 20)
+    tag_extraction.setdefault('max_entities', 30)
+
     outputs = normalized.setdefault('outputs', {})
     outputs.setdefault('markdown', {'enabled': True, 'directory': 'data/markdown'})
     outputs.setdefault('json', {'enabled': True, 'directory': 'data'})

@@ -60,6 +60,8 @@ class DocumentSchema:
     keywords: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     entities: List[str] = field(default_factory=list)
+    themes: List[str] = field(default_factory=list)
+    tag_facets: Dict[str, List[str]] = field(default_factory=dict)
     research_direction: List[str] = field(default_factory=list)
     importance_score: Optional[float] = None
     reading_suggestion: ReadingSuggestion = field(default_factory=ReadingSuggestion)

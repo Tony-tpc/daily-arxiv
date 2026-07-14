@@ -19,6 +19,7 @@ sys.path.insert(0, str(project_root))
 
 from src.summarizer.llm_factory import LLMClientFactory
 from src.utils import get_date_string, get_language, pick_text, save_json
+from src.extractor.tag_extractor import TagExtractor
 
 
 GENERIC_FIELDS = [
@@ -43,6 +44,7 @@ class KnowledgeExtractor:
         self.language = get_language(config)
         self.extract_config = config.get("knowledge_extraction", {})
         self.logger = logging.getLogger("daily_arxiv.extractor")
+        self.tag_extractor = TagExtractor(config)
         self.llm_client = LLMClientFactory.create_client(config)
 
     def extract(self, papers: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -52,7 +54,7 @@ class KnowledgeExtractor:
             return {}
 
         max_papers = int(self.extract_config.get("max_papers", len(papers)))
-        target_papers = papers[:max_papers]
+        target_papers = self.tag_extractor.extract_documents(papers[:max_papers])
         topic = self._resolve_topic()
 
         self.logger.info("=" * 60)
@@ -79,6 +81,7 @@ class KnowledgeExtractor:
             "topic": topic,
             "generic_fields": GENERIC_FIELDS,
             "facet_schema": facet_schema,
+            "documents": enriched_papers,
             "papers": enriched_papers,
             "taxonomy": taxonomy,
             "paper_count": len(enriched_papers),
