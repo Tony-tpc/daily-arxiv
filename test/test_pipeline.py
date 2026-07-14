@@ -272,6 +272,26 @@ class PipelineTests(unittest.TestCase):
         save_json_mock.assert_called_once()
         self.assertEqual(context.artifacts['linked_documents'], 'data/documents/latest.json')
 
+    def test_export_stage_runs_obsidian_without_summary_report(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.config['outputs'] = {
+            'obsidian': {'enabled': True, 'vault_path': 'unused-in-mock'}
+        }
+        context.summarized_documents = [{'id': 'paper-1', 'source_type': 'paper'}]
+        exporter = Mock()
+        exporter.export_documents.return_value = {
+            'vault_path': 'vault',
+            'daily_path': 'vault/daily/2026-07-14.md',
+            'count': 1,
+        }
+
+        with patch('src.pipeline.export_stage.ObsidianExporter', return_value=exporter):
+            from src.pipeline import export_stage
+            export_stage.run(context)
+
+        exporter.export_documents.assert_called_once()
+        self.assertEqual(context.artifacts['obsidian_vault'], 'vault')
+
 
 def _mark_stop(context):
     context.stop_requested = True

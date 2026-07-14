@@ -483,17 +483,19 @@ src/
 
 ### 9.1 Obsidian 导出器
 
-- [ ] 新增文件：`src/exporters/obsidian_exporter.py`
-- [ ] 输出 vault-friendly Markdown
-- [ ] 默认使用标准 Markdown links
-- [ ] 支持目录结构：
+状态：已完成
+
+- [x] 新增文件：`src/exporters/obsidian_exporter.py`
+- [x] 输出 vault-friendly Markdown
+- [x] 默认使用标准 Markdown links
+- [x] 支持目录结构：
   - `papers/`
   - `policies/`
   - `news/`
   - `industry_reports/`
   - `daily/`
   - `weekly/`
-- [ ] 支持 frontmatter：
+- [x] 支持 frontmatter：
   - tags
   - source_type
   - priority
