@@ -124,6 +124,16 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         policy_config.setdefault('max_seen_items', 10000)
         policy_config.setdefault('llm_extraction', {'enabled': True, 'max_tokens': 900})
 
+    industry_config = sources.setdefault('industry_report', {})
+    if isinstance(industry_config, dict):
+        industry_config.setdefault('feeds', [])
+        industry_config.setdefault('request_timeout_seconds', 20)
+        industry_config.setdefault('state_path', 'data/state/industry_report.json')
+        industry_config.setdefault('snapshot_dir', 'data/raw/industry_report')
+        industry_config.setdefault('max_entries_per_feed', 100)
+        industry_config.setdefault('max_seen_items', 10000)
+        industry_config.setdefault('llm_extraction', {'enabled': True, 'max_tokens': 900})
+
     if isinstance(normalized.get('arxiv'), dict):
         normalized['arxiv'].setdefault('enabled', True)
 

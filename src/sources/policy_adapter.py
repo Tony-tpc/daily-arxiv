@@ -12,6 +12,7 @@ from src.summarizer.llm_factory import LLMClientFactory
 from src.utils import save_json
 
 from .rss_adapter import RSSSourceAdapter
+from .structured_metadata import clean_optional, parse_json_object, string_list, unique
 
 
 class PolicySourceAdapter(RSSSourceAdapter):
@@ -43,9 +44,9 @@ class PolicySourceAdapter(RSSSourceAdapter):
             feed_config = self._feed_config.get(str(record.get("feed_url", "")), {})
             standard = self._extract_standard_fields(record, feed_config)
             insights = self._extract_llm_insights(record, standard)
-            technology_directions = self._string_list(insights.get("technology_directions"))
-            impact_areas = self._unique(
-                standard["impact_areas"] + self._string_list(insights.get("impact_areas"))
+            technology_directions = string_list(insights.get("technology_directions"))
+            impact_areas = unique(
+                standard["impact_areas"] + string_list(insights.get("impact_areas"))
             )
             document = create_document(
                 SourceType.POLICY,
@@ -58,8 +59,8 @@ class PolicySourceAdapter(RSSSourceAdapter):
                 collected_at=str(record.get("collected_at", "")),
                 url=str(record.get("url", "")),
                 raw_text=str(record.get("content", "")),
-                keywords=self._unique(list(record.get("tags", [])) + impact_areas),
-                tags=self._unique(impact_areas + [standard["document_type"], standard["policy_strength"]]),
+                keywords=unique(list(record.get("tags", [])) + impact_areas),
+                tags=unique(impact_areas + [standard["document_type"], standard["policy_strength"]]),
                 research_direction=technology_directions,
                 importance_score=self._strength_score(standard["policy_strength"]),
                 issuing_body=standard["issuing_body"],
@@ -69,9 +70,9 @@ class PolicySourceAdapter(RSSSourceAdapter):
                 document_type=standard["document_type"],
                 impact_areas=impact_areas,
                 policy_strength=standard["policy_strength"],
-                core_policy_direction=self._clean_optional(insights.get("core_policy_direction")),
+                core_policy_direction=clean_optional(insights.get("core_policy_direction")),
                 technology_directions=technology_directions,
-                potential_impact=self._clean_optional(insights.get("potential_impact")),
+                potential_impact=clean_optional(insights.get("potential_impact")),
                 provenance={
                     "collected_via": "policy_adapter",
                     "source_record_id": str(record.get("entry_id", "")),
@@ -102,7 +103,7 @@ class PolicySourceAdapter(RSSSourceAdapter):
         ).strip()
         document_type = str(feed_config.get("document_type") or self._infer_document_type(text))
         strength = str(feed_config.get("policy_strength") or self._infer_strength(text, document_type))
-        impact_areas = self._string_list(feed_config.get("impact_areas"))
+        impact_areas = string_list(feed_config.get("impact_areas"))
         impact_areas.extend(str(tag) for tag in record.get("tags", []))
         lowered = text.casefold()
         for topic in self.config.get("tracking_topics", []):
@@ -120,10 +121,14 @@ class PolicySourceAdapter(RSSSourceAdapter):
             "effective_date": str(
                 feed_config.get("effective_date") or self._infer_effective_date(text)
             ),
-            "impact_areas": self._unique(impact_areas),
+            "impact_areas": unique(impact_areas),
             "policy_strength": strength,
             "policy_level": str(feed_config.get("policy_level", "unspecified")),
-            "region": str(feed_config.get("region") or record.get("region") or "global"),
+            "region": str(
+                feed_config.get("region")
+                or record.get("region")
+                or next(iter(self.source_config.get("regions", [])), "CN")
+            ),
         }
 
     def _extract_llm_insights(
@@ -149,7 +154,7 @@ Text: {record.get('content', '')[:12000]}
                 system_prompt="You extract concise, evidence-grounded policy intelligence.",
                 max_tokens=int(extraction_config.get("max_tokens", 900)),
             )
-            return self._parse_json_object(response)
+            return parse_json_object(response)
         except Exception as exc:
             self.logger.warning("Policy LLM extraction failed for %s: %s", record.get("title"), exc)
             return {}
@@ -193,40 +198,6 @@ Text: {record.get('content', '')[:12000]}
             if match:
                 return match.group(1)
         return ""
-
-    @staticmethod
-    def _parse_json_object(value: Any) -> Dict[str, Any]:
-        text = str(value or "").strip()
-        fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, flags=re.DOTALL | re.IGNORECASE)
-        if fenced:
-            text = fenced.group(1)
-        else:
-            start, end = text.find("{"), text.rfind("}")
-            if start >= 0 and end > start:
-                text = text[start : end + 1]
-        parsed = json.loads(text)
-        if not isinstance(parsed, dict):
-            raise ValueError("Policy extraction response must be a JSON object")
-        return parsed
-
-    @staticmethod
-    def _string_list(value: Any) -> List[str]:
-        if isinstance(value, str):
-            values = [part.strip() for part in value.split(",")]
-        elif isinstance(value, list):
-            values = [str(part).strip() for part in value]
-        else:
-            values = []
-        return [part for part in values if part]
-
-    @staticmethod
-    def _unique(values: List[str]) -> List[str]:
-        return list(dict.fromkeys(str(value).strip() for value in values if str(value).strip()))
-
-    @staticmethod
-    def _clean_optional(value: Any) -> Optional[str]:
-        cleaned = str(value or "").strip()
-        return cleaned or None
 
     @staticmethod
     def _strength_score(value: str) -> float:

@@ -86,6 +86,9 @@ class DocumentSchema:
     # Industry report-specific fields
     institution: Optional[str] = None
     report_type: Optional[str] = None
+    topic_directions: List[str] = field(default_factory=list)
+    industry_progress: Optional[str] = None
+    trend_assessment: Optional[str] = None
 
     def __post_init__(self) -> None:
         if isinstance(self.reading_suggestion, dict):
