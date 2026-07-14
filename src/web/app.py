@@ -36,6 +36,7 @@ config = load_config()
 web_config = config.get('web', {})
 language = get_language(config)
 relevance_ranker = RelevanceRanker(config)
+DIRECTORY_SOURCE_TYPES = {"policy", "news", "industry_report"}
 
 WEB_I18N = {
     'zh': {
@@ -92,6 +93,29 @@ def _load_summaries_by_id() -> dict:
         if paper_id:
             summary_index[paper_id] = summary
     return summary_index
+
+
+def _load_intelligence_documents() -> list[dict]:
+    """Load the latest canonical mixed-source snapshot without duplicating records."""
+    documents: list[dict] = []
+    for candidate in ('data/documents/latest.json', 'data/summaries/latest.json'):
+        payload = load_json(candidate) or {}
+        candidate_documents = (
+            payload.get('documents')
+            or payload.get('summaries')
+            or payload.get('papers')
+            or []
+        )
+        if candidate_documents:
+            documents = [item for item in candidate_documents if isinstance(item, dict)]
+            break
+
+    unique_documents = {}
+    for document in documents:
+        document_id = str(document.get('id') or document.get('url') or document.get('title') or '')
+        if document_id:
+            unique_documents[document_id] = document
+    return list(unique_documents.values())
 
 
 def _build_document_from_paper(paper: dict, summary_record: dict | None = None):
@@ -307,6 +331,74 @@ def get_stats():
         
         return jsonify(stats)
     
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/documents')
+def get_documents():
+    """Return a filtered directory of policies, news, or industry reports."""
+    try:
+        source_type = str(request.args.get('source_type', '')).strip().lower()
+        if source_type not in DIRECTORY_SOURCE_TYPES:
+            return jsonify({
+                'error': 'source_type 必须是 policy、news 或 industry_report'
+                if language == 'zh'
+                else 'source_type must be policy, news, or industry_report'
+            }), 400
+
+        page = max(1, request.args.get('page', 1, type=int))
+        per_page = min(100, max(1, request.args.get('per_page', 20, type=int)))
+        priority = str(request.args.get('priority', '')).strip().lower()
+        search = str(request.args.get('search', '')).strip().casefold()
+        sort_by = str(request.args.get('sort', 'relevance')).strip().lower()
+
+        documents = [
+            relevance_ranker.rank_document(document)
+            for document in _load_intelligence_documents()
+            if str(document.get('source_type') or '').lower() == source_type
+        ]
+        if priority in {'high', 'medium', 'low'}:
+            documents = [
+                document for document in documents
+                if document.get('reading_suggestion', {}).get('read_priority') == priority
+            ]
+        if search:
+            documents = [
+                document for document in documents
+                if search in ' '.join(
+                    str(value or '')
+                    for value in (
+                        document.get('title'),
+                        document.get('summary'),
+                        document.get('raw_text'),
+                        ' '.join(document.get('authors_or_orgs') or []),
+                        ' '.join(document.get('tags') or []),
+                    )
+                ).casefold()
+            ]
+
+        if sort_by == 'date':
+            documents.sort(
+                key=lambda item: str(item.get('published_at') or ''), reverse=True
+            )
+        elif sort_by == 'title':
+            documents.sort(key=lambda item: str(item.get('title') or '').casefold())
+        else:
+            documents.sort(
+                key=lambda item: float(item.get('importance_score') or 0), reverse=True
+            )
+
+        total = len(documents)
+        start = (page - 1) * per_page
+        return jsonify({
+            'documents': documents[start:start + per_page],
+            'source_type': source_type,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total + per_page - 1) // per_page,
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

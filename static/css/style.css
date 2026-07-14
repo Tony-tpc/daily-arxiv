@@ -224,6 +224,23 @@ body {
     width: 20px;
 }
 
+.nav-count {
+    min-width: 1.45rem;
+    margin-left: auto;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.nav-item.active .nav-count {
+    background: rgba(255, 255, 255, 0.22);
+    color: inherit;
+}
+
 /* ==================== 日历组件 ==================== */
 .calendar-widget {
     background: var(--bg-secondary);
@@ -584,6 +601,65 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+}
+
+.directory-header {
+    align-items: flex-start;
+}
+
+.directory-header h1 i {
+    margin-right: 0.5rem;
+    color: var(--primary-color);
+}
+
+.directory-total {
+    flex: 0 0 auto;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.directory-filter .search-box {
+    min-width: min(24rem, 100%);
+    flex: 1;
+}
+
+.intelligence-card .paper-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+}
+
+.source-type-icon {
+    margin-top: 0.2rem;
+    color: var(--primary-color);
+}
+
+.directory-empty {
+    padding: 3.5rem 1.5rem;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-primary);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.directory-empty i {
+    display: block;
+    margin-bottom: 0.8rem;
+    color: var(--primary-color);
+    font-size: 2rem;
+    opacity: 0.7;
+}
+
+.directory-empty strong {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--text-primary);
 }
 
 .paper-card {

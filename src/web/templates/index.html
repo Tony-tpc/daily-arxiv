@@ -61,6 +61,21 @@
                     <i class="fas fa-file-alt"></i>
                     <span>{{ '论文列表' if language == 'zh' else 'Papers' }}</span>
                 </a>
+                <a href="#policies" class="nav-item" data-section="policies">
+                    <i class="fas fa-landmark"></i>
+                    <span>{{ '中国政策' if language == 'zh' else 'China Policies' }}</span>
+                    <span class="nav-count" id="policy-nav-count">0</span>
+                </a>
+                <a href="#news" class="nav-item" data-section="news">
+                    <i class="fas fa-newspaper"></i>
+                    <span>{{ '国内新闻' if language == 'zh' else 'China News' }}</span>
+                    <span class="nav-count" id="news-nav-count">0</span>
+                </a>
+                <a href="#industry-reports" class="nav-item" data-section="industry-reports">
+                    <i class="fas fa-industry"></i>
+                    <span>{{ '行业报告' if language == 'zh' else 'Industry Reports' }}</span>
+                    <span class="nav-count" id="industry-report-nav-count">0</span>
+                </a>
                 <a href="#analysis" class="nav-item" data-section="analysis">
                     <i class="fas fa-chart-line"></i>
                     <span>{{ '趋势分析' if language == 'zh' else 'Analysis' }}</span>
@@ -247,6 +262,57 @@
                 <nav class="pagination-nav">
                     <ul class="pagination" id="pagination"></ul>
                 </nav>
+            </section>
+
+            <!-- 中国政策目录 -->
+            <section id="policies-section" class="content-section source-directory" data-source-type="policy">
+                <div class="section-header directory-header">
+                    <div>
+                        <h1><i class="fas fa-landmark"></i> {{ '中国政策' if language == 'zh' else 'China Policies' }}</h1>
+                        <p class="section-desc">{{ '国家能源局、国家发展改革委等国内权威机构的能源政策' if language == 'zh' else 'Energy policy from authoritative Chinese institutions' }}</p>
+                    </div>
+                    <span class="directory-total" id="policy-total">0 {{ '条' if language == 'zh' else 'items' }}</span>
+                </div>
+                <div class="filter-bar directory-filter" data-source-type="policy">
+                    <div class="search-box"><i class="fas fa-search"></i><input type="search" data-directory-search="policy" placeholder="{{ '搜索政策标题、机构或主题...' if language == 'zh' else 'Search policies...' }}"></div>
+                    <select class="filter-select" data-directory-priority="policy"><option value="">{{ '全部优先级' if language == 'zh' else 'All priorities' }}</option><option value="high">{{ '高 · 精读' if language == 'zh' else 'High' }}</option><option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium' }}</option><option value="low">{{ '低 · 存档' if language == 'zh' else 'Low' }}</option></select>
+                    <select class="filter-select" data-directory-sort="policy"><option value="relevance">{{ '按研究价值' if language == 'zh' else 'By relevance' }}</option><option value="date">{{ '按发布日期' if language == 'zh' else 'By date' }}</option><option value="title">{{ '按标题' if language == 'zh' else 'By title' }}</option></select>
+                </div>
+                <div id="policy-list" class="papers-list intelligence-list"></div>
+            </section>
+
+            <!-- 国内新闻目录 -->
+            <section id="news-section" class="content-section source-directory" data-source-type="news">
+                <div class="section-header directory-header">
+                    <div>
+                        <h1><i class="fas fa-newspaper"></i> {{ '国内新闻' if language == 'zh' else 'China News' }}</h1>
+                        <p class="section-desc">{{ '聚焦中国能源系统、虚拟电厂与智能决策的时效信息' if language == 'zh' else 'Timely intelligence on China energy systems and autonomous decisions' }}</p>
+                    </div>
+                    <span class="directory-total" id="news-total">0 {{ '条' if language == 'zh' else 'items' }}</span>
+                </div>
+                <div class="filter-bar directory-filter" data-source-type="news">
+                    <div class="search-box"><i class="fas fa-search"></i><input type="search" data-directory-search="news" placeholder="{{ '搜索新闻标题、媒体或主题...' if language == 'zh' else 'Search news...' }}"></div>
+                    <select class="filter-select" data-directory-priority="news"><option value="">{{ '全部优先级' if language == 'zh' else 'All priorities' }}</option><option value="high">{{ '高 · 精读' if language == 'zh' else 'High' }}</option><option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium' }}</option><option value="low">{{ '低 · 存档' if language == 'zh' else 'Low' }}</option></select>
+                    <select class="filter-select" data-directory-sort="news"><option value="relevance">{{ '按研究价值' if language == 'zh' else 'By relevance' }}</option><option value="date">{{ '按发布日期' if language == 'zh' else 'By date' }}</option><option value="title">{{ '按标题' if language == 'zh' else 'By title' }}</option></select>
+                </div>
+                <div id="news-list" class="papers-list intelligence-list"></div>
+            </section>
+
+            <!-- 行业报告目录 -->
+            <section id="industry-reports-section" class="content-section source-directory" data-source-type="industry_report">
+                <div class="section-header directory-header">
+                    <div>
+                        <h1><i class="fas fa-industry"></i> {{ '行业报告' if language == 'zh' else 'Industry Reports' }}</h1>
+                        <p class="section-desc">{{ '中国能源产业机构发布的进展、白皮书与趋势研判' if language == 'zh' else 'Progress, white papers, and outlooks from China energy institutions' }}</p>
+                    </div>
+                    <span class="directory-total" id="industry-report-total">0 {{ '份' if language == 'zh' else 'items' }}</span>
+                </div>
+                <div class="filter-bar directory-filter" data-source-type="industry_report">
+                    <div class="search-box"><i class="fas fa-search"></i><input type="search" data-directory-search="industry_report" placeholder="{{ '搜索报告标题、机构或主题...' if language == 'zh' else 'Search reports...' }}"></div>
+                    <select class="filter-select" data-directory-priority="industry_report"><option value="">{{ '全部优先级' if language == 'zh' else 'All priorities' }}</option><option value="high">{{ '高 · 精读' if language == 'zh' else 'High' }}</option><option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium' }}</option><option value="low">{{ '低 · 存档' if language == 'zh' else 'Low' }}</option></select>
+                    <select class="filter-select" data-directory-sort="industry_report"><option value="relevance">{{ '按研究价值' if language == 'zh' else 'By relevance' }}</option><option value="date">{{ '按发布日期' if language == 'zh' else 'By date' }}</option><option value="title">{{ '按标题' if language == 'zh' else 'By title' }}</option></select>
+                </div>
+                <div id="industry-report-list" class="papers-list intelligence-list"></div>
             </section>
 
             <!-- 趋势分析部分 -->

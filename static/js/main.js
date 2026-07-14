@@ -54,7 +54,14 @@ const I18N = {
         comparisonMethod: '方法',
         comparisonScenario: '场景',
         comparisonMetric: '指标',
-        comparisonContribution: '贡献'
+        comparisonContribution: '贡献',
+        originalSource: '查看原文',
+        emptyPolicyTitle: '暂无中国政策数据',
+        emptyPolicyHint: '采集任务运行后，国家能源局和国家发展改革委政策将在此展示。',
+        emptyNewsTitle: '暂无国内新闻数据',
+        emptyNewsHint: '采集任务运行后，国内能源新闻将在此展示。',
+        emptyReportTitle: '暂无行业报告数据',
+        emptyReportHint: '配置国内行业报告来源并运行采集任务后，报告将在此展示。'
     },
     en: {
         monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -106,7 +113,14 @@ const I18N = {
         comparisonMethod: 'Method',
         comparisonScenario: 'Scenario',
         comparisonMetric: 'Metric',
-        comparisonContribution: 'Contribution'
+        comparisonContribution: 'Contribution',
+        originalSource: 'Open source',
+        emptyPolicyTitle: 'No China policy data',
+        emptyPolicyHint: 'Policies will appear after the collection job runs.',
+        emptyNewsTitle: 'No China news data',
+        emptyNewsHint: 'News will appear after the collection job runs.',
+        emptyReportTitle: 'No industry report data',
+        emptyReportHint: 'Reports will appear after sources are configured and collected.'
     }
 };
 
@@ -139,6 +153,11 @@ const state = {
     selectedPriority: '',
     searchQuery: '',
     allPapers: [],
+    directories: {
+        policy: {documents: [], total: 0, search: '', priority: '', sort: 'relevance'},
+        news: {documents: [], total: 0, search: '', priority: '', sort: 'relevance'},
+        industry_report: {documents: [], total: 0, search: '', priority: '', sort: 'relevance'}
+    },
     allCategories: [],
     analysis: null,
     history: [],
@@ -345,7 +364,10 @@ async function loadAllData() {
             loadHistory(),
             loadKnowledge(),
             loadPapers(),
-            loadCategories()
+            loadCategories(),
+            loadDirectory('policy'),
+            loadDirectory('news'),
+            loadDirectory('industry_report')
         ]);
         renderPapers(filterPapers(state.allPapers));
         renderFeaturedPapers(state.allPapers.slice(0, 5));
@@ -595,6 +617,80 @@ function renderPapers(papers) {
             </div>
         </div>
     `;
+    }).join('');
+}
+
+async function loadDirectory(sourceType) {
+    const directory = state.directories[sourceType];
+    if (!directory) return;
+    const ids = directoryIds(sourceType);
+    showLoading(ids.list);
+    const params = new URLSearchParams({
+        source_type: sourceType,
+        page: 1,
+        per_page: 100,
+        search: directory.search,
+        priority: directory.priority,
+        sort: directory.sort
+    });
+    try {
+        const response = await fetch(`/api/documents?${params}`);
+        if (!response.ok) throw new Error('Failed to load directory');
+        const payload = await response.json();
+        directory.documents = payload.documents || [];
+        directory.total = Number(payload.total || 0);
+        updateElement(ids.total, `${directory.total} ${sourceType === 'industry_report' && LANG === 'zh' ? '份' : LANG === 'zh' ? '条' : 'items'}`);
+        updateElement(ids.navCount, directory.total);
+        renderDirectoryDocuments(sourceType, directory.documents);
+    } catch (error) {
+        console.error(`加载 ${sourceType} 目录失败:`, error);
+        showError(ids.list, LANG === 'zh' ? '目录加载失败' : 'Failed to load directory');
+    }
+}
+
+function directoryIds(sourceType) {
+    const prefix = sourceType === 'industry_report' ? 'industry-report' : sourceType;
+    return {list: `${prefix}-list`, total: `${prefix}-total`, navCount: `${prefix}-nav-count`};
+}
+
+function renderDirectoryDocuments(sourceType, documents) {
+    const container = document.getElementById(directoryIds(sourceType).list);
+    if (!container) return;
+    if (!documents.length) {
+        const empty = {
+            policy: ['fa-landmark', t('emptyPolicyTitle'), t('emptyPolicyHint')],
+            news: ['fa-newspaper', t('emptyNewsTitle'), t('emptyNewsHint')],
+            industry_report: ['fa-industry', t('emptyReportTitle'), t('emptyReportHint')]
+        }[sourceType];
+        container.innerHTML = `<div class="directory-empty"><i class="fas ${empty[0]}"></i><strong>${empty[1]}</strong><span>${empty[2]}</span></div>`;
+        return;
+    }
+
+    const icon = {policy: 'fa-landmark', news: 'fa-newspaper', industry_report: 'fa-industry'}[sourceType];
+    container.innerHTML = documents.map(document => {
+        const card = document.web_card || document;
+        const links = card.links || {};
+        const suggestion = card.reading_suggestion || {};
+        const sourceUrl = links.source_url || links.primary_url || document.url || '#';
+        const title = card.title || document.title || '';
+        const publishedAt = card.published_at || document.published_at || 'N/A';
+        const organization = card.author_line || card.source_name || document.source_name || t('unknown');
+        const summary = card.summary || card.description || document.summary || document.raw_text || t('noAbstract');
+        const badges = card.badges || document.tags || [];
+        const priority = normalizePriority(card.read_priority || suggestion.read_priority);
+        return `<article class="paper-card intelligence-card fade-in priority-card-${priority}">
+            <div class="paper-header"><div>
+                <h3 class="paper-title"><i class="fas ${icon} source-type-icon"></i><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a></h3>
+                <div class="paper-meta">
+                    <span class="paper-meta-item"><i class="fas fa-calendar"></i>${escapeHtml(publishedAt)}</span>
+                    <span class="paper-meta-item"><i class="fas fa-building"></i>${escapeHtml(organization)}</span>
+                </div>
+            </div></div>
+            ${renderRankingPanel(card)}
+            <p class="paper-abstract">${escapeHtml(summary)}</p>
+            <div class="paper-categories">${badges.slice(0, 12).map(tag => `<span class="category-badge">${escapeHtml(tag)}</span>`).join('')}</div>
+            <div class="paper-actions"><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="btn-paper btn-primary"><i class="fas fa-arrow-up-right-from-square"></i>${t('originalSource')}</a></div>
+        </article>`;
     }).join('');
 }
 
@@ -1265,6 +1361,34 @@ function initEventListeners() {
             sortPapers(e.target.value);
         });
     }
+
+    document.querySelectorAll('[data-directory-search]').forEach(input => {
+        let searchTimeout;
+        input.addEventListener('input', event => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const sourceType = event.target.dataset.directorySearch;
+                state.directories[sourceType].search = event.target.value;
+                loadDirectory(sourceType);
+            }, 300);
+        });
+    });
+
+    document.querySelectorAll('[data-directory-priority]').forEach(select => {
+        select.addEventListener('change', event => {
+            const sourceType = event.target.dataset.directoryPriority;
+            state.directories[sourceType].priority = event.target.value;
+            loadDirectory(sourceType);
+        });
+    });
+
+    document.querySelectorAll('[data-directory-sort]').forEach(select => {
+        select.addEventListener('change', event => {
+            const sourceType = event.target.dataset.directorySort;
+            state.directories[sourceType].sort = event.target.value;
+            loadDirectory(sourceType);
+        });
+    });
 }
 
 function sortPapers(sortBy) {
@@ -1356,5 +1480,6 @@ window.dailyArxiv = {
     filterByCategory,
     searchPapers,
     loadPapers,
+    loadDirectory,
     toggleTheme
 };
