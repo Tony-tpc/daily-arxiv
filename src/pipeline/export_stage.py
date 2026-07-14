@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from src.exporters.obsidian_exporter import ObsidianExporter
+from src.integrations.zotero_client import ZoteroClient
 from src.utils import get_date_string
 
 from .context import PipelineContext
@@ -36,5 +37,15 @@ def run(context: PipelineContext) -> PipelineContext:
         context.logger.info(context.text(
             f"📚 Obsidian 已导出 {result['count']} 条文档: {result['vault_path']}",
             f"📚 Exported {result['count']} documents to Obsidian: {result['vault_path']}",
+        ))
+
+    zotero_config = context.config.get('outputs', {}).get('zotero', {})
+    if zotero_config.get('enabled', False) and documents:
+        result = ZoteroClient(context.config).export_documents(documents)
+        context.artifacts['zotero_csl_json'] = result['csl_json']
+        context.artifacts['zotero_bibtex'] = result['bibtex']
+        context.logger.info(context.text(
+            f"📖 Zotero 交换文件已导出: {result['csl_json']}",
+            f"📖 Zotero interchange files exported: {result['csl_json']}",
         ))
     return context

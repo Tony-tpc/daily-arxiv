@@ -416,6 +416,10 @@ outputs:
   zotero:
     enabled: false
     mode: "local_api"
+    base_url: "http://localhost:23119/api"
+    user_id: 0
+    timeout_seconds: 5
+    export_directory: "data/zotero"
 
 # 分析配置 / Analysis settings
 analysis:

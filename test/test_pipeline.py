@@ -292,6 +292,25 @@ class PipelineTests(unittest.TestCase):
         exporter.export_documents.assert_called_once()
         self.assertEqual(context.artifacts['obsidian_vault'], 'vault')
 
+    def test_export_stage_writes_zotero_exchange_files_without_api_write(self):
+        context = create_pipeline_context(self.config, self.logger, self.text)
+        context.config['outputs'] = {'zotero': {'enabled': True}}
+        context.summarized_documents = [{'id': 'paper-1', 'source_type': 'paper'}]
+        client = Mock()
+        client.export_documents.return_value = {
+            'csl_json': 'data/zotero/papers.csl.json',
+            'bibtex': 'data/zotero/papers.bib',
+        }
+
+        with patch('src.pipeline.export_stage.ZoteroClient', return_value=client):
+            from src.pipeline import export_stage
+            export_stage.run(context)
+
+        client.export_documents.assert_called_once_with(context.summarized_documents)
+        self.assertEqual(
+            context.artifacts['zotero_bibtex'], 'data/zotero/papers.bib'
+        )
+
 
 def _mark_stop(context):
     context.stop_requested = True

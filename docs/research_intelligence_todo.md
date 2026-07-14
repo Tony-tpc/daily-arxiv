@@ -510,11 +510,13 @@ src/
 
 ### 9.2 Zotero 集成
 
-- [ ] 新增文件：`src/integrations/zotero_client.py`
-- [ ] 优先实现 Local API 只读集成
-- [ ] 支持 CSL-JSON / BibTeX 导出
-- [ ] 支持将论文记录映射为 Zotero item payload
-- [ ] 预留 citekey 字段
+状态：已完成
+
+- [x] 新增文件：`src/integrations/zotero_client.py`
+- [x] 优先实现 Local API 只读集成
+- [x] 支持 CSL-JSON / BibTeX 导出
+- [x] 支持将论文记录映射为 Zotero item payload
+- [x] 预留 citekey 字段
 
 **验收标准**
 

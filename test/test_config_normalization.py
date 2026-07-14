@@ -35,6 +35,10 @@ class ConfigNormalizationTests(unittest.TestCase):
         self.assertTrue(normalized["outputs"]["markdown"]["enabled"])
         self.assertEqual(normalized["analysis"]["trend_window_days"], [7, 30, 60])
         self.assertEqual(normalized["regional_focus"], ["CN"])
+        self.assertEqual(
+            normalized["outputs"]["zotero"]["base_url"],
+            "http://localhost:23119/api",
+        )
 
     def test_normalize_backfills_top_level_arxiv_from_sources(self):
         config = {
