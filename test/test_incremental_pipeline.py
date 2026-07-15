@@ -104,6 +104,51 @@ class IncrementalPipelineTests(unittest.TestCase):
         self.assertEqual(paper["title"], "Energy Agent Coordination")
         self.assertEqual(paper["schema_version"], "1.0")
 
+    @patch("src.pipeline.normalize_stage.build_storage")
+    def test_incremental_baseline_drops_enterprise_news_updates(self, build_storage):
+        build_storage.return_value.load_latest.return_value = {
+            "snapshot_id": "news-baseline",
+            "documents": [
+                {
+                    "id": "company-update",
+                    "source_type": "news",
+                    "title": "国家电网有限公司发布新能源发展报告",
+                },
+                {
+                    "id": "grid-news",
+                    "source_type": "news",
+                    "title": "国家电网否认撤销区域电网",
+                },
+            ],
+        }
+        adapter = Mock()
+        adapter.normalize.return_value = [
+            {"id": "policy-1", "source_type": "policy", "title": "New policy"}
+        ]
+        context = PipelineContext(
+            config={
+                "runtime": {"merge_with_latest": True},
+                "sources": {"rss": {
+                    "exclude_enterprise_updates": True,
+                    "enterprise_entity_keywords": ["公司", "集团"],
+                    "enterprise_update_keywords": ["发布", "中标"],
+                    "enterprise_strong_exclude_keywords": ["上市", "融资"],
+                }},
+            },
+            logger=logging.getLogger("test.incremental.enterprise-news"),
+            text=lambda zh, en: zh,
+            enabled_sources=["policy"],
+            source_adapters={"policy": adapter},
+            source_records={"policy": [{"title": "raw"}]},
+        )
+
+        result = run(context)
+
+        self.assertEqual(
+            [item["id"] for item in result.normalized_records],
+            ["grid-news", "policy-1"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

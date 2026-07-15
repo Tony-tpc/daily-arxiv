@@ -28,6 +28,10 @@ sources:
     enabled: false
   rss:
     enabled: true
+    exclude_enterprise_updates: true
+    enterprise_entity_keywords: ["公司", "集团", "股份", "控股"]
+    enterprise_update_keywords: ["发布", "中标", "签约", "投资", "投产", "投运"]
+    enterprise_strong_exclude_keywords: ["上市", "IPO", "融资", "募资", "认购", "业绩", "营收", "净利润", "产品发布"]
     filter_scope: "title"
     include_keywords: ["能源", "电力", "电网", "储能", "虚拟电厂"]
     exclude_keywords: ["机械臂", "人形机器人"]

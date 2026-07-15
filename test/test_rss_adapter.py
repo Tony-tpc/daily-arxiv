@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from src.sources.rss_adapter import RSSSourceAdapter
+from src.sources.rss_adapter import RSSSourceAdapter, is_news_in_scope
 
 
 RSS_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
@@ -108,6 +108,23 @@ class RSSSourceAdapterTests(unittest.TestCase):
         records = RSSSourceAdapter(self.config).fetch()
 
         self.assertEqual([record["entry_id"] for record in records], ["1"])
+
+    def test_enterprise_updates_are_excluded_but_grid_news_is_retained(self):
+        self.config["sources"]["rss"].update({
+            "exclude_enterprise_updates": True,
+            "enterprise_entity_keywords": ["公司", "集团"],
+            "enterprise_update_keywords": ["发布", "中标", "签约"],
+            "enterprise_strong_exclude_keywords": ["上市", "融资", "认购"],
+        })
+
+        excluded = [
+            {"title": "国家电网有限公司发布新能源发展报告"},
+            {"title": "华能新能源重启上市并获认购"},
+        ]
+        retained = {"title": "国家电网否认撤销区域电网"}
+
+        self.assertTrue(all(not is_news_in_scope(item, self.config) for item in excluded))
+        self.assertTrue(is_news_in_scope(retained, self.config))
 
     @staticmethod
     def _response(content, status_code=200, headers=None):

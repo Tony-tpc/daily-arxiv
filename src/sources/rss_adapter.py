@@ -19,6 +19,35 @@ from src.utils import load_json, save_json
 from .base import BaseSourceAdapter
 
 
+def is_news_in_scope(record: Dict[str, Any], config: Dict[str, Any]) -> bool:
+    """Exclude company updates while retaining system-level domestic energy news."""
+    settings = config.get("sources", {}).get("rss", {})
+    if not isinstance(settings, dict) or not settings.get(
+        "exclude_enterprise_updates", False
+    ):
+        return True
+
+    title = str(record.get("title") or "").casefold()
+    if not title:
+        return True
+    strong_terms = _string_list(settings.get("enterprise_strong_exclude_keywords"))
+    if any(term.casefold() in title for term in strong_terms):
+        return False
+
+    entity_terms = _string_list(settings.get("enterprise_entity_keywords"))
+    action_terms = _string_list(settings.get("enterprise_update_keywords"))
+    has_enterprise = any(term.casefold() in title for term in entity_terms)
+    has_update = any(term.casefold() in title for term in action_terms)
+    return not (has_enterprise and has_update)
+
+
+def _string_list(value: Any) -> List[str]:
+    if isinstance(value, (list, tuple, set)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    cleaned = str(value or "").strip()
+    return [cleaned] if cleaned else []
+
+
 class RSSSourceAdapter(BaseSourceAdapter):
     """Collect standard RSS/Atom entries and normalize them as news documents."""
 
@@ -141,6 +170,8 @@ class RSSSourceAdapter(BaseSourceAdapter):
         """Map feed entries to the unified news schema."""
         documents = []
         for record in records:
+            if not is_news_in_scope(record, self.config):
+                continue
             source_name = record.get("source_name") or record.get("feed_title") or "RSS"
             authors = [value for value in [record.get("author"), source_name] if value]
             document = create_document(
@@ -223,6 +254,8 @@ class RSSSourceAdapter(BaseSourceAdapter):
         self, record: Dict[str, Any], feed_config: Dict[str, Any]
     ) -> bool:
         """Apply optional source/feed keyword filters before an item enters state."""
+        if not is_news_in_scope(record, self.config):
+            return False
         include = [
             *self._string_list(self.source_config.get("include_keywords")),
             *self._string_list(feed_config.get("include_keywords")),
@@ -249,10 +282,7 @@ class RSSSourceAdapter(BaseSourceAdapter):
 
     @staticmethod
     def _string_list(value: Any) -> List[str]:
-        if isinstance(value, (list, tuple, set)):
-            return [str(item).strip() for item in value if str(item).strip()]
-        cleaned = str(value or "").strip()
-        return [cleaned] if cleaned else []
+        return _string_list(value)
 
     @staticmethod
     def _entry_datetime(entry: Dict[str, Any]) -> str:

@@ -211,6 +211,39 @@ sources:
 
   rss:
     enabled: true
+    # 排除企业上市、融资、业绩、产品发布等公司动态，保留系统级国内能源新闻。
+    exclude_enterprise_updates: true
+    enterprise_entity_keywords:
+      - "公司"
+      - "集团"
+      - "股份"
+      - "控股"
+    enterprise_update_keywords:
+      - "发布"
+      - "中标"
+      - "签约"
+      - "投资"
+      - "投产"
+      - "投运"
+      - "收购"
+      - "并购"
+      - "增资"
+    enterprise_strong_exclude_keywords:
+      - "上市"
+      - "IPO"
+      - "融资"
+      - "募资"
+      - "认购"
+      - "招股"
+      - "业绩"
+      - "营收"
+      - "净利润"
+      - "股价"
+      - "增持"
+      - "减持"
+      - "股权"
+      - "产品发布"
+      - "新品发布"
     # 仅保留与中国能源系统、市场和自主决策相关的国内新闻。
     filter_scope: "title"
     include_keywords:

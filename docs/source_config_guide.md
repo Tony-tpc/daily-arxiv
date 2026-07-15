@@ -10,7 +10,7 @@
 |---|---|---|
 | `arxiv` | 能源系统与多智能体论文 | `categories`、`keyword_groups`、`days_back` |
 | `openalex_search` | 主题检索与引用信息 | `topic_query`、`recent_days`、`max_results` |
-| `rss` | 国内能源新闻 | `feeds`、`include_keywords`、`exclude_keywords` |
+| `rss` | 国内能源新闻 | `feeds`、关键词过滤、企业动态排除规则 |
 | `policy` | 中国政策文件 | HTML selectors、`issuing_body`、`policy_level` |
 | `industry_report` | 中国能源行业报告 | selectors、`institution`、标题白/黑名单 |
 
@@ -33,6 +33,13 @@ sources:
 ```
 
 选择器变更会导致空结果而不是写入脏数据。修改后运行对应测试，例如 `python -m unittest test.test_policy_adapter`，并用临时 state 路径做一次小规模抓取。不要删除 `state_path`：它保存 ETag、Last-Modified 和已见条目，避免重复采集。
+
+新闻源默认启用 `exclude_enterprise_updates`。`enterprise_strong_exclude_keywords`
+直接排除上市、融资、业绩和产品发布；`enterprise_entity_keywords` 与
+`enterprise_update_keywords` 同时命中时，排除公司发布、中标、签约等动态。
+国家电网结构调整、电力负荷等系统级新闻不因出现企业名称而自动排除。
+调整词表时同步运行 `python -m unittest test.test_rss_adapter
+test.test_incremental_pipeline`，确保历史快照中的旧企业动态也会被清理。
 
 ## 调度与安全
 
