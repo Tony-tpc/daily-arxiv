@@ -47,6 +47,21 @@ class WebForecastTests(unittest.TestCase):
         self.assertEqual([item["topic_id"] for item in data["scenarios"]], ["grid_coordination"])
         self.assertEqual(list(data["topic_series"]), ["grid_coordination"])
 
+    def test_forecast_dashboard_exposes_visual_controls_and_evidence_drawer(self):
+        response = self.client.get("/")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        for element_id in (
+            "forecast-horizon", "forecast-topic", "forecast-confidence",
+            "forecast-data-quality", "forecast-chart", "forecast-topic-cards",
+            "forecast-transmission", "forecast-scenarios", "forecast-monitoring",
+            "forecast-evidence-drawer", "forecast-evidence-list",
+        ):
+            self.assertIn(f'id="{element_id}"', html)
+        self.assertIn("未来趋势分析", html)
+        self.assertIn("反证条件与持续监测", html)
+
     def test_forecast_api_rejects_invalid_filters(self):
         self.assertEqual(
             self.client.get("/api/trends/forecast?horizon=weekly").status_code,

@@ -193,6 +193,9 @@ const state = {
     homeFilters: {sourceType: 'all', topic: '', priority: '', dateFrom: '', dateTo: ''},
     allCategories: [],
     analysis: null,
+    forecast: null,
+    forecastTaxonomy: [],
+    forecastFilters: {horizon: 'all', topic: '', confidence: ''},
     report: null,
     history: [],
     knowledgeByPaperId: {},
@@ -201,6 +204,7 @@ const state = {
     trendChart: null,
     sourceComparisonChart: null,
     entityTrendChart: null,
+    forecastChart: null,
     currentDate: new Date(),
     theme: localStorage.getItem('theme') || 'light'
 };
@@ -397,6 +401,7 @@ async function loadAllData() {
         await Promise.all([
             loadStats(),
             loadAnalysis(),
+            loadForecast(),
             loadHistory(),
             loadKnowledge(),
             loadPapers(),
@@ -499,21 +504,51 @@ async function loadAnalysis() {
         // 加载词云
         await loadWordcloud();
         
-        // 加载LLM分析
-        const llmAnalysis = analysis.llm_analysis || {};
-        
-        renderAnalysisContent('summary-content', llmAnalysis.analysis_summary_html || llmAnalysis.analysis_summary);
-        renderAnalysisContent('hotspots-content', llmAnalysis.hotspots_html || llmAnalysis.hotspots);
-        renderAnalysisContent('trends-content', llmAnalysis.trends_html || llmAnalysis.trends);
-        renderAnalysisContent('future-content', llmAnalysis.future_directions_html || llmAnalysis.future_directions);
-        renderAnalysisContent('ideas-content', llmAnalysis.research_ideas_html || llmAnalysis.research_ideas);
+        if (analysis.trend_forecast && !state.forecast) {
+            state.forecast = analysis.trend_forecast;
+            state.forecastTaxonomy = analysis.trend_forecast.taxonomy || [];
+            renderForecastDashboard();
+        }
         renderResearchTrendModules();
         renderHomeTrendSignals();
         
     } catch (error) {
         console.error('加载分析数据失败:', error);
-        showError('hotspots-content', t('loadAnalysisFailed'));
+        showError('forecast-topic-cards', t('loadAnalysisFailed'));
     }
+}
+
+async function loadForecast() {
+    const filters = state.forecastFilters;
+    const params = new URLSearchParams();
+    params.set('horizon', filters.horizon || 'all');
+    if (filters.topic) params.set('topic', filters.topic);
+    if (filters.confidence) params.set('confidence', filters.confidence);
+    try {
+        const response = await fetch(`/api/trends/forecast?${params.toString()}`);
+        if (!response.ok) throw new Error('Failed to load forecast');
+        const payload = await response.json();
+        state.forecast = payload;
+        if ((payload.taxonomy || []).length > state.forecastTaxonomy.length) {
+            state.forecastTaxonomy = payload.taxonomy;
+        }
+        populateForecastTopics();
+        renderForecastDashboard();
+    } catch (error) {
+        console.error('加载未来趋势失败:', error);
+        showError('forecast-topic-cards', LANG === 'zh' ? '未来趋势加载失败' : 'Failed to load future trends');
+    }
+}
+
+function populateForecastTopics() {
+    const select = document.getElementById('forecast-topic');
+    if (!select) return;
+    const selected = state.forecastFilters.topic;
+    const allLabel = LANG === 'zh' ? '全部六类主题' : 'All six topics';
+    select.innerHTML = `<option value="">${allLabel}</option>` + state.forecastTaxonomy.map(item =>
+        `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`
+    ).join('');
+    select.value = selected;
 }
 
 async function loadWordcloud() {
@@ -1320,6 +1355,209 @@ function renderResearchTrendModules() {
     renderTrendTimeline();
     renderSourceComparisonChart();
     renderEntityTrendChart();
+    renderForecastDashboard();
+}
+
+function renderForecastDashboard() {
+    if (!state.forecast) return;
+    renderForecastQuality();
+    renderForecastChart();
+    renderForecastTopicCards();
+    renderForecastTransmission();
+    renderForecastScenarios();
+    renderForecastMonitoring();
+}
+
+function renderForecastQuality() {
+    const container = document.getElementById('forecast-data-quality');
+    if (!container) return;
+    const quality = state.forecast?.data_quality || {};
+    const sourceLabels = LANG === 'zh'
+        ? {paper: '论文', policy: '中国政策', news: '国内新闻', industry_report: '行业报告'}
+        : {paper: 'Papers', policy: 'China policies', news: 'China news', industry_report: 'Industry reports'};
+    const sources = Object.entries(quality.source_counts || {}).map(([source, count]) =>
+        `<span class="quality-chip"><i class="fas fa-database"></i>${escapeHtml(sourceLabels[source] || source)} ${Number(count || 0)}</span>`
+    ).join('');
+    const coverage = quality.coverage_status_counts || {};
+    const coverageText = LANG === 'zh'
+        ? `完整 ${Number(coverage.complete || 0)} · 部分 ${Number(coverage.partial || 0)} · 不可用 ${Number(coverage.unavailable || 0)}`
+        : `Complete ${Number(coverage.complete || 0)} · Partial ${Number(coverage.partial || 0)} · Unavailable ${Number(coverage.unavailable || 0)}`;
+    const gaps = quality.gaps || [];
+    container.innerHTML = `<div class="quality-summary">
+        <div><span>${LANG === 'zh' ? '有效历史' : 'Usable history'}</span><strong>${Number(quality.history_month_count || 0)} / 24</strong><small>${LANG === 'zh' ? '个月' : 'months'}</small></div>
+        <div><span>${LANG === 'zh' ? '事件定期资料' : 'Event-dated records'}</span><strong>${Number(quality.document_count || 0)}</strong><small>${escapeHtml(quality.period_start || '')} — ${escapeHtml(quality.period_end || '')}</small></div>
+        <div><span>${LANG === 'zh' ? '来源覆盖' : 'Coverage'}</span><strong>${escapeHtml(coverageText)}</strong><small>${LANG === 'zh' ? '缺口不按零值计算' : 'Missing coverage is not treated as zero'}</small></div>
+    </div>
+    <div class="quality-source-row">${sources || `<span class="quality-chip warning">${LANG === 'zh' ? '暂无来源统计' : 'No source totals'}</span>`}</div>
+    ${gaps.length ? `<div class="quality-warning"><i class="fas fa-triangle-exclamation"></i><div><strong>${LANG === 'zh' ? '结论边界' : 'Limitations'}</strong>${gaps.map(gap => `<p>${escapeHtml(gap)}</p>`).join('')}</div></div>` : ''}`;
+}
+
+function renderForecastChart() {
+    const canvas = document.getElementById('forecast-chart');
+    const note = document.getElementById('forecast-chart-note');
+    const topicLabel = document.getElementById('forecast-chart-topic');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const forecasts = state.forecast?.forecasts || [];
+    const taxonomy = state.forecast?.taxonomy || state.forecastTaxonomy;
+    const topicId = state.forecastFilters.topic || forecasts[0]?.topic_id || taxonomy[0]?.id;
+    const definition = taxonomy.find(item => item.id === topicId) || state.forecastTaxonomy.find(item => item.id === topicId) || {};
+    const series = state.forecast?.topic_series?.[topicId] || [];
+    const forecast = forecasts.find(item => item.topic_id === topicId);
+    if (topicLabel) topicLabel.textContent = definition.label || forecast?.topic || '';
+    if (!series.length) {
+        if (note) note.textContent = LANG === 'zh' ? '当前筛选下没有可用时间序列。' : 'No time series for the current filters.';
+        if (state.forecastChart) state.forecastChart.destroy();
+        state.forecastChart = null;
+        return;
+    }
+    const labels = series.map(point => point.month);
+    const futureLabels = [1, 2, 3].map(offset => addMonth(labels[labels.length - 1], offset));
+    const allLabels = [...labels, ...futureLabels];
+    const historyData = [...series.map(point => point.available ? Number(point.share || 0) * 100 : null), null, null, null];
+    const lastActual = [...historyData.slice(0, labels.length)].reverse().find(value => value !== null);
+    const projection = Array(allLabels.length).fill(null);
+    const lower = Array(allLabels.length).fill(null);
+    const upper = Array(allLabels.length).fill(null);
+    if (lastActual !== undefined) projection[labels.length - 1] = lastActual;
+    (forecast?.projections || []).forEach(point => {
+        const index = labels.length - 1 + Number(point.months_ahead || 0);
+        projection[index] = Number(point.share || 0) * 100;
+        lower[index] = Number(point.lower || 0) * 100;
+        upper[index] = Number(point.upper || 0) * 100;
+    });
+    if (state.forecastChart) state.forecastChart.destroy();
+    state.forecastChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: allLabels,
+            datasets: [
+                {label: LANG === 'zh' ? '历史主题占比' : 'Historical topic share', data: historyData, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.1)', fill: true, tension: .3, spanGaps: false},
+                {label: LANG === 'zh' ? '预测中位线' : 'Forecast', data: projection, borderColor: '#f59e0b', borderDash: [7, 5], tension: .25, spanGaps: true},
+                {label: LANG === 'zh' ? '80%区间下界' : '80% lower', data: lower, borderColor: 'rgba(245,158,11,.15)', pointRadius: 0, spanGaps: true},
+                {label: LANG === 'zh' ? '80%预测区间' : '80% interval', data: upper, borderColor: 'rgba(245,158,11,.15)', backgroundColor: 'rgba(245,158,11,.18)', pointRadius: 0, fill: '-1', spanGaps: true}
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {mode: 'index', intersect: false},
+            scales: {y: {beginAtZero: true, ticks: {callback: value => `${value}%`}}},
+            plugins: {legend: {position: 'bottom'}}
+        }
+    });
+    if (note) note.textContent = forecast?.mode === 'quantitative'
+        ? (LANG === 'zh' ? '虚线为 Theil–Sen 稳健预测，阴影为80%区间；预测不是确定事实。' : 'Dashed line is a robust forecast with an 80% interval.')
+        : (LANG === 'zh' ? `数据未达到定量门槛：${(forecast?.data_gaps || []).join('；') || '当前仅展示历史证据'}` : 'Quantitative threshold not met; history only.');
+}
+
+function renderForecastTopicCards() {
+    const container = document.getElementById('forecast-topic-cards');
+    if (!container) return;
+    const forecasts = state.forecast?.forecasts || [];
+    if (!forecasts.length) {
+        container.innerHTML = `<p class="trend-note">${LANG === 'zh' ? '当前筛选下没有近期预测卡，请切换周期或置信度。' : 'No near-term cards for these filters.'}</p>`;
+        return;
+    }
+    container.innerHTML = forecasts.map(item => {
+        const metrics = item.metrics || {};
+        const ids = encodeURIComponent(JSON.stringify(item.evidence_ids || []));
+        return `<article class="forecast-topic-card confidence-${escapeHtml(item.confidence || 'low')}">
+            <div class="forecast-card-heading"><div><small>${escapeHtml(modeLabel(item.mode))}</small><h3>${escapeHtml(item.topic)}</h3></div><span class="confidence-badge">${escapeHtml(confidenceLabel(item.confidence))}</span></div>
+            <div class="trajectory-row"><span class="trajectory trajectory-${escapeHtml(item.trajectory || 'stable')}"><i class="fas fa-arrow-trend-up"></i>${escapeHtml(trajectoryLabel(item.trajectory))}</span><strong>${LANG === 'zh' ? '持续性' : 'Persistence'} ${Math.round(Number(metrics.persistence || 0) * 100)}%</strong></div>
+            <div class="forecast-metric-grid"><div><span>${LANG === 'zh' ? '速度' : 'Velocity'}</span><strong>${signed(metrics.velocity)}</strong></div><div><span>${LANG === 'zh' ? '加速度' : 'Acceleration'}</span><strong>${signed(metrics.acceleration)}</strong></div><div><span>${LANG === 'zh' ? '来源类型' : 'Sources'}</span><strong>${Number(metrics.source_diversity || 0)}</strong></div></div>
+            <p class="research-action"><i class="fas fa-flask"></i>${escapeHtml(item.research_action || '')}</p>
+            <div class="driver-list">${(item.drivers || []).map(driver => `<span>${escapeHtml(driver)}</span>`).join('')}</div>
+            <details><summary>${LANG === 'zh' ? '反证条件与数据缺口' : 'Counter-signals and gaps'}</summary><ul>${(item.counter_signals || []).map(signal => `<li>${escapeHtml(signal)}</li>`).join('')}</ul></details>
+            <button type="button" class="forecast-evidence-btn" data-evidence-ids="${ids}"><i class="fas fa-folder-open"></i>${LANG === 'zh' ? '查看支撑材料' : 'View evidence'} · ${(item.evidence_ids || []).length}</button>
+        </article>`;
+    }).join('');
+    container.querySelectorAll('.forecast-evidence-btn').forEach(button => {
+        button.addEventListener('click', () => openEvidenceDrawer(
+            JSON.parse(decodeURIComponent(button.dataset.evidenceIds || '%5B%5D'))
+        ));
+    });
+}
+
+function renderForecastTransmission() {
+    const container = document.getElementById('forecast-transmission');
+    if (!container) return;
+    const sourceLabels = LANG === 'zh'
+        ? {paper: '论文', policy: '政策', news: '国内新闻', industry_report: '行业报告'}
+        : {paper: 'Paper', policy: 'Policy', news: 'News', industry_report: 'Report'};
+    const items = state.forecast?.lead_lag || [];
+    container.innerHTML = items.length ? items.map(item => {
+        const steps = (item.sequence || []).map((step, index) => `<div class="transmission-step"><span>${escapeHtml(sourceLabels[step.source_type] || step.source_type)}</span><strong>${escapeHtml(step.onset || '')}</strong><small>${Number(step.count || 0)} ${LANG === 'zh' ? '条' : 'items'}</small></div>${index < item.sequence.length - 1 ? '<i class="fas fa-arrow-right"></i>' : ''}`).join('');
+        return `<article class="transmission-item"><div><h3>${escapeHtml(item.topic)}</h3><span class="signal-status status-${escapeHtml(item.status)}">${item.status === 'supported' ? (LANG === 'zh' ? '有重复证据' : 'Supported') : (LANG === 'zh' ? '证据不足' : 'Insufficient')}</span></div><div class="transmission-track">${steps || `<p>${escapeHtml(item.limitation || '')}</p>`}</div><small>${escapeHtml(item.limitation || '')}</small></article>`;
+    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前筛选下没有传导证据。' : 'No transmission evidence.'}</p>`;
+}
+
+function renderForecastScenarios() {
+    const container = document.getElementById('forecast-scenarios');
+    if (!container) return;
+    const scenarios = state.forecast?.scenarios || [];
+    container.innerHTML = scenarios.length ? scenarios.map(item => `<article class="scenario-card">
+        <div><h3>${escapeHtml(item.topic)}</h3><span class="confidence-badge">${escapeHtml(confidenceLabel(item.confidence))}</span></div>
+        <p class="scenario-base"><strong>${LANG === 'zh' ? '基准' : 'Base'}：</strong>${escapeHtml(item.base_case || '')}</p>
+        <p class="scenario-up"><strong>${LANG === 'zh' ? '上行' : 'Upside'}：</strong>${escapeHtml(item.upside || '')}</p>
+        <p class="scenario-down"><strong>${LANG === 'zh' ? '下行' : 'Downside'}：</strong>${escapeHtml(item.downside || '')}</p>
+    </article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '请选择“战略”或“双周期”查看情景。' : 'Choose strategic or both horizons.'}</p>`;
+}
+
+function renderForecastMonitoring() {
+    const container = document.getElementById('forecast-monitoring');
+    if (!container) return;
+    const items = (state.forecast?.forecasts || []).length ? state.forecast.forecasts : (state.forecast?.scenarios || []);
+    container.innerHTML = items.length ? items.map(item => `<article class="monitoring-card"><h3>${escapeHtml(item.topic)}</h3><div><strong>${LANG === 'zh' ? '持续监测' : 'Watch'}</strong>${(item.watch_indicators || item.triggers || []).map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div><div class="counter-monitor"><strong>${LANG === 'zh' ? '下调判断条件' : 'Downgrade when'}</strong>${(item.counter_signals || []).map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div></article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前筛选下暂无监测项。' : 'No monitoring items.'}</p>`;
+}
+
+function openEvidenceDrawer(evidenceIds) {
+    const drawer = document.getElementById('forecast-evidence-drawer');
+    const list = document.getElementById('forecast-evidence-list');
+    const count = document.getElementById('forecast-evidence-count');
+    if (!drawer || !list) return;
+    const documents = [
+        ...state.allPapers,
+        ...Object.values(state.directories).flatMap(directory => directory.documents || [])
+    ];
+    const index = new Map(documents.map(document => [String(document.id || ''), document]));
+    const uniqueIds = [...new Set(evidenceIds || [])];
+    if (count) count.textContent = String(uniqueIds.length);
+    list.innerHTML = uniqueIds.length ? uniqueIds.map(id => {
+        const document = index.get(String(id));
+        const title = document?.title || id;
+        const source = document?.source_name || document?.source_type || (LANG === 'zh' ? '历史语料' : 'Historical corpus');
+        const url = document?.url || document?.entry_url || '';
+        return `<article><div><span>${escapeHtml(source)}</span><small>${escapeHtml(document?.published_at || '')}</small></div>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>` : `<strong>${escapeHtml(title)}</strong>`}<code>${escapeHtml(id)}</code></article>`;
+    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '没有可展示的证据ID。' : 'No evidence IDs.'}</p>`;
+    drawer.open = true;
+    drawer.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function addMonth(month, offset) {
+    const [year, value] = String(month || '').split('-').map(Number);
+    if (!year || !value) return '';
+    const date = new Date(Date.UTC(year, value - 1 + offset, 1));
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function signed(value) {
+    const number = Number(value || 0);
+    return `${number >= 0 ? '+' : ''}${number.toFixed(3)}`;
+}
+
+function confidenceLabel(value) {
+    const labels = LANG === 'zh' ? {high: '高置信', medium: '中置信', low: '低置信'} : {high: 'High', medium: 'Medium', low: 'Low'};
+    return labels[value] || labels.low;
+}
+
+function trajectoryLabel(value) {
+    const labels = LANG === 'zh' ? {rising: '上升', stable: '稳定', declining: '回落'} : {rising: 'Rising', stable: 'Stable', declining: 'Declining'};
+    return labels[value] || labels.stable;
+}
+
+function modeLabel(value) {
+    if (LANG === 'zh') return value === 'quantitative' ? '定量预测' : '低置信情景';
+    return value === 'quantitative' ? 'Quantitative' : 'Low-confidence scenario';
 }
 
 function renderCategoryChart() {
@@ -1663,6 +1901,23 @@ function initEventListeners() {
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
     }
+
+    const forecastHorizon = document.getElementById('forecast-horizon');
+    const forecastTopic = document.getElementById('forecast-topic');
+    const forecastConfidence = document.getElementById('forecast-confidence');
+    forecastHorizon?.addEventListener('change', event => {
+        state.forecastFilters.horizon = event.target.value;
+        loadForecast();
+    });
+    forecastTopic?.addEventListener('change', event => {
+        state.forecastFilters.topic = event.target.value;
+        loadForecast();
+    });
+    forecastConfidence?.addEventListener('change', event => {
+        state.forecastFilters.confidence = event.target.value;
+        loadForecast();
+    });
+    document.getElementById('forecast-refresh')?.addEventListener('click', loadForecast);
     
     // 搜索
     const searchInput = document.getElementById('search-input');
@@ -1879,5 +2134,6 @@ window.dailyArxiv = {
     loadDirectory,
     loadReport,
     loadIntelligenceHome,
+    loadForecast,
     toggleTheme
 };

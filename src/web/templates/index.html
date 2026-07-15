@@ -408,94 +408,77 @@
             <!-- 趋势分析部分 -->
             <section id="analysis-section" class="content-section">
                 <div class="section-header">
-                    <h1>{{ '趋势分析' if language == 'zh' else 'Trend Analysis' }}</h1>
-                    <p class="section-desc">{{ '基于 AI 的深度研究趋势分析' if language == 'zh' else 'In-depth AI-powered research trend analysis' }}</p>
+                    <h1>{{ '未来趋势分析' if language == 'zh' else 'Future Trend Analysis' }}</h1>
+                    <p class="section-desc">{{ '以时间序列证据、预测区间、跨来源传导与可证伪情景支持能源具身智能科研决策' if language == 'zh' else 'Evidence, uncertainty bands, source transmission, and falsifiable scenarios for energy research decisions' }}</p>
                 </div>
 
-                <!-- 研究热点 -->
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="header-left">
-                            <i class="fas fa-fire"></i>
-                            <h2>{{ '当前研究热点' if language == 'zh' else 'Current Research Hotspots' }}</h2>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="analysis-content" id="hotspots-content">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="forecast-toolbar" aria-label="{{ '趋势筛选' if language == 'zh' else 'Forecast filters' }}">
+                    <label>
+                        <span>{{ '分析周期' if language == 'zh' else 'Horizon' }}</span>
+                        <select id="forecast-horizon" class="filter-select">
+                            <option value="all">{{ '双周期总览' if language == 'zh' else 'Both horizons' }}</option>
+                            <option value="near">{{ '近期 1–3 个月' if language == 'zh' else 'Near term · 1–3 months' }}</option>
+                            <option value="strategic">{{ '战略 6–12 个月' if language == 'zh' else 'Strategic · 6–12 months' }}</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>{{ '研究主题' if language == 'zh' else 'Topic' }}</span>
+                        <select id="forecast-topic" class="filter-select">
+                            <option value="">{{ '全部六类主题' if language == 'zh' else 'All six topics' }}</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>{{ '置信度' if language == 'zh' else 'Confidence' }}</span>
+                        <select id="forecast-confidence" class="filter-select">
+                            <option value="">{{ '全部置信度' if language == 'zh' else 'All confidence levels' }}</option>
+                            <option value="high">{{ '高置信' if language == 'zh' else 'High' }}</option>
+                            <option value="medium">{{ '中置信' if language == 'zh' else 'Medium' }}</option>
+                            <option value="low">{{ '低置信' if language == 'zh' else 'Low' }}</option>
+                        </select>
+                    </label>
+                    <button type="button" id="forecast-refresh" class="report-refresh-btn"><i class="fas fa-rotate"></i>{{ '刷新分析' if language == 'zh' else 'Refresh' }}</button>
                 </div>
 
-                <!-- 技术趋势 -->
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="header-left">
-                            <i class="fas fa-arrow-trend-up"></i>
-                            <h2>{{ '技术趋势与演进' if language == 'zh' else 'Technical Trends' }}</h2>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="analysis-content" id="trends-content">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                            </div>
-                        </div>
-                    </div>
+                <div id="forecast-data-quality" class="forecast-quality-panel">
+                    <div class="loading-small"><div class="spinner-small"></div></div>
                 </div>
 
-                <!-- 未来方向 -->
-                <div class="content-card">
+                <div class="content-card forecast-chart-card">
                     <div class="card-header">
-                        <div class="header-left">
-                            <i class="fas fa-crystal-ball"></i>
-                            <h2>{{ '未来发展方向' if language == 'zh' else 'Future Directions' }}</h2>
-                        </div>
+                        <div class="header-left"><i class="fas fa-chart-line"></i><h2>{{ '历史走势与近期预测区间' if language == 'zh' else 'History and Near-term Forecast Band' }}</h2></div>
+                        <span id="forecast-chart-topic" class="update-time"></span>
                     </div>
                     <div class="card-body">
-                        <div class="analysis-content" id="future-content">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                            </div>
-                        </div>
+                        <div class="forecast-chart-wrap"><canvas id="forecast-chart"></canvas></div>
+                        <p id="forecast-chart-note" class="trend-note"></p>
                     </div>
                 </div>
 
-                <!-- 创新想法 -->
                 <div class="content-card">
-                    <div class="card-header">
-                        <div class="header-left">
-                            <i class="fas fa-lightbulb"></i>
-                            <h2>{{ '创新研究想法' if language == 'zh' else 'Research Ideas' }}</h2>
-                        </div>
+                    <div class="card-header"><div class="header-left"><i class="fas fa-compass"></i><h2>{{ '主题科研决策卡' if language == 'zh' else 'Research Decision Cards' }}</h2></div></div>
+                    <div class="card-body"><div id="forecast-topic-cards" class="forecast-topic-grid"><div class="loading"><div class="spinner"></div></div></div></div>
+                </div>
+
+                <div class="forecast-two-column">
+                    <div class="content-card">
+                        <div class="card-header"><div class="header-left"><i class="fas fa-timeline"></i><h2>{{ '论文→政策→产业传导' if language == 'zh' else 'Paper → Policy → Industry' }}</h2></div></div>
+                        <div class="card-body"><div id="forecast-transmission" class="transmission-list"></div></div>
                     </div>
-                    <div class="card-body">
-                        <div class="analysis-content" id="ideas-content">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                            </div>
-                        </div>
+                    <div class="content-card">
+                        <div class="card-header"><div class="header-left"><i class="fas fa-code-branch"></i><h2>{{ '战略情景对比' if language == 'zh' else 'Strategic Scenarios' }}</h2></div></div>
+                        <div class="card-body"><div id="forecast-scenarios" class="scenario-list"></div></div>
                     </div>
                 </div>
 
-                <!-- 分析总结 -->
                 <div class="content-card">
-                    <div class="card-header">
-                        <div class="header-left">
-                            <i class="fas fa-clipboard-check"></i>
-                            <h2>{{ '分析总结' if language == 'zh' else 'Analysis Summary' }}</h2>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="analysis-content" id="summary-content">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="card-header"><div class="header-left"><i class="fas fa-shield-halved"></i><h2>{{ '反证条件与持续监测' if language == 'zh' else 'Counter-signals and Monitoring' }}</h2></div></div>
+                    <div class="card-body"><div id="forecast-monitoring" class="monitoring-grid"></div></div>
                 </div>
+
+                <details id="forecast-evidence-drawer" class="content-card forecast-evidence-drawer">
+                    <summary><i class="fas fa-folder-open"></i>{{ '证据抽屉：回查支撑材料' if language == 'zh' else 'Evidence drawer' }} <span id="forecast-evidence-count">0</span></summary>
+                    <div id="forecast-evidence-list" class="forecast-evidence-list"></div>
+                </details>
             </section>
 
             <!-- 统计数据部分 -->
