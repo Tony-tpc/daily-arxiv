@@ -9,6 +9,7 @@ from src.sources.paper_normalizer import (
     is_excluded_paper,
     normalize_paper_record,
 )
+from src.sources.policy_adapter import is_policy_in_scope
 from src.sources.rss_adapter import is_news_in_scope
 from src.storage.base import build_storage
 from src.utils import get_data_path, load_json
@@ -114,6 +115,8 @@ def _canonicalize_record(
         return normalize_paper_record(record, source_name, config)
     if str(record.get('source_type') or '').lower() == 'news':
         return dict(record) if is_news_in_scope(record, config) else None
+    if str(record.get('source_type') or '').lower() == 'policy':
+        return dict(record) if is_policy_in_scope(record, config) else None
     return dict(record)
 
 
@@ -129,6 +132,8 @@ def _normalize_existing_documents(
         document = dict(raw)
         source_type = str(document.get('source_type') or '')
         if source_type == 'news' and not is_news_in_scope(document, config):
+            continue
+        if source_type == 'policy' and not is_policy_in_scope(document, config):
             continue
         legacy_paper = not source_type and _looks_like_legacy_paper(document)
         if source_type == 'paper' or legacy_paper:

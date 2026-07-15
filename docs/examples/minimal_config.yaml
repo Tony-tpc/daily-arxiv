@@ -41,6 +41,7 @@ sources:
         region: "CN"
   policy:
     enabled: true
+    title_keywords_any: ["能源", "电力", "电网", "电价", "储能", "新能源", "虚拟电厂", "核电", "节能降碳", "能效"]
     feeds:
       - name: "国家能源局"
         url: "https://www.nea.gov.cn/"

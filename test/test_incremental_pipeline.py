@@ -149,6 +149,48 @@ class IncrementalPipelineTests(unittest.TestCase):
             ["grid-news", "policy-1"],
         )
 
+    @patch("src.pipeline.normalize_stage.build_storage")
+    def test_incremental_baseline_drops_non_energy_policy(self, build_storage):
+        build_storage.return_value.load_latest.return_value = {
+            "snapshot_id": "policy-baseline",
+            "documents": [
+                {
+                    "id": "general-policy",
+                    "source_type": "policy",
+                    "title": "中央预算内投资计划管理办法",
+                },
+                {
+                    "id": "energy-policy",
+                    "source_type": "policy",
+                    "title": "新型能源体系建设十五五规划",
+                },
+            ],
+        }
+        adapter = Mock()
+        adapter.normalize.return_value = [
+            {"id": "news-1", "source_type": "news", "title": "Grid news"}
+        ]
+        context = PipelineContext(
+            config={
+                "runtime": {"merge_with_latest": True},
+                "sources": {"policy": {
+                    "title_keywords_any": ["能源", "电力", "储能"],
+                }},
+            },
+            logger=logging.getLogger("test.incremental.energy-policy"),
+            text=lambda zh, en: zh,
+            enabled_sources=["rss"],
+            source_adapters={"rss": adapter},
+            source_records={"rss": [{"title": "raw"}]},
+        )
+
+        result = run(context)
+
+        self.assertEqual(
+            [item["id"] for item in result.normalized_records],
+            ["energy-policy", "news-1"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from src.sources.policy_adapter import PolicySourceAdapter
+from src.sources.policy_adapter import PolicySourceAdapter, is_policy_in_scope
 
 
 class PolicySourceAdapterTests(unittest.TestCase):
@@ -96,6 +96,21 @@ class PolicySourceAdapterTests(unittest.TestCase):
         self.assertEqual(first[0]["content"], "Binding energy policy.")
         self.assertEqual(first[0]["published_at"], "2026-07-10")
         self.assertEqual(client.get.call_args_list[2].kwargs["headers"]["If-None-Match"], '"cn-v1"')
+
+    def test_policy_title_filter_keeps_energy_policy_and_drops_general_policy(self):
+        self.config["sources"]["policy"]["title_keywords_any"] = [
+            "能源", "电力", "电网", "电价", "储能", "节能降碳"
+        ]
+
+        self.assertTrue(is_policy_in_scope(
+            {"title": "新型能源体系建设十五五规划"}, self.config
+        ))
+        self.assertTrue(is_policy_in_scope(
+            {"title": "省级电网输配电价通知"}, self.config
+        ))
+        self.assertFalse(is_policy_in_scope(
+            {"title": "中央预算内投资计划管理办法"}, self.config
+        ))
 
     @staticmethod
     def _record():

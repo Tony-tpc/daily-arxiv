@@ -20,6 +20,30 @@ from .rss_adapter import RSSSourceAdapter
 from .structured_metadata import clean_optional, parse_json_object, string_list, unique
 
 
+def is_policy_in_scope(
+    record: Dict[str, Any],
+    config: Dict[str, Any],
+    feed_config: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Keep policy records whose titles match the configured energy boundary."""
+    settings = config.get("sources", {}).get("policy", {})
+    if not isinstance(settings, dict):
+        return True
+    feed_config = feed_config or {}
+    include = unique(
+        string_list(settings.get("title_keywords_any"))
+        + string_list(feed_config.get("title_keywords_any"))
+    )
+    exclude = unique(
+        string_list(settings.get("title_keywords_exclude"))
+        + string_list(feed_config.get("title_keywords_exclude"))
+    )
+    title = str(record.get("title") or "").casefold()
+    if exclude and any(term.casefold() in title for term in exclude):
+        return False
+    return not include or any(term.casefold() in title for term in include)
+
+
 class PolicySourceAdapter(RSSSourceAdapter):
     """Collect configured policy feeds and normalize entries as policy documents."""
 
@@ -47,6 +71,8 @@ class PolicySourceAdapter(RSSSourceAdapter):
             if not str(record.get("title", "")).strip():
                 continue
             feed_config = self._feed_config.get(str(record.get("feed_url", "")), {})
+            if not is_policy_in_scope(record, self.config, feed_config):
+                continue
             standard = self._extract_standard_fields(record, feed_config)
             insights = self._extract_llm_insights(record, standard)
             technology_directions = string_list(insights.get("technology_directions"))
@@ -168,6 +194,8 @@ class PolicySourceAdapter(RSSSourceAdapter):
                 title = self._clean_text(link.get("title") or link.get_text(" ", strip=True))
                 url = self._canonical_url(urljoin(source_url, str(link["href"])))
                 if not title or not url:
+                    continue
+                if not is_policy_in_scope({"title": title}, self.config, source):
                     continue
                 dedup_key = hashlib.sha256(f"{url}\n{title.casefold()}".encode("utf-8")).hexdigest()
                 if dedup_key in self.state["seen"]:

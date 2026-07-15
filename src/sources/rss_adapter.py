@@ -254,7 +254,7 @@ class RSSSourceAdapter(BaseSourceAdapter):
         self, record: Dict[str, Any], feed_config: Dict[str, Any]
     ) -> bool:
         """Apply optional source/feed keyword filters before an item enters state."""
-        if not is_news_in_scope(record, self.config):
+        if self.source_name == "rss" and not is_news_in_scope(record, self.config):
             return False
         include = [
             *self._string_list(self.source_config.get("include_keywords")),

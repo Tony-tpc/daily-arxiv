@@ -32,6 +32,11 @@ sources:
         region: "CN"
 ```
 
+`policy.title_keywords_any` 是政策目录的能源边界。国家发改委等综合栏目必须命中
+能源、电力、电网、电价、储能、新能源、核电、节能降碳等词后才进入统一快照；
+也可以在单个 feed 上追加 `title_keywords_any` 或 `title_keywords_exclude`。
+过滤在抓取详情前执行，并在合并历史快照时再次执行，避免无关通用政策长期残留。
+
 选择器变更会导致空结果而不是写入脏数据。修改后运行对应测试，例如 `python -m unittest test.test_policy_adapter`，并用临时 state 路径做一次小规模抓取。不要删除 `state_path`：它保存 ETag、Last-Modified 和已见条目，避免重复采集。
 
 新闻源默认启用 `exclude_enterprise_updates`。`enterprise_strong_exclude_keywords`
