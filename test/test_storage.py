@@ -26,6 +26,7 @@ class StorageBackendTests(unittest.TestCase):
             )
 
             self.assertTrue(Path(info.location).is_file())
+            self.assertNotIn('\\', info.location)
             self.assertTrue(Path(temp_dir, 'latest.json').is_file())
             self.assertTrue(Path(temp_dir, 'manifest.json').is_file())
             self.assertRegex(
@@ -42,6 +43,7 @@ class StorageBackendTests(unittest.TestCase):
             manifest = storage.rebuild_manifest()
             self.assertEqual(manifest['snapshot_count'], 1)
             self.assertEqual(manifest['snapshots'][0]['source_counts']['paper'], 1)
+            self.assertNotIn('\\', manifest['snapshots'][0]['location'])
             self.assertEqual(
                 storage.list_snapshots(source_type='policy', topic='储能')[0]['snapshot_id'],
                 info.snapshot_id,
@@ -62,6 +64,7 @@ class StorageBackendTests(unittest.TestCase):
             second = storage.save_snapshot(second_docs, snapshot_date='2026-07-14')
 
             self.assertTrue(database.is_file())
+            self.assertNotIn('\\', second.location)
             self.assertEqual(storage.load_snapshot(first.snapshot_id)['document_count'], 2)
             self.assertEqual(storage.load_latest()['snapshot_id'], second.snapshot_id)
             self.assertEqual(storage.query(source_type='policy'), second_docs)

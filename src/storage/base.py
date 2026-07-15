@@ -103,11 +103,11 @@ class JSONStorage(StorageBackend):
             documents,
             snapshot_date=snapshot_date,
             source_type=source_type,
-            location=str(self.root_path),
+            location=self.root_path.as_posix(),
         )
         snapshot_path = self.snapshots_path / f"{info.snapshot_id}.json"
         persisted_info = SnapshotInfo(
-            **{**info.to_dict(), "location": str(snapshot_path)}
+            **{**info.to_dict(), "location": snapshot_path.as_posix()}
         )
         payload = {
             "schema_version": "1.0",
@@ -230,7 +230,7 @@ class SQLiteStorage(StorageBackend):
             documents,
             snapshot_date=snapshot_date,
             source_type=source_type,
-            location=str(self.database_path),
+            location=self.database_path.as_posix(),
         )
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -347,7 +347,7 @@ class SQLiteStorage(StorageBackend):
                 "source_type": row["source_type"],
                 "document_count": row["document_count"],
                 "created_at": row["created_at"],
-                "location": str(self.database_path),
+                "location": self.database_path.as_posix(),
                 "metadata": json.loads(row["metadata_json"] or "{}"),
             }
             for row in rows
