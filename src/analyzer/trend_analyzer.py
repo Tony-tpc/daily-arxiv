@@ -46,14 +46,20 @@ class TrendAnalyzer:
         self.logger = logging.getLogger('daily_arxiv.analyzer')
         self.text = lambda zh, en: pick_text(self.config, zh, en)
         
-        # 下载必要的 NLTK 数据 / Download required NLTK resources
+        # Use the NLTK corpus when installed, but never download at runtime.
         try:
-            nltk.data.find('corpora/stopwords')
+            self.stop_words = set(stopwords.words('english'))
         except LookupError:
-            self.logger.info(self.text("下载 NLTK stopwords...", "Downloading NLTK stopwords..."))
-            nltk.download('stopwords', quiet=True)
-        
-        self.stop_words = set(stopwords.words('english'))
+            self.logger.warning(self.text(
+                "未安装 NLTK stopwords，使用内置确定性词表",
+                "NLTK stopwords are unavailable; using the deterministic fallback",
+            ))
+            self.stop_words = {
+                'a', 'an', 'and', 'are', 'as', 'at', 'be', 'been', 'by',
+                'for', 'from', 'has', 'have', 'in', 'into', 'is', 'it',
+                'of', 'on', 'or', 'that', 'the', 'their', 'this', 'to',
+                'was', 'were', 'will', 'with',
+            }
         # 添加自定义停用词 / Add custom stop words
         self.stop_words.update([
             'paper', 'study', 'research', 'approach', 'method', 'propose',

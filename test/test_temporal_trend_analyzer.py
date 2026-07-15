@@ -1,7 +1,7 @@
 """Tests for historical topic, entity, and source trend analysis."""
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from src.analyzer.trend_analyzer import TrendAnalyzer
 
@@ -62,6 +62,19 @@ class TemporalTrendAnalyzerTests(unittest.TestCase):
     def test_invalid_as_of_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'Invalid as_of'):
             self.analyzer.analyze_temporal([], as_of='not-a-date')
+
+    @patch('src.analyzer.trend_analyzer.nltk.download')
+    def test_missing_nltk_stopwords_uses_offline_fallback(self, nltk_download):
+        mocked_stopwords = Mock()
+        mocked_stopwords.words.side_effect = LookupError
+        with patch.dict(
+            TrendAnalyzer.__init__.__globals__, {'stopwords': mocked_stopwords}
+        ):
+            analyzer = TrendAnalyzer({'app': {'language': 'en'}})
+
+        self.assertIn('the', analyzer.stop_words)
+        self.assertIn('paper', analyzer.stop_words)
+        nltk_download.assert_not_called()
 
     def test_mixed_source_documents_use_canonical_fields(self):
         self.analyzer.stop_words = set()
