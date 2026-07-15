@@ -22,6 +22,7 @@ from src.analyzer.cross_source_analyzer import CrossSourceAnalyzer
 from src.analyzer.research_profile_analyzer import ResearchProfileAnalyzer
 from src.ranking.relevance_ranker import RelevanceRanker
 from src.reporting.intelligence_report_generator import IntelligenceReportGenerator
+from src.sources.paper_normalizer import normalize_paper_records
 from src.storage.base import build_storage
 from src.utils import load_config, load_json, get_language
 
@@ -82,12 +83,41 @@ app.config['DESCRIPTION'] = web_config.get('description', t('description_default
 
 
 def _load_papers_data() -> dict:
-    """Load paper records, preferring OpenAlex search or enriched snapshots when available."""
+    """Load canonical papers, retaining normalized legacy files as a fallback."""
+    canonical_papers = [
+        document for document in _load_intelligence_documents()
+        if str(document.get('source_type') or '').lower() == 'paper'
+    ]
+    if canonical_papers:
+        latest_date = max(
+            (_document_date(document) for document in canonical_papers),
+            default='',
+        )
+        return {
+            'papers': canonical_papers,
+            'date': latest_date or None,
+            'data_source': 'canonical_snapshot',
+        }
+
     for candidate in ['data/papers/latest_openalex.json', 'data/papers/latest_enriched.json']:
         data = load_json(candidate)
         if data and data.get('papers'):
-            return data
-    return load_json('data/papers/latest.json') or {}
+            normalized = normalize_paper_records(
+                data['papers'],
+                'openalex_search' if 'openalex' in candidate else 'arxiv',
+                config,
+            )
+            if normalized:
+                return {**data, 'papers': normalized, 'data_source': 'legacy_fallback'}
+
+    data = load_json('data/papers/latest.json') or {}
+    if data.get('papers'):
+        data = {
+            **data,
+            'papers': normalize_paper_records(data['papers'], 'arxiv', config),
+            'data_source': 'legacy_fallback',
+        }
+    return data
 
 
 def _load_summaries_by_id() -> dict:
@@ -252,7 +282,9 @@ def _document_date(document: dict) -> str:
 def _build_document_from_paper(paper: dict, summary_record: dict | None = None):
     summary_record = summary_record or {}
     document = deepcopy(paper)
-    document.update(summary_record)
+    for key, value in summary_record.items():
+        if key not in document or document[key] in (None, '', [], {}):
+            document[key] = deepcopy(value)
     document.setdefault('source_type', 'paper')
     document.setdefault('source_name', 'arXiv')
     document.setdefault('summary', paper.get('summary', ''))
