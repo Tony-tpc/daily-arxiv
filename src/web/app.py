@@ -548,23 +548,35 @@ def _render_narrative_payload(payload: dict) -> dict:
     """Render Markdown after neutralising raw HTML and unsafe link schemes."""
     rendered = deepcopy(payload)
     for section in rendered.get('sections', []):
-        markdown_text = str(section.get('markdown') or '')
-        escaped = html.escape(markdown_text, quote=False)
-        escaped = re.sub(
-            r'\[([^\]]+)\]\((?!https?://)[^)]+\)',
-            r'\1',
-            escaped,
-            flags=re.IGNORECASE,
-        )
-        section['html'] = markdown.markdown(
-            escaped,
-            extensions=['tables', 'fenced_code', 'nl2br'],
-        )
+        section['html'] = _safe_markdown_html(section.get('markdown') or '')
     for evidence in rendered.get('evidence_index', {}).values():
         url = str(evidence.get('url') or '').strip()
         if url and not re.match(r'^https?://', url, flags=re.IGNORECASE):
             evidence['url'] = ''
     return rendered
+
+
+def _render_report_payload(payload: dict) -> dict:
+    """Add safe HTML only for narrative sections consumed by the report reader."""
+    rendered = deepcopy(payload)
+    for section in rendered.get('sections', []):
+        if section.get('kind') == 'narrative':
+            section['html'] = _safe_markdown_html(section.get('markdown') or '')
+    return rendered
+
+
+def _safe_markdown_html(value: object) -> str:
+    escaped = html.escape(str(value or ''), quote=False)
+    escaped = re.sub(
+        r'\[([^\]]+)\]\((?!https?://)[^)]+\)',
+        r'\1',
+        escaped,
+        flags=re.IGNORECASE,
+    )
+    return markdown.markdown(
+        escaped,
+        extensions=['tables', 'fenced_code', 'nl2br'],
+    )
 
 
 @app.route('/api/trends/forecast')
@@ -817,7 +829,7 @@ def get_latest_report():
     if report_type not in {'weekly', 'stage'}:
         return jsonify({'error': 'report_type 必须是 weekly 或 stage'}), 400
     try:
-        return jsonify(_load_latest_report(report_type))
+        return jsonify(_render_report_payload(_load_latest_report(report_type)))
     except (OSError, ValueError) as exc:
         return jsonify({'error': str(exc)}), 500
 

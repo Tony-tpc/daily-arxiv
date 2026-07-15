@@ -639,13 +639,13 @@ function bindNarrativeEvidenceButtons(root) {
     root.querySelectorAll('[data-evidence-ids]').forEach(button => button.addEventListener('click', () => openNarrativeEvidence(String(button.dataset.evidenceIds || '').split(',').filter(Boolean))));
 }
 
-function openNarrativeEvidence(evidenceIds) {
+function openNarrativeEvidence(evidenceIds, evidenceIndex = null) {
     const drawer = document.getElementById('narrative-evidence-drawer');
     const backdrop = document.getElementById('narrative-drawer-backdrop');
     const body = document.getElementById('narrative-evidence-body');
     const title = document.getElementById('narrative-evidence-title');
     if (!drawer || !backdrop || !body) return;
-    const index = state.narrative?.evidence_index || {};
+    const index = evidenceIndex || state.narrative?.evidence_index || {};
     const ids = [...new Set(evidenceIds || [])].filter(id => index[id]);
     if (title) title.textContent = LANG === 'zh' ? `证据详情 · ${ids.length} 条` : `Evidence · ${ids.length}`;
     body.innerHTML = ids.length ? ids.map(id => {
@@ -1020,22 +1020,31 @@ function renderIntelligenceReport(report) {
         news_and_industry: 'fa-industry',
         key_trends: 'fa-arrow-trend-up',
         research_inspirations: 'fa-lightbulb',
-        next_actions: 'fa-list-check'
+        next_actions: 'fa-list-check',
+        narrative_paper_opportunities: 'fa-flask',
+        narrative_multi_source_chains: 'fa-link'
     };
     container.innerHTML = sections.map((section, index) => {
         const items = section.items || [];
-        return `<article class="report-section-card report-section-${escapeHtml(section.key || '')}">
+        const isNarrative = section.kind === 'narrative';
+        return `<article class="report-section-card ${isNarrative ? 'report-section-narrative' : ''} report-section-${escapeHtml(section.key || '')}">
             <header>
                 <span class="report-section-index">${String(index + 1).padStart(2, '0')}</span>
-                <i class="fas ${icons[section.key] || 'fa-file-lines'}"></i>
+                <i class="fas ${isNarrative ? 'fa-book-open' : (icons[section.key] || 'fa-file-lines')}"></i>
                 <h2>${escapeHtml(section.title || '')}</h2>
-                <span class="report-section-count">${items.length}</span>
+                <span class="report-section-count">${isNarrative ? `${Number(section.char_count || 0).toLocaleString()} ${LANG === 'zh' ? '字' : 'chars'}` : items.length}</span>
             </header>
-            <div class="report-section-items">
-                ${items.length ? items.map(item => renderReportItem(item, section.key)).join('') : `<p class="report-empty">${t('reportEmpty')}</p>`}
+            <div class="${isNarrative ? 'report-narrative-body analysis-content' : 'report-section-items'}" ${isNarrative ? `data-report-view="${escapeHtml(section.view || '')}"` : ''}>
+                ${isNarrative ? decorateNarrativeCitations(section.html || '') : (items.length ? items.map(item => renderReportItem(item, section.key)).join('') : `<p class="report-empty">${t('reportEmpty')}</p>`)}
             </div>
         </article>`;
     }).join('');
+    container.querySelectorAll('.report-narrative-body').forEach(section => {
+        const evidenceIndex = report.evidence_indexes?.[section.dataset.reportView] || {};
+        section.querySelectorAll('.narrative-citation').forEach(button => {
+            button.addEventListener('click', () => openNarrativeEvidence([button.dataset.evidenceId], evidenceIndex));
+        });
+    });
 }
 
 function renderReportItem(item, sectionKey = '') {

@@ -15,7 +15,7 @@ class ResearchReportGeneratorTests(unittest.TestCase):
     def test_legacy_import_remains_compatible(self):
         self.assertIs(IntelligenceReportGenerator, ResearchReportGenerator)
 
-    def test_weekly_report_is_topic_first_with_source_appendices(self):
+    def test_weekly_report_reuses_narratives_with_source_appendices(self):
         generator = ResearchReportGenerator({'reporting': {'max_items_per_section': 4}})
         report = generator.generate(
             _documents(),
@@ -30,17 +30,19 @@ class ResearchReportGeneratorTests(unittest.TestCase):
         self.assertEqual(
             [section['key'] for section in report['sections']],
             [
-                'future_outlook', 'topic_decision_cards', 'cross_source_transmission',
-                'near_term_forecast', 'strategic_scenarios', 'research_actions',
-                'monitoring', 'appendix_papers', 'appendix_policies',
+                'narrative_paper_hotspots', 'narrative_paper_opportunities',
+                'narrative_multi_source_shared_topics',
+                'narrative_multi_source_chains',
+                'appendix_papers', 'appendix_policies',
                 'appendix_news', 'appendix_industry_reports',
             ],
         )
-        self.assertEqual(report['schema_version'], '2.0')
-        self.assertIn('未来趋势总览', report['markdown'])
-        self.assertIn('低置信情景', report['markdown'])
-        self.assertIn('反证条件', report['markdown'])
-        self.assertIn('科研行动建议', report['markdown'])
+        self.assertEqual(report['schema_version'], '2.1')
+        self.assertEqual(report['narrative_views'], ['paper', 'multi_source'])
+        self.assertIn('论文趋势分析｜当前研究热点', report['markdown'])
+        self.assertIn('论文长篇正文[P01]', report['markdown'])
+        self.assertIn('四类来源综合分析｜跨来源共同议题', report['markdown'])
+        self.assertIn('综合长篇正文[POL01][N01][R01]', report['markdown'])
         self.assertNotIn('研究价值 90.0', report['markdown'])
         rendered = markdown.markdown(report['markdown'])
         self.assertNotIn('href="javascript:', rendered)
@@ -102,6 +104,48 @@ def _documents():
 
 def _analysis():
     return {
+        'narrative_analysis': {
+            'paper': {
+                'schema_version': '1.0',
+                'sections': [{
+                    'id': 'hotspots', 'title': '当前研究热点',
+                    'markdown': '论文长篇正文[P01]',
+                    'claims': [{'evidence_ids': ['P01']}],
+                }],
+                'opportunities': [{
+                    'title': '闭环实验', 'question': '如何协同控制',
+                    'method': '安全强化学习', 'baseline': '模型预测控制',
+                    'validation': '微电网数字孪生', 'metrics': ['约束违例率'],
+                    'evidence_ids': ['P01'],
+                }],
+                'evidence_index': {'P01': {'title': '能源智能体论文'}},
+            },
+            'multi_source': {
+                'schema_version': '1.0',
+                'coverage': {'status': 'partial', 'gaps': ['行业报告不足']},
+                'sections': [{
+                    'id': 'shared_topics', 'title': '跨来源共同议题',
+                    'markdown': '综合长篇正文[POL01][N01][R01]',
+                    'claims': [{'evidence_ids': ['POL01', 'N01', 'R01']}],
+                }],
+                'evidence_chains': [{
+                    'topic': '源网荷储协同',
+                    'nodes': [
+                        {'label': '论文', 'status': 'supported', 'summary': '方法证据'},
+                        {'label': '中国政策', 'status': 'supported', 'summary': '约束证据'},
+                        {'label': '国内新闻', 'status': 'missing', 'summary': '证据缺口'},
+                        {'label': '行业报告', 'status': 'supported', 'summary': '运行数据'},
+                    ],
+                    'experiment': {'title': '协同闭环实验', 'validation': '配电网仿真'},
+                    'causality_note': '节点对齐不表示因果关系。',
+                    'evidence_ids': ['POL01', 'R01'],
+                }],
+                'evidence_index': {
+                    'POL01': {'title': '政策'}, 'N01': {'title': '新闻'},
+                    'R01': {'title': '报告'},
+                },
+            },
+        },
         'trend_forecast': {
             'schema_version': '2.0',
             'as_of': '2026-07-14',

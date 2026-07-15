@@ -2349,6 +2349,30 @@ body.drawer-open {
     padding: 0 1.1rem;
 }
 
+.report-section-narrative {
+    grid-column: 1 / -1;
+}
+
+.report-narrative-body {
+    padding: clamp(1.25rem, 3vw, 2.5rem);
+    color: var(--text-primary);
+    font-size: .96rem;
+    line-height: 1.9;
+}
+
+.report-narrative-body p {
+    margin: 0 0 1rem;
+    text-align: justify;
+    text-justify: inter-ideograph;
+}
+
+.report-narrative-body h3 {
+    margin: 1.5rem 0 .7rem;
+    padding-left: .7rem;
+    border-left: 3px solid var(--primary-color);
+    font-size: 1.08rem;
+}
+
 .report-item {
     padding: 1rem 0;
     border-bottom: 1px solid var(--border-color);

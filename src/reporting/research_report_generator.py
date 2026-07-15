@@ -54,26 +54,9 @@ class ResearchReportGenerator:
             if isinstance(item, dict) and _in_period(item, start, end)
         ]
         forecast = analysis.get("trend_forecast") or {}
-        sections = [
-            _text_section("future_outlook", "未来趋势总览", _future_outlook(forecast)),
-            _text_section(
-                "topic_decision_cards", "主题决策卡", _topic_decision_cards(forecast)
-            ),
-            _text_section(
-                "cross_source_transmission", "跨来源传导", _lead_lag_items(forecast)
-            ),
-            _text_section(
-                "near_term_forecast", "近期 1–3 个月预测", _near_term_items(forecast)
-            ),
-            _text_section(
-                "strategic_scenarios", "战略 6–12 个月情景", _scenario_items(forecast)
-            ),
-            _text_section(
-                "research_actions", "科研行动建议", _research_action_items(forecast)
-            ),
-            _text_section(
-                "monitoring", "反证与监测清单", _monitoring_items(forecast)
-            ),
+        narratives = analysis.get("narrative_analysis") or {}
+        narrative_sections = _narrative_report_sections(narratives)
+        sections = (narrative_sections or _legacy_forecast_sections(forecast)) + [
             _document_section(
                 "appendix_papers", "来源附录｜论文",
                 _ranked(filtered, "paper")[: self.max_items],
@@ -93,7 +76,7 @@ class ResearchReportGenerator:
         ]
         report_id = f"{resolved_type}_{start.isoformat()}_{end.isoformat()}"
         payload = {
-            "schema_version": "2.0",
+            "schema_version": "2.1",
             "report_id": report_id,
             "report_type": resolved_type,
             "title": REPORT_TITLES[resolved_type],
@@ -103,11 +86,23 @@ class ResearchReportGenerator:
             "document_count": len(filtered),
             "source_counts": _source_counts(filtered),
             "forecast_version": forecast.get("schema_version", "legacy"),
-            "data_quality": forecast.get("data_quality", {}),
+            "narrative_version": _narrative_version(narratives),
+            "narrative_views": [
+                view for view in ("paper", "multi_source") if narratives.get(view)
+            ],
+            "data_quality": (
+                (narratives.get("multi_source") or {}).get("coverage")
+                or forecast.get("data_quality", {})
+            ),
+            "evidence_indexes": {
+                view: dict((narratives.get(view) or {}).get("evidence_index") or {})
+                for view in ("paper", "multi_source")
+                if narratives.get(view)
+            },
             "narrative_policy": {
-                "mode": "metrics_first",
+                "mode": "evidence_bound_long_form",
                 "requires_evidence_ids": True,
-                "unsupported_claim_behavior": "omit",
+                "unsupported_claim_behavior": "reject_or_disclose_gap",
             },
             "sections": sections,
         }
@@ -145,6 +140,10 @@ class ResearchReportGenerator:
         ]
         for section in report.get("sections", []):
             lines.extend([f"## {section.get('title', '')}", ""])
+            if section.get("kind") == "narrative":
+                narrative = _safe_narrative_markdown(section.get("markdown") or "")
+                lines.extend([narrative or "本节暂无可用正文。", ""])
+                continue
             items = section.get("items", [])
             if not items:
                 lines.extend(["本周期暂无可用证据。", ""])
@@ -177,6 +176,132 @@ class ResearchReportGenerator:
             lines.append("")
         lines.extend(["---", "", "本报告由系统自动生成，重要判断请回查原始来源。", ""])
         return "\n".join(lines)
+
+
+def _narrative_report_sections(narratives: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Reuse the exact successful narratives instead of recreating report conclusions."""
+    sections: List[Dict[str, Any]] = []
+    labels = {"paper": "论文趋势分析", "multi_source": "四类来源综合分析"}
+    for view in ("paper", "multi_source"):
+        narrative = narratives.get(view) or {}
+        for source_section in narrative.get("sections", []):
+            evidence_ids = []
+            for claim in source_section.get("claims", []):
+                evidence_ids.extend(claim.get("evidence_ids", []))
+            sections.append({
+                "key": f"narrative_{view}_{source_section.get('id') or 'section'}",
+                "kind": "narrative",
+                "view": view,
+                "title": f"{labels[view]}｜{source_section.get('title') or '正文'}",
+                "markdown": str(source_section.get("markdown") or ""),
+                "char_count": _visible_length(source_section.get("markdown") or ""),
+                "evidence_ids": list(dict.fromkeys(evidence_ids)),
+                "items": [],
+            })
+        if not narrative:
+            continue
+        if view == "paper":
+            sections.append(_text_section(
+                "narrative_paper_opportunities",
+                "论文趋势分析｜实验机会矩阵",
+                _opportunity_items(narrative.get("opportunities", [])),
+            ))
+        else:
+            sections.append(_text_section(
+                "narrative_multi_source_chains",
+                "四类来源综合分析｜证据链与可执行实验",
+                _evidence_chain_items(narrative.get("evidence_chains", [])),
+            ))
+    return sections
+
+
+def _opportunity_items(opportunities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [{
+        "heading": str(item.get("title") or "实验机会"),
+        "body": (
+            f"研究问题：{item.get('question') or ''} "
+            f"候选方法：{item.get('method') or ''} "
+            f"对比基线：{item.get('baseline') or ''} "
+            f"验证环境：{item.get('validation') or ''} "
+            f"核心指标：{'、'.join(item.get('metrics', []))}"
+        ),
+        "meta": "证据约束的实验设计",
+        "evidence_ids": list(item.get("evidence_ids", [])),
+    } for item in opportunities]
+
+
+def _evidence_chain_items(chains: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    items = []
+    for chain in chains:
+        nodes = []
+        for node in chain.get("nodes", []):
+            if node.get("status") == "missing":
+                nodes.append(f"{node.get('label')}：证据缺口")
+            else:
+                nodes.append(
+                    f"{node.get('label')}：{node.get('summary') or ''}"
+                )
+        experiment = chain.get("experiment") or {}
+        items.append({
+            "heading": str(chain.get("topic") or "跨来源研究问题"),
+            "body": (
+                " → ".join(nodes)
+                + f" → 可执行实验：{experiment.get('title') or ''}；"
+                f"验证环境：{experiment.get('validation') or ''}"
+            ),
+            "meta": str(chain.get("causality_note") or "节点对齐不表示因果关系。"),
+            "evidence_ids": list(chain.get("evidence_ids", [])),
+        })
+    return items
+
+
+def _legacy_forecast_sections(forecast: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Keep old artifacts readable while making the downgrade explicit."""
+    return [
+        _text_section("future_outlook", "兼容视图｜未来趋势总览", _future_outlook(forecast)),
+        _text_section(
+            "topic_decision_cards", "兼容视图｜主题分析", _topic_decision_cards(forecast)
+        ),
+        _text_section(
+            "cross_source_transmission", "兼容视图｜跨来源传导", _lead_lag_items(forecast)
+        ),
+        _text_section(
+            "near_term_forecast", "兼容视图｜近期预测", _near_term_items(forecast)
+        ),
+        _text_section(
+            "strategic_scenarios", "兼容视图｜战略情景", _scenario_items(forecast)
+        ),
+        _text_section(
+            "research_actions", "兼容视图｜科研行动建议", _research_action_items(forecast)
+        ),
+        _text_section(
+            "monitoring", "兼容视图｜反证与监测清单", _monitoring_items(forecast)
+        ),
+    ]
+
+
+def _narrative_version(narratives: Dict[str, Any]) -> str:
+    versions = {
+        str(item.get("schema_version") or "legacy")
+        for item in narratives.values() if isinstance(item, dict)
+    }
+    return ",".join(sorted(versions)) if versions else "unavailable"
+
+
+def _visible_length(value: Any) -> int:
+    text = re.sub(r"```.*?```", "", str(value or ""), flags=re.DOTALL)
+    text = re.sub(r"[`*_>#\[\]()-]", "", text)
+    return len(re.sub(r"\s+", "", text))
+
+
+def _safe_narrative_markdown(value: Any) -> str:
+    text = str(value or "").replace("<", "&lt;")
+    return re.sub(
+        r"\[([^\]]+)\]\((?!https?://)[^)]+\)",
+        r"\1",
+        text,
+        flags=re.IGNORECASE,
+    )
 
 
 def _document_section(key: str, title: str, documents: List[Dict[str, Any]]) -> Dict[str, Any]:

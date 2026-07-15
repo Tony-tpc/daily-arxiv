@@ -4,6 +4,7 @@
 import logging
 import sys
 import unittest
+from datetime import date
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -236,6 +237,8 @@ class PipelineTests(unittest.TestCase):
             cross_source_analysis=context.cross_source_result,
             research_profile_analysis=context.profile_result,
             trend_forecast=forecast_instance.analyze.return_value,
+            narrative_documents=context.normalized_records,
+            narrative_as_of=date.today(),
         )
         query_kwargs = storage_instance.query_history.call_args.kwargs
         self.assertLess(query_kwargs['date_from'], query_kwargs['date_to'])
