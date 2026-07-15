@@ -62,14 +62,14 @@ const I18N = {
         emptyNewsHint: '采集任务运行后，国内能源新闻将在此展示。',
         emptyReportTitle: '暂无行业报告数据',
         emptyReportHint: '配置国内行业报告来源并运行采集任务后，报告将在此展示。',
-        relatedIntelligence: '关联情报',
+        relatedIntelligence: '关联信息',
         duplicateSources: '已合并来源',
         reportLoadFailed: '报告加载失败',
         reportEmpty: '本周期暂无可展示条目',
         reportOriginal: '查看原始来源',
         reportPeriod: '报告周期',
         reportGenerated: '生成于',
-        noIntelligence: '暂无符合条件的科研情报',
+        noIntelligence: '暂无符合条件的科研信息',
         signalInsufficient: '历史信号不足，运行多源采集后将在此展示',
         schedulerPending: '待运行',
         schedulerEmpty: '本轮无新增',
@@ -137,14 +137,14 @@ const I18N = {
         emptyNewsHint: 'News will appear after the collection job runs.',
         emptyReportTitle: 'No industry report data',
         emptyReportHint: 'Reports will appear after sources are configured and collected.',
-        relatedIntelligence: 'Related intelligence',
+        relatedIntelligence: 'Related information',
         duplicateSources: 'Merged sources',
         reportLoadFailed: 'Failed to load report',
         reportEmpty: 'No items in this period',
         reportOriginal: 'Open source',
         reportPeriod: 'Period',
         reportGenerated: 'Generated',
-        noIntelligence: 'No matching intelligence',
+        noIntelligence: 'No matching research information',
         signalInsufficient: 'Run multi-source collection to build historical signals',
         schedulerPending: 'Pending',
         schedulerEmpty: 'No new records',
@@ -675,14 +675,14 @@ async function loadIntelligenceHome() {
         per_page: 8
     });
     try {
-        const response = await fetch(`/api/intelligence?${params}`);
-        if (!response.ok) throw new Error('Failed to load intelligence');
+        const response = await fetch(`/api/research-information?${params}`);
+        if (!response.ok) throw new Error('Failed to load research information');
         const payload = await response.json();
         updateElement('intelligence-result-count', `${payload.total || 0} ${LANG === 'zh' ? '条' : 'items'}`);
         renderTodayRecommendations(payload.documents || []);
         renderSourceSnapshot(payload.source_counts || {});
     } catch (error) {
-        console.error('加载科研情报首页失败:', error);
+        console.error('加载科研信息首页失败:', error);
         showError('today-recommendations', t('noIntelligence'));
     }
 }
@@ -784,7 +784,7 @@ async function loadReport(reportType) {
         state.report = await response.json();
         renderIntelligenceReport(state.report);
     } catch (error) {
-        console.error('加载情报报告失败:', error);
+        console.error('加载研究报告失败:', error);
         showError('intelligence-report', t('reportLoadFailed'));
     }
 }

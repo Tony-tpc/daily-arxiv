@@ -51,7 +51,7 @@ class ObsidianExporter:
 
         daily_path = self.vault_path / "daily" / f"{export_date}.md"
         daily_path.write_text(
-            self._render_index("每日研究情报", export_date, documents, daily_path, path_index),
+            self._render_index("每日研究信息汇总", export_date, documents, daily_path, path_index),
             encoding="utf-8",
         )
         return {
@@ -81,7 +81,7 @@ class ObsidianExporter:
                 )
         weekly_path = self.vault_path / "weekly" / f"{safe_filename(period_label)}.md"
         weekly_path.write_text(
-            self._render_index("每周研究情报", period_label, documents, weekly_path, path_index),
+            self._render_index("每周研究信息汇总", period_label, documents, weekly_path, path_index),
             encoding="utf-8",
         )
         return str(weekly_path)
@@ -144,7 +144,7 @@ class ObsidianExporter:
 
         related = document.get("related_documents") or []
         if related:
-            lines.extend(["## 关联情报", ""])
+            lines.extend(["## 关联信息", ""])
             for item in related:
                 link = self._related_link(item, current_path, path_index or {})
                 relation = item.get("relationship") or "related"

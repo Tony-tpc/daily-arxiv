@@ -6,7 +6,7 @@
 
 [English](README.md) | **中文文档**
 
-面向中国能源方向具身智能的多源研究情报系统：自动汇集学术论文、中国政策、国内新闻和行业报告，生成中文摘要、阅读建议、跨来源关联与趋势报告。这里的“具身智能”指能源智能体对源网荷储等物理能源系统的感知、决策与控制，不聚焦机器人或机械臂。
+面向中国能源方向具身智能的多源研究信息收集与整理系统：自动汇集学术论文、中国政策、国内新闻和行业报告，生成中文摘要、阅读建议、跨来源关联与趋势报告。这里的“具身智能”指能源智能体对源网荷储等物理能源系统的感知、决策与控制，不聚焦机器人或机械臂。
 
 ## 当前多源工作流
 
@@ -19,7 +19,7 @@ python scheduler.py
 python -m unittest discover -s test -p "test_*.py"
 ```
 
-配置与扩展入口见 [多源架构](docs/multi_source_architecture.md)、[数据源配置](docs/source_config_guide.md)、[Obsidian 导出](docs/obsidian_export_guide.md)、[Zotero 集成](docs/zotero_integration_guide.md)和[情报报告](docs/intelligence_report_guide.md)。最小示例位于 `docs/examples/`。
+配置与扩展入口见 [多源架构](docs/multi_source_architecture.md)、[数据源配置](docs/source_config_guide.md)、[Obsidian 导出](docs/obsidian_export_guide.md)、[Zotero 集成](docs/zotero_integration_guide.md)和[研究报告](docs/research_report_guide.md)。最小示例位于 `docs/examples/`。
 
 ## ✨ 功能特性
 

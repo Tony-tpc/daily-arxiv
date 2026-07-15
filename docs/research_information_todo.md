@@ -1,4 +1,4 @@
-# 科研情报多源跟踪系统开发 Todo List
+# 科研信息多源收集系统开发 Todo List
 
 > 本文档用于指导后续开发执行，范围限定为：**学术论文、政策文件、新闻报道、行业报告**。
 >
@@ -8,14 +8,14 @@
 
 ## 1. 文档目标
 
-本 Todo List 的目标是将当前仓库从“单一 arXiv 论文跟踪工具”逐步升级为一个可运行的、轻量级的、多源科研情报跟踪与整理原型系统，用于：
+本 Todo List 的目标是将当前仓库从“单一 arXiv 论文跟踪工具”逐步升级为一个可运行的、轻量级的、多源科研信息收集与整理原型系统，用于：
 
 1. 自动收集学术论文、政策文件、新闻报道、行业报告。
 2. 使用大语言模型生成中文概括、标签和阅读建议。
-3. 优先将多源信息展示在网页端，形成可直接浏览的研究情报界面。
+3. 优先将多源信息展示在网页端，形成可直接浏览的研究信息界面。
 4. 将多源信息统一保存为 Markdown / JSON / 本地知识库结构，作为持久化与导出层。
 5. 对阶段性结果进行关键词统计、主题归纳与趋势分析。
-6. 支持后续生成研究情报报告和研究方向对比分析。
+6. 支持后续生成研究信息汇总报告和研究方向对比分析。
 
 ---
 
@@ -93,7 +93,7 @@ venv\Scripts\python.exe -X utf8 src/web/app.py
 - Obsidian / Markdown / JSON 输出
 - Zotero 集成（优先 Local API / 导出能力）
 - 多源趋势分析
-- 研究情报报告生成
+- 研究信息汇总报告生成
 
 ### 明确排除
 
@@ -130,7 +130,7 @@ venv\Scripts\python.exe -X utf8 src/web/app.py
 6. Serve Web API / Render Web UI
 7. Export Markdown / JSON / Obsidian / Zotero
 8. Analyze Trends
-9. Generate Intelligence Reports
+9. Generate Research Reports
 
 建议目录演进方向：
 
@@ -596,11 +596,11 @@ src/
 
 ---
 
-### 10.3 研究情报报告生成器
+### 10.3 研究信息汇总报告生成器
 
 状态：已完成
 
-- [x] 新增文件：`src/reporting/intelligence_report_generator.py`
+- [x] 新增文件：`src/reporting/research_report_generator.py`
 - [x] 支持自动生成周报 / 阶段报告
 - [x] 固定章节建议包括：
   - 热点论文
@@ -623,7 +623,7 @@ src/
 状态：已完成
 
 - [x] 支持用户配置“自身研究主题 / 技术路线”
-- [x] 将外部情报结果与自身研究方向对比
+- [x] 将外部信息收集结果与自身研究方向对比
 - [x] 输出内容包括：
   - 已有优势
   - 存在差距
@@ -654,12 +654,12 @@ src/
   - source comparison
   - entity trends
 - [x] 增加“今日建议阅读”面板
-- [x] 增加“研究情报首页”，集中展示摘要、政策、新闻、行业报告和趋势卡片
+- [x] 增加“研究信息首页”，集中展示摘要、政策、新闻、行业报告和趋势卡片
 - [x] 优先把摘要、阅读建议、热点判断、关联关系直接渲染到网页，不要求用户阅读 json/md 文件
 
 **验收标准**
 
-- Web 页面从论文看板升级为多源科研情报看板。
+- Web 页面从论文看板升级为多源科研信息看板。
 - 绝大多数核心信息都能直接在网页端完成阅读与筛选。
 
 ---
@@ -708,7 +708,7 @@ src/
   - `docs/source_config_guide.md`
   - `docs/obsidian_export_guide.md`
   - `docs/zotero_integration_guide.md`
-  - `docs/intelligence_report_guide.md`
+  - `docs/research_report_guide.md`
 - [x] 提供一个最小 demo 配置与样例输出
 
 **验收标准**
@@ -737,7 +737,7 @@ src/
 14. 抽象 storage backend
 15. 升级趋势分析为时序版本
 16. 增加 cross-source analyzer
-17. 增加 intelligence report generator
+17. 增加 research report generator
 18. 升级 Web 与 scheduler
 19. 补测试
 20. 补文档
@@ -775,7 +775,7 @@ src/
 - [x] Obsidian 导出可用
 - [x] Zotero 至少具备基础集成能力
 - [x] 趋势分析支持历史对比
-- [x] 能自动生成阶段性研究情报报告
+- [x] 能自动生成阶段性研究信息汇总报告
 - [x] Web 页面可展示多源结果
 - [x] 调度可自动运行
 - [x] 关键路径有测试覆盖

@@ -1,4 +1,4 @@
-"""Unified document schema for multi-source research intelligence."""
+"""Unified document schema for multi-source research information."""
 
 from __future__ import annotations
 

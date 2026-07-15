@@ -1776,7 +1776,7 @@ body {
     color: white;
 }
 
-/* ==================== 情报报告阅读器 ==================== */
+/* ==================== 研究报告阅读器 ==================== */
 .intelligence-report-section {
     max-width: 1180px;
     margin: 0 auto;
@@ -2032,7 +2032,7 @@ body {
     }
 }
 
-/* ==================== 多源科研情报首页 ==================== */
+/* ==================== 多源科研信息首页 ==================== */
 .intelligence-home-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.8fr);

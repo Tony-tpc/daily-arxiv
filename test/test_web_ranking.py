@@ -41,7 +41,7 @@ class WebRankingTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('id="paper-priority-filter"', html)
         self.assertIn('value="relevance"', html)
-        self.assertIn("中国能源具身智能研究情报", html)
+        self.assertIn("中国能源具身智能信息收集平台", html)
 
     def test_papers_api_defaults_to_relevance_order(self):
         papers = {

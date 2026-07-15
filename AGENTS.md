@@ -29,4 +29,4 @@ Recent history follows Conventional Commit prefixes, especially `feat:` and `fix
 
 ## Configuration & Security
 
-Copy `.env.example` to `.env` and keep secrets local. Make portable defaults in `config/config.yaml`, document new source keys in `docs/source_config_guide.md`, and avoid committing machine-specific paths. Keep the product scope on Chinese energy policy, domestic energy intelligence, and agents operating physical energy systems; do not broaden it to robot arms or general-purpose robotics.
+Copy `.env.example` to `.env` and keep secrets local. Make portable defaults in `config/config.yaml`, document new source keys in `docs/source_config_guide.md`, and avoid committing machine-specific paths. Keep the product scope on Chinese energy policy, domestic energy information collection, and agents operating physical energy systems; do not broaden it to robot arms or general-purpose robotics.

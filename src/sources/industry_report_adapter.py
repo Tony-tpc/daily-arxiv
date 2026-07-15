@@ -21,7 +21,7 @@ from .structured_metadata import clean_optional, parse_json_object, string_list,
 
 
 class IndustryReportSourceAdapter(RSSSourceAdapter):
-    """Collect configured report feeds and normalize industry intelligence."""
+    """Collect configured report feeds and normalize industry information."""
 
     source_name = "industry_report"
 
@@ -273,7 +273,7 @@ class IndustryReportSourceAdapter(RSSSourceAdapter):
         try:
             if self._llm_client is None:
                 self._llm_client = LLMClientFactory.create_client(self.config)
-            prompt = f"""Extract industry intelligence from the report below.
+            prompt = f"""Extract structured industry information from the report below.
 Return strict JSON only with keys: industry_progress (string),
 trend_assessment (string), topic_directions (array of strings),
 keywords (array of strings). Distinguish reported facts from forecasts.
@@ -284,7 +284,7 @@ Text: {record.get('content', '')[:12000]}
 """
             response = self._llm_client.generate(
                 prompt,
-                system_prompt="You extract concise, evidence-grounded industry report intelligence.",
+                system_prompt="You extract concise, evidence-grounded industry report information.",
                 max_tokens=int(extraction_config.get("max_tokens", 900)),
             )
             return parse_json_object(response)

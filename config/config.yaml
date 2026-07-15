@@ -466,7 +466,7 @@ web:
   host: "0.0.0.0"
   port: 5000
   debug: false
-  title: "中国能源具身智能研究情报"
+  title: "中国能源具身智能信息收集平台"
   # Web 描述 / Web description
   description: "聚焦中国能源政策、能源智能体与源网荷储自主决策"
 

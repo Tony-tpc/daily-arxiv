@@ -1,8 +1,8 @@
-"""Weekly or stage intelligence report generation stage."""
+"""Weekly or stage research-information report generation stage."""
 
 from __future__ import annotations
 
-from src.reporting.intelligence_report_generator import IntelligenceReportGenerator
+from src.reporting.research_report_generator import ResearchReportGenerator
 
 from .context import PipelineContext
 
@@ -17,7 +17,7 @@ def run(context: PipelineContext) -> PipelineContext:
         or context.normalized_records
         or context.papers
     )
-    generator = IntelligenceReportGenerator(context.config)
+    generator = ResearchReportGenerator(context.config)
     report_type = context.config.get("reporting", {}).get("default_type", "weekly")
     context.report_result = generator.generate(
         documents,
@@ -25,10 +25,13 @@ def run(context: PipelineContext) -> PipelineContext:
         report_type=report_type,
     )
     paths = generator.save(context.report_result)
+    context.artifacts["research_report_json"] = paths["json"]
+    context.artifacts["research_report_markdown"] = paths["markdown"]
+    # Preserve legacy artifact keys for existing automation consumers.
     context.artifacts["intelligence_report_json"] = paths["json"]
     context.artifacts["intelligence_report_markdown"] = paths["markdown"]
     context.logger.info(context.text(
-        f"研究情报报告已生成：{paths['markdown']}",
-        f"Research intelligence report generated: {paths['markdown']}",
+        f"研究信息汇总报告已生成：{paths['markdown']}",
+        f"Research information report generated: {paths['markdown']}",
     ))
     return context

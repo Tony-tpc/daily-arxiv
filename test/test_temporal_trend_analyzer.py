@@ -130,7 +130,7 @@ class TemporalTrendAnalyzerTests(unittest.TestCase):
         )
 
         self.assertEqual(result['generation_mode'], 'deterministic')
-        self.assertIn('2 条中国能源多源情报', result['analysis_summary'])
+        self.assertIn('2 条中国能源多源研究信息', result['analysis_summary'])
         self.assertIn('虚拟电厂', result['hotspots'])
         self.assertIn('源网荷储', result['trends'])
         self.assertNotIn('需要 LLM', ' '.join(result.values()))

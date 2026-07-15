@@ -1,1 +1,1 @@
-"""Research intelligence report generation."""
+"""Research information report generation."""

@@ -1,7 +1,7 @@
 """
 趋势分析器 / Trend analyzer
 
-分析多源科研情报集合，生成 / Analyze multi-source intelligence and generate:
+分析多源科研信息集合，生成 / Analyze multi-source research information and generate:
 1. 词云图
 2. 研究热点分析
 3. 趋势预测
@@ -80,11 +80,11 @@ class TrendAnalyzer:
         """执行完整的趋势分析
         
         Args:
-            papers: 规范化情报文档列表（参数名为兼容旧接口而保留）
+            papers: 规范化研究文档列表（参数名为兼容旧接口而保留）
             summaries: 文档总结列表（可选）
             history_observations: 历史 snapshot 中的结构化观测
             cross_source_analysis: 学术—政策—行业方向比较结果
-            research_profile_analysis: 外部情报与自身研究画像比较结果
+            research_profile_analysis: 外部信息与自身研究画像比较结果
             
         Returns:
             分析结果字典
@@ -564,7 +564,7 @@ class TrendAnalyzer:
         ) or '- The current sample is too small for stable topic clusters'
         return {
             'analysis_summary': self.text(
-                f'本期基于 {len(documents)} 条中国能源多源情报生成统计简报；来源分布为 {source_summary or "暂无"}。'
+                f'本期基于 {len(documents)} 条中国能源多源研究信息生成统计简报；来源分布为 {source_summary or "暂无"}。'
                 f'高频信号集中在 {"、".join(top_keywords) or "待继续积累"}。',
                 f'This deterministic brief covers {len(documents)} multi-source Chinese energy records '
                 f'({english_sources or "no source data"}). Leading signals are '
@@ -613,7 +613,7 @@ class TrendAnalyzer:
         if self.language == 'en':
             return f"""As a senior energy embodied-intelligence research expert, perform an in-depth analysis based on the latest {paper_count} research, policy, news, and industry documents below.
 
-    ## Intelligence Document List (Top 30):
+    ## Research Information Document List (Top 30):
     {papers_summary}
 
     ## High-frequency Keywords:
@@ -660,7 +660,7 @@ class TrendAnalyzer:
 
         return f"""作为一位资深的能源具身智能研究专家，请基于以下 {paper_count} 篇最新论文、中国政策、国内新闻与行业报告进行深入分析。
 
-    ## 情报文档列表（前30篇）：
+    ## 研究信息文档列表（前30篇）：
     {papers_summary}
 
     ## 高频关键词：

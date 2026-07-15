@@ -303,7 +303,7 @@ class PolicySourceAdapter(RSSSourceAdapter):
         try:
             if self._llm_client is None:
                 self._llm_client = LLMClientFactory.create_client(self.config)
-            prompt = f"""Extract policy intelligence from the document below.
+            prompt = f"""Extract structured policy information from the document below.
 Return strict JSON only with keys: core_policy_direction (string),
 technology_directions (array of strings), potential_impact (string),
 impact_areas (array of strings). Do not invent facts.
@@ -314,7 +314,7 @@ Text: {record.get('content', '')[:12000]}
 """
             response = self._llm_client.generate(
                 prompt,
-                system_prompt="You extract concise, evidence-grounded policy intelligence.",
+                system_prompt="You extract concise, evidence-grounded policy information.",
                 max_tokens=int(extraction_config.get("max_tokens", 900)),
             )
             return parse_json_object(response)

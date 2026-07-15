@@ -439,7 +439,7 @@
   },
   "wordcloud_path": "data/analysis/wordcloud_2026-07-15.png",
   "llm_analysis": {
-    "analysis_summary": "本期基于 35 条中国能源多源情报生成统计简报；来源分布为 industry_report 3 条、news 4 条、paper 19 条、policy 9 条。高频信号集中在 政策治理、energy、2026、energy systems、systems、optimization。",
+    "analysis_summary": "本期基于 35 条中国能源多源研究信息生成统计简报；来源分布为 industry_report 3 条、news 4 条、paper 19 条、policy 9 条。高频信号集中在 政策治理、energy、2026、energy systems、systems、optimization。",
     "hotspots": "### 当前高频信号\n\n- 政策治理\n- energy\n- 2026\n- energy systems\n- systems\n- optimization",
     "trends": "### 结构化主题\n\n- 主题 1：电力市场, 中国电力系统, 能源系统智能化, 能源系统, 能源市场博弈与协同\n- 主题 2：政策治理, 2026, medium, 的通知, notice\n- 主题 3：energy, systems, grid, optimization, smart\n- 主题 4：power, distribution, flow, optimal, analysis",
     "future_directions": "### 后续观察\n\n- 持续跟踪中国能源政策与电力市场变化\n- 关注能源智能体在源网荷储、虚拟电厂和需求响应中的闭环决策证据\n- 对跨来源共振方向补充论文、政策与行业验证",

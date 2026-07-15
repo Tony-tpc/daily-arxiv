@@ -8,11 +8,15 @@ from pathlib import Path
 import markdown
 
 from src.reporting.intelligence_report_generator import IntelligenceReportGenerator
+from src.reporting.research_report_generator import ResearchReportGenerator
 
 
-class IntelligenceReportGeneratorTests(unittest.TestCase):
+class ResearchReportGeneratorTests(unittest.TestCase):
+    def test_legacy_import_remains_compatible(self):
+        self.assertIs(IntelligenceReportGenerator, ResearchReportGenerator)
+
     def test_weekly_report_contains_fixed_sections_and_cross_source_insights(self):
-        generator = IntelligenceReportGenerator({'reporting': {'max_items_per_section': 4}})
+        generator = ResearchReportGenerator({'reporting': {'max_items_per_section': 4}})
         report = generator.generate(
             _documents(),
             _analysis(),
@@ -40,7 +44,7 @@ class IntelligenceReportGeneratorTests(unittest.TestCase):
 
     def test_stage_report_saves_json_markdown_and_latest_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            generator = IntelligenceReportGenerator({
+            generator = ResearchReportGenerator({
                 'reporting': {'directory': temp_dir},
             })
             report = generator.generate(
@@ -60,7 +64,7 @@ class IntelligenceReportGeneratorTests(unittest.TestCase):
             self.assertEqual(saved['report_id'], 'stage_2026-06-15_2026-07-14')
 
     def test_invalid_report_period_is_rejected(self):
-        generator = IntelligenceReportGenerator()
+        generator = ResearchReportGenerator()
         with self.assertRaisesRegex(ValueError, 'period_start'):
             generator.generate(
                 [], {}, report_type='weekly',

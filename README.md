@@ -7,7 +7,7 @@
 
 **English Document** | [中文文档](README_zh.md)
 
-A China-focused, multi-source research-intelligence system for embodied intelligence in energy: it collects papers, Chinese policy, domestic news, and industry reports, then produces Chinese summaries, reading guidance, cross-source links, and trend reports. “Embodied intelligence” here means energy agents sensing, deciding, and controlling physical source-grid-load-storage systems—not robotics or robot arms.
+A China-focused, multi-source research-information collection system for embodied intelligence in energy: it collects papers, Chinese policy, domestic news, and industry reports, then produces Chinese summaries, reading guidance, cross-source links, and trend reports. “Embodied intelligence” here means energy agents sensing, deciding, and controlling physical source-grid-load-storage systems—not robotics or robot arms.
 
 ## Current Multi-Source Workflow
 
@@ -20,7 +20,7 @@ python scheduler.py
 python -m unittest discover -s test -p "test_*.py"
 ```
 
-See the [architecture](docs/multi_source_architecture.md), [source configuration](docs/source_config_guide.md), [Obsidian export](docs/obsidian_export_guide.md), [Zotero integration](docs/zotero_integration_guide.md), and [intelligence reporting](docs/intelligence_report_guide.md) guides. A minimal configuration and representative output are under `docs/examples/`.
+See the [architecture](docs/multi_source_architecture.md), [source configuration](docs/source_config_guide.md), [Obsidian export](docs/obsidian_export_guide.md), [Zotero integration](docs/zotero_integration_guide.md), and [research reporting](docs/research_report_guide.md) guides. A minimal configuration and representative output are under `docs/examples/`.
 
 ## ✨ Features
 

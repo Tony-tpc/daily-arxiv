@@ -36,7 +36,7 @@ SOURCE_INSTRUCTIONS = {
     ),
 }
 
-SYSTEM_PROMPT = """你是面向中国科研与产业情报工作的文档分析助手。
+SYSTEM_PROMPT = """你是面向中国科研与产业信息收集工作的文档分析助手。
 只能依据输入内容作答，不补造数字、结论或政策条款。最终只返回一个 JSON 对象，
 不得使用 Markdown 代码块。JSON 必须使用以下键：
 {
@@ -123,7 +123,7 @@ class DocumentSummarizer:
             return "今日没有可汇总的文档。"
 
         lines = [
-            "# 每日科研情报摘要",
+            "# 每日科研信息摘要",
             "",
             f"**日期**: {get_date_string()}",
             f"**文档数量**: {len(documents)}",

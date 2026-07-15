@@ -1,4 +1,4 @@
-"""Explainable relevance ranking for mixed-source research intelligence."""
+"""Explainable relevance ranking for mixed-source research information."""
 
 from __future__ import annotations
 

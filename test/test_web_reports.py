@@ -20,12 +20,12 @@ class WebReportTests(unittest.TestCase):
         self.assertIn('id="reports-section"', html)
         self.assertIn('id="report-type"', html)
         self.assertIn('id="intelligence-report"', html)
-        self.assertIn('情报报告', html)
+        self.assertIn('研究报告', html)
 
     def test_latest_report_api_supports_weekly_and_rejects_invalid_type(self):
         report = {
             'report_type': 'weekly',
-            'title': '中国能源具身智能研究情报周报',
+            'title': '中国能源具身智能研究信息周报',
             'sections': [],
         }
         with patch.object(web_app, '_load_latest_report', return_value=report):

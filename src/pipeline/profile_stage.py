@@ -8,7 +8,7 @@ from .context import PipelineContext
 
 
 def run(context: PipelineContext) -> PipelineContext:
-    """Compare enriched external intelligence with the configured research profile."""
+    """Compare enriched external information with the configured research profile."""
     if context.stop_requested:
         return context
     documents = (

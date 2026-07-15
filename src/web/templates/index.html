@@ -78,7 +78,7 @@
                 </a>
                 <a href="#reports" class="nav-item" data-section="reports">
                     <i class="fas fa-book-open-reader"></i>
-                    <span>{{ '情报报告' if language == 'zh' else 'Reports' }}</span>
+                    <span>{{ '研究报告' if language == 'zh' else 'Reports' }}</span>
                 </a>
                 <a href="#analysis" class="nav-item" data-section="analysis">
                     <i class="fas fa-chart-line"></i>
@@ -166,7 +166,7 @@
                     </div>
                 </div>
 
-                <!-- 研究情报首页 -->
+                <!-- 研究信息首页 -->
                 <div class="intelligence-home-grid">
                     <div class="content-card intelligence-reading-card">
                         <div class="card-header">
@@ -174,7 +174,7 @@
                             <span class="update-time" id="intelligence-result-count">0 {{ '条' if language == 'zh' else 'items' }}</span>
                         </div>
                         <div class="card-body">
-                            <div class="intelligence-filter-grid" aria-label="{{ '科研情报筛选' if language == 'zh' else 'Intelligence filters' }}">
+                            <div class="intelligence-filter-grid" aria-label="{{ '科研信息筛选' if language == 'zh' else 'Research information filters' }}">
                                 <select id="home-source-filter" class="filter-select" aria-label="{{ '来源类型' if language == 'zh' else 'Source type' }}">
                                     <option value="all">{{ '全部来源' if language == 'zh' else 'All sources' }}</option>
                                     <option value="paper">{{ '论文' if language == 'zh' else 'Papers' }}</option>
@@ -198,7 +198,7 @@
                     </div>
                     <aside class="intelligence-signal-column">
                         <div class="content-card">
-                            <div class="card-header"><div class="header-left"><i class="fas fa-layer-group"></i><h2>{{ '多源情报速览' if language == 'zh' else 'Source Snapshot' }}</h2></div></div>
+                            <div class="card-header"><div class="header-left"><i class="fas fa-layer-group"></i><h2>{{ '多源信息速览' if language == 'zh' else 'Source Snapshot' }}</h2></div></div>
                             <div class="card-body source-snapshot" id="source-snapshot"></div>
                         </div>
                         <div class="content-card">
@@ -342,7 +342,7 @@
                 <div class="section-header directory-header">
                     <div>
                         <h1><i class="fas fa-newspaper"></i> {{ '国内新闻' if language == 'zh' else 'China News' }}</h1>
-                        <p class="section-desc">{{ '聚焦中国能源系统、虚拟电厂与智能决策的时效信息' if language == 'zh' else 'Timely intelligence on China energy systems and autonomous decisions' }}</p>
+                        <p class="section-desc">{{ '聚焦中国能源系统、虚拟电厂与智能决策的时效信息' if language == 'zh' else 'Timely information on China energy systems and autonomous decisions' }}</p>
                     </div>
                     <span class="directory-total" id="news-total">0 {{ '条' if language == 'zh' else 'items' }}</span>
                 </div>
@@ -377,12 +377,12 @@
                 <div id="industry-report-list" class="papers-list intelligence-list"></div>
             </section>
 
-            <!-- 情报报告 -->
+            <!-- 研究报告 -->
             <section id="reports-section" class="content-section intelligence-report-section">
                 <div class="section-header report-page-header">
                     <div>
                         <p class="report-eyebrow">{{ 'ENERGY EMBODIED INTELLIGENCE' if language == 'zh' else 'ENERGY EMBODIED INTELLIGENCE' }}</p>
-                        <h1 id="report-title">{{ '中国能源具身智能研究情报周报' if language == 'zh' else 'Energy Embodied Intelligence Weekly' }}</h1>
+                        <h1 id="report-title">{{ '中国能源具身智能研究信息周报' if language == 'zh' else 'Energy Embodied Intelligence Weekly' }}</h1>
                         <p class="section-desc" id="report-period">{{ '正在读取最新报告…' if language == 'zh' else 'Loading the latest report…' }}</p>
                     </div>
                     <div class="report-controls" aria-label="{{ '报告类型' if language == 'zh' else 'Report type' }}">

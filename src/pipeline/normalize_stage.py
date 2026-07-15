@@ -91,7 +91,7 @@ def run(context: PipelineContext) -> PipelineContext:
                 context.normalized_records = existing + context.normalized_records
                 context.artifacts['incremental_baseline'] = baseline_id
                 context.logger.info(context.text(
-                    f"增量任务已合并 {len(existing)} 条现有情报，后续统一去重",
+                    f"增量任务已合并 {len(existing)} 条现有信息，后续统一去重",
                     f"Incremental job merged {len(existing)} existing documents before deduplication",
                 ))
         except Exception as exc:

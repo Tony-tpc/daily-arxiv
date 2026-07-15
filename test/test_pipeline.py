@@ -288,7 +288,7 @@ class PipelineTests(unittest.TestCase):
         }
 
         with patch(
-            'src.pipeline.report_stage.IntelligenceReportGenerator',
+            'src.pipeline.report_stage.ResearchReportGenerator',
             return_value=generator,
         ):
             from src.pipeline import report_stage
@@ -301,8 +301,12 @@ class PipelineTests(unittest.TestCase):
         )
         self.assertEqual(context.report_result['report_id'], 'weekly-test')
         self.assertEqual(
-            context.artifacts['intelligence_report_markdown'],
+            context.artifacts['research_report_markdown'],
             'data/reports/weekly-test.md',
+        )
+        self.assertEqual(
+            context.artifacts['intelligence_report_markdown'],
+            context.artifacts['research_report_markdown'],
         )
 
     def test_extract_stage_keeps_local_tags_when_llm_extraction_fails(self):

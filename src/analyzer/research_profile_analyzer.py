@@ -1,4 +1,4 @@
-"""Compare external intelligence with the user's research topic and routes."""
+"""Compare external research information with the user's topic and routes."""
 
 from __future__ import annotations
 

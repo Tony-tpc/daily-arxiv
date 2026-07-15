@@ -1,4 +1,4 @@
-"""Tests for the unified multi-source research-intelligence dashboard."""
+"""Tests for the unified multi-source research-information dashboard."""
 
 import unittest
 from unittest.mock import patch
@@ -6,7 +6,7 @@ from unittest.mock import patch
 from src.web import app as web_app
 
 
-class WebIntelligenceDashboardTests(unittest.TestCase):
+class WebResearchInformationDashboardTests(unittest.TestCase):
     def setUp(self):
         web_app.app.config.update(TESTING=True)
         self.client = web_app.app.test_client()
@@ -23,7 +23,7 @@ class WebIntelligenceDashboardTests(unittest.TestCase):
         ):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn('今日建议阅读', html)
-        self.assertIn('多源情报速览', html)
+        self.assertIn('多源信息速览', html)
 
     def test_unified_api_filters_source_topic_priority_and_date(self):
         documents = [
@@ -49,7 +49,7 @@ class WebIntelligenceDashboardTests(unittest.TestCase):
         ]
         with patch.object(web_app, '_load_intelligence_documents', return_value=documents):
             response = self.client.get(
-                '/api/intelligence?source_type=policy&topic=虚拟电厂'
+                '/api/research-information?source_type=policy&topic=虚拟电厂'
                 '&priority=high&date_from=2026-07-01&date_to=2026-07-14'
             )
 
@@ -59,6 +59,13 @@ class WebIntelligenceDashboardTests(unittest.TestCase):
         self.assertEqual(payload['documents'][0]['id'], 'policy-current')
         self.assertEqual(payload['source_counts'], {'policy': 1})
         self.assertEqual(payload['filters']['topic'], '虚拟电厂')
+
+    def test_legacy_information_route_remains_available(self):
+        with patch.object(web_app, '_load_intelligence_documents', return_value=[]):
+            response = self.client.get('/api/intelligence')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['documents'], [])
 
     def test_directory_api_supports_topic_and_date_range(self):
         documents = [

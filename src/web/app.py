@@ -21,7 +21,7 @@ import markdown
 from src.analyzer.cross_source_analyzer import CrossSourceAnalyzer
 from src.analyzer.research_profile_analyzer import ResearchProfileAnalyzer
 from src.ranking.relevance_ranker import RelevanceRanker
-from src.reporting.intelligence_report_generator import IntelligenceReportGenerator
+from src.reporting.research_report_generator import ResearchReportGenerator
 from src.sources.paper_normalizer import normalize_paper_records
 from src.storage.base import build_storage
 from src.utils import load_config, load_json, get_language
@@ -188,7 +188,7 @@ def _load_latest_report(report_type: str = "weekly") -> dict:
         analysis['research_profile_analysis'] = ResearchProfileAnalyzer(config).analyze(
             documents, analysis['cross_source_analysis']
         )
-    return IntelligenceReportGenerator(config).generate(
+    return ResearchReportGenerator(config).generate(
         documents,
         analysis,
         report_type=report_type,
@@ -589,8 +589,9 @@ def get_documents():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/research-information')
 @app.route('/api/intelligence')
-def get_intelligence():
+def get_research_information():
     """Return the unified paper-policy-news-industry reading queue."""
     try:
         source_type = str(request.args.get('source_type', '')).strip().lower()
