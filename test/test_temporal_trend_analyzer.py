@@ -1,9 +1,11 @@
 """Tests for historical topic, entity, and source trend analysis."""
 
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.analyzer.trend_analyzer import TrendAnalyzer
+from src.analyzer.trend_analyzer import TrendAnalyzer, _document_text
 
 
 class TemporalTrendAnalyzerTests(unittest.TestCase):
@@ -75,6 +77,40 @@ class TemporalTrendAnalyzerTests(unittest.TestCase):
         self.assertIn('the', analyzer.stop_words)
         self.assertIn('paper', analyzer.stop_words)
         nltk_download.assert_not_called()
+
+    def test_wordcloud_font_allows_portable_config_override(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            font_path = Path(temp_dir) / 'cjk-font.ttf'
+            font_path.touch()
+            analyzer = TrendAnalyzer.__new__(TrendAnalyzer)
+            analyzer.config = {
+                'analysis': {'wordcloud_font_path': str(font_path)},
+            }
+            analyzer.logger = Mock()
+            analyzer.text = lambda zh, en: zh
+
+            resolved = analyzer._resolve_wordcloud_font()
+
+        self.assertEqual(resolved, str(font_path))
+
+    def test_analysis_text_excludes_policy_page_chrome(self):
+        document = {
+            'source_type': 'policy',
+            'title': '新型能源体系建设规划',
+            'summary': '目录项的基本信息 公开事项名称 索引号 主办单位',
+            'raw_text': '网页导航和公开元数据',
+            'tags': ['虚拟电厂'],
+            'themes': ['能源系统'],
+            'research_direction': ['源网荷储协同'],
+        }
+
+        text = _document_text(document)
+
+        self.assertIn('新型能源体系建设规划', text)
+        self.assertIn('虚拟电厂', text)
+        self.assertIn('源网荷储协同', text)
+        self.assertNotIn('目录项的基本信息', text)
+        self.assertNotIn('网页导航', text)
 
     def test_mixed_source_documents_use_canonical_fields(self):
         self.analyzer.stop_words = set()

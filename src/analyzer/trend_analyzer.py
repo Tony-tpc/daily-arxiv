@@ -9,6 +9,7 @@
 """
 import logging
 import json
+import os
 from typing import List, Dict, Any
 from pathlib import Path
 from datetime import date, datetime, timedelta
@@ -313,6 +314,7 @@ class TrendAnalyzer:
         text = re.sub(r'[^\w\s]', ' ', text.lower())
         
         # 生成词云 / Generate word cloud
+        font_path = self._resolve_wordcloud_font()
         wordcloud = WordCloud(
             width=1600,
             height=800,
@@ -321,7 +323,8 @@ class TrendAnalyzer:
             max_words=100,
             relative_scaling=0.5,
             colormap='viridis',
-            min_font_size=10
+            min_font_size=10,
+            font_path=font_path,
         ).generate(text)
         
         # 保存图片 / Save image
@@ -345,6 +348,34 @@ class TrendAnalyzer:
         self.logger.info(self.text(f"✓ 词云已保存: {wordcloud_path}", f"✓ Word cloud saved: {wordcloud_path}"))
         
         return wordcloud_path
+
+    def _resolve_wordcloud_font(self) -> str | None:
+        """Return a configured or platform Chinese font without machine-only defaults."""
+        configured = str(
+            self.config.get('analysis', {}).get('wordcloud_font_path') or ''
+        ).strip()
+        candidates = [Path(configured)] if configured else []
+        if os.name == 'nt':
+            windows_root = Path(os.environ.get('WINDIR', 'C:/Windows'))
+            candidates.extend([
+                windows_root / 'Fonts' / 'msyh.ttc',
+                windows_root / 'Fonts' / 'NotoSansSC-VF.ttf',
+                windows_root / 'Fonts' / 'simhei.ttf',
+            ])
+        candidates.extend([
+            Path('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'),
+            Path('/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf'),
+            Path('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'),
+            Path('/System/Library/Fonts/PingFang.ttc'),
+        ])
+        for candidate in candidates:
+            if candidate.is_file():
+                return str(candidate)
+        self.logger.warning(self.text(
+            '未找到中文词云字体；可配置 analysis.wordcloud_font_path',
+            'No CJK word-cloud font found; configure analysis.wordcloud_font_path',
+        ))
+        return None
     
     def _generate_statistics(self, papers: List[Dict[str, Any]], 
                            summaries: List[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -883,18 +914,34 @@ def _normalize_observations(
 
 
 def _document_text(document: Dict[str, Any]) -> str:
-    """Return canonical searchable text across papers and intelligence documents."""
-    parts = [
-        document.get("title"),
-        document.get("raw_text"),
-        document.get("abstract"),
-        document.get("description"),
-    ]
+    """Return analysis text without letting scraped page chrome dominate signals."""
+    parts: List[Any] = [document.get("title")]
+    for field in (
+        "tags", "themes", "research_direction", "topic_directions",
+        "keywords", "core_viewpoints", "follow_up_suggestions",
+    ):
+        value = document.get(field)
+        if isinstance(value, (list, tuple, set)):
+            parts.extend(value)
+        elif value:
+            parts.append(value)
+    if document.get("research_relevance"):
+        parts.append(document["research_relevance"])
+
     summary = document.get("summary")
     if isinstance(summary, dict):
         parts.extend(str(value) for value in summary.values())
-    elif summary:
+    elif document.get("source_type") == "paper" and summary:
         parts.append(summary)
+    elif summary and len(str(summary)) <= 300 and "目录项的基本信息" not in str(summary):
+        parts.append(summary)
+
+    if document.get("source_type") == "paper":
+        parts.extend([
+            document.get("abstract"),
+            document.get("raw_text"),
+            document.get("description"),
+        ])
     return " ".join(str(part).strip() for part in parts if str(part or "").strip())
 
 

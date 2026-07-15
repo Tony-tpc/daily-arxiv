@@ -47,6 +47,7 @@
 - 高分辨率图片 (1600x800)
 - 自定义配色方案
 - 自动调整字体大小
+- 自动探测 Windows 微软雅黑/黑体、Linux Noto CJK/文泉驿和 macOS PingFang；也可通过 `analysis.wordcloud_font_path` 覆盖
 - 保存为 PNG 格式
 
 **生成路径**: `data/analysis/wordcloud_YYYY-MM-DD.png`

@@ -733,7 +733,12 @@ def get_wordcloud():
         # 转换为相对路径
         if wordcloud_path:
             filename = os.path.basename(wordcloud_path)
-            wordcloud_url = f'/images/{filename}'
+            asset_path = project_root / 'data' / 'analysis' / filename
+            try:
+                version = int(os.path.getmtime(asset_path) * 1_000_000_000)
+            except OSError:
+                version = str(analysis_data.get('generated_at') or '')
+            wordcloud_url = f'/images/{filename}?v={version}'
         else:
             wordcloud_url = None
         

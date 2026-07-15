@@ -18,6 +18,21 @@
 bash deploy/deploy_services.sh
 ```
 
+### Linux 中文词云字体
+
+服务器建议安装 Noto CJK，避免中文词云显示为方框：
+
+```bash
+sudo apt-get update
+sudo apt-get install -y fonts-noto-cjk
+fc-cache -f
+```
+
+程序会自动探测 Ubuntu/Debian 常见字体路径。非标准发行版可在
+`config/config.yaml` 设置 `analysis.wordcloud_font_path` 为字体绝对路径；留空时
+仍可运行，只会回退到系统默认字体。systemd 服务不依赖 Windows 路径，也不会在
+启动时联网下载字体或 NLTK 语料。
+
 脚本会自动完成：
 1. 检查必要命令（`systemctl`、`sudo`、`ss` 等）。
 2. 读取 `config/config.yaml` 中的 `web.port`，并在启动前检查端口占用。

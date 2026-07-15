@@ -578,6 +578,8 @@ outputs:
 
 # 分析配置 / Analysis settings
 analysis:
+  # 可覆盖自动发现的微软雅黑/Noto CJK 等字体；默认留空以保持跨平台。
+  wordcloud_font_path: ""
   trend_window_days:
     - 7
     - 30

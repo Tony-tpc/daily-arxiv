@@ -85,6 +85,7 @@ outputs:
   zotero: {enabled: false, export_directory: "data/zotero"}
 
 analysis:
+  wordcloud_font_path: ""
   trend_window_days: [7, 30, 60]
 reporting:
   enabled: true
