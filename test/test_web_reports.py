@@ -1,6 +1,7 @@
 """Tests for the website report reader and API."""
 
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from src.web import app as web_app
@@ -21,6 +22,12 @@ class WebReportTests(unittest.TestCase):
         self.assertIn('id="report-type"', html)
         self.assertIn('id="intelligence-report"', html)
         self.assertIn('研究报告', html)
+
+        script = (Path(__file__).resolve().parents[1] / 'static' / 'js' / 'main.js').read_text(
+            encoding='utf-8'
+        )
+        self.assertIn('renderReportEvidence', script)
+        self.assertIn("startsWith('appendix_')", script)
 
     def test_latest_report_api_supports_weekly_and_rejects_invalid_type(self):
         report = {

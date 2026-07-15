@@ -14,6 +14,7 @@
 | Phase 4 | Obsidian、Zotero、JSON/SQLite、历史快照索引 | `23743a1`, `cf63ae1`, `93dd7d3`, `1ce9ac3` |
 | Phase 5 | 7/30/60 天趋势、跨源分析、周报/阶段报告、研究方向对比 | `eaa9fe8`, `f7dc19b`, `9eabb81`, `703a390` |
 | Phase 6 | 多源 Web 控件、来源独立目录、调度编排、测试与文档 | `c61ffc7`, `d96f984`, `f2424fd`, `213e2a2`, `a2c09b4` |
+| 趋势 v2 | 事件时间、24 月回补、证据预测、情景报告、预测可视化 | `4a217ec`, `2b18b5a`, `e58c841`, `66c53de`, `79bcc56` |
 
 计划文件内不存在未勾选项。每个功能组均有独立 Conventional Commit，可按上表回溯或回滚。
 
@@ -39,10 +40,12 @@
 
 ## CI 与 Linux 兼容性
 
-`.github/workflows/ci.yml` 在 `ubuntu-latest`、Python 3.11、Node 20 上执行依赖安装、Python 编译、JavaScript 语法检查和全量回归。2026-07-15 本地复核结果：`pip check` 通过、Bash 三个部署脚本通过 `bash -n`、Node 语法通过、128 项 `unittest` 全部通过。
+`.github/workflows/ci.yml` 在 `ubuntu-latest` 和 `windows-latest`、Python 3.11、Node 20 上执行依赖安装、Python 编译、Pyright、JavaScript 语法检查、Flask API 冒烟检查和全量回归。2026-07-15 趋势 v2 本地复核结果：Python/JavaScript 语法通过，145 项 `unittest` 全部通过。
 
 Linux 部署具备 systemd 脚本；快照路径统一保存为 POSIX `/`；默认关闭 Flask debug/reloader；运行期不下载 NLTK 数据；词云自动探测 Noto CJK/WenQuanYi，部署文档给出 `fonts-noto-cjk` 安装命令。相关修复为 `89ee2f7`, `8ccadf0`, `202b0ad`, `a1a7406`。
 
 ## 代码审查结论
 
 最终审查发现并已关闭：论文目录读取旧数据（`4edc51d`）、企业新闻混入（`7191ba0`）、非能源政策混入（`956bfa7`）、论文标题 HTML/机器人偏题（`6896202`）、离线分析依赖网络或 LLM（`89ee2f7`, `09c6c13`）、混合来源报告误称“论文”（`5928bc5`）、中文词云字体与缓存（`8ccadf0`）、跨平台路径和生产调试模式（`202b0ad`, `a1a7406`）。未发现仍需阻断交付的代码问题。
+
+趋势 v2 审查重点覆盖时间泄漏、空基线误报、缺失月份当零、无证据预测、重要性评分越权、研究范围漂移和旧 API 兼容。趋势结论只读取 `event_date` 与结构化指标；采集时间、重要性评分和覆盖缺口均不进入增长估计。跨来源顺序明确标注为时间先后而非因果关系。

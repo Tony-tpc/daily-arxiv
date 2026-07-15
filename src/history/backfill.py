@@ -378,7 +378,7 @@ class _HTMLArchiveCollector:
                 errors.append(f"{page_url}: {exc}")
                 break
             pages += 1
-            soup = BeautifulSoup(response.content, "html.parser")
+            soup = BeautifulSoup(response.text, "html.parser")
             items = soup.select(str(source.get("item_selector", "li")))
             if not items:
                 errors.append(f"{page_url}: selector matched no items")

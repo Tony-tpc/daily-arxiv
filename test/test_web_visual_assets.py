@@ -1,7 +1,7 @@
 """Tests for cache-safe visual assets used by the web dashboard."""
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.web import app as web_app
 
@@ -17,7 +17,7 @@ class WebVisualAssetTests(unittest.TestCase):
             'generated_at': '2026-07-15T08:00:00',
         }
         with patch.object(web_app, 'load_json', return_value=analysis), patch(
-            'src.web.app.os.path.getmtime', return_value=123.5
+            'src.web.app.Path.stat', return_value=Mock(st_mtime_ns=123500000000)
         ):
             response = self.client.get('/api/wordcloud')
 

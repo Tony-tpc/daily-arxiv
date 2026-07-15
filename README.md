@@ -17,10 +17,11 @@ The web sidebar exposes Papers, Chinese Policy, Domestic News, and Industry Repo
 python main.py
 python src/web/app.py
 python scheduler.py
+python -m src.backfill --months 24
 python -m unittest discover -s test -p "test_*.py"
 ```
 
-See the [architecture](docs/multi_source_architecture.md), [source configuration](docs/source_config_guide.md), [Obsidian export](docs/obsidian_export_guide.md), [Zotero integration](docs/zotero_integration_guide.md), and [research reporting](docs/research_report_guide.md) guides. A minimal configuration and representative output are under `docs/examples/`.
+The backfill command stores 24 months by event date and labels unavailable coverage explicitly. Forecast v2 uses six energy research topics, robust Theil–Sen trends, source transmission evidence, and low-confidence scenarios when thresholds are unmet. See the [forecast and backfill guide](docs/trend_forecast_guide.md), [architecture](docs/multi_source_architecture.md), [source configuration](docs/source_config_guide.md), and [research reporting](docs/research_report_guide.md) guides.
 
 ## ✨ Features
 
@@ -36,11 +37,11 @@ See the [architecture](docs/multi_source_architecture.md), [source configuration
   - Bilingual (Chinese & English) summaries  
   - Concurrent processing for higher efficiency  
 
-- 📊 **Trend Analysis**: In‑depth analysis of research hot topics and technological trends  
-  - TF‑IDF keyword extraction  
-  - LDA topic modeling  
-  - Word‑cloud visualization  
-  - LLM deep analysis (research hotspots, technical trends, future directions, research ideas, analysis summary)  
+- 📊 **Trend Analysis**: Evidence-first support for research decisions
+  - 24-month event-time coverage with explicit data gaps
+  - 1/3-month forecast intervals and 6–12-month strategic scenarios
+  - Cross-source transmission, counter-signals, watch indicators, and evidence IDs
+  - Importance scores are restricted to source-appendix ordering
 
 - 🌐 **Web Interface**: Modern responsive web UI  
   - Built with Bootstrap 5  

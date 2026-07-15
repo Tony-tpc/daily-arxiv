@@ -764,6 +764,21 @@ function renderSourceSnapshot(counts) {
 function renderHomeTrendSignals() {
     const container = document.getElementById('home-trend-signals');
     if (!container) return;
+    const forecastSignals = (state.forecast?.forecasts || []).slice(0, 3).map(item => {
+        const metrics = item.metrics || {};
+        const mode = item.mode === 'quantitative'
+            ? (LANG === 'zh' ? '定量预测' : 'Quantitative')
+            : (LANG === 'zh' ? '低置信情景' : 'Low-confidence scenario');
+        return {
+            title: item.topic || item.topic_id,
+            body: `${trajectoryLabel(item.trajectory)} · ${confidenceLabel(item.confidence)} · ${mode} · ${LANG === 'zh' ? '持续性' : 'persistence'} ${Math.round(Number(metrics.persistence || 0) * 100)}%`
+        };
+    });
+    if (forecastSignals.length) {
+        container.innerHTML = forecastSignals.map(item => `<div class="home-trend-signal"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div>`).join('');
+        return;
+    }
+    // Compatibility fallback for analysis artifacts created before schema 2.0.
     const sevenDay = state.analysis?.temporal_trends?.windows?.['7'] || {};
     const rising = (sevenDay.topic_momentum || []).filter(item => ['new', 'rising'].includes(item.status)).slice(0, 3);
     const directions = (state.analysis?.cross_source_analysis?.directions || []).slice(0, 2);
@@ -864,14 +879,15 @@ function renderIntelligenceReport(report) {
                 <span class="report-section-count">${items.length}</span>
             </header>
             <div class="report-section-items">
-                ${items.length ? items.map(renderReportItem).join('') : `<p class="report-empty">${t('reportEmpty')}</p>`}
+                ${items.length ? items.map(item => renderReportItem(item, section.key)).join('') : `<p class="report-empty">${t('reportEmpty')}</p>`}
             </div>
         </article>`;
     }).join('');
 }
 
-function renderReportItem(item) {
+function renderReportItem(item, sectionKey = '') {
     const score = Number(item.importance_score || 0);
+    const isAppendix = String(sectionKey).startsWith('appendix_');
     const sourceUrl = /^https?:\/\//i.test(item.url || '') ? item.url : '';
     const sourceTypeLabel = {
         paper: LANG === 'zh' ? '论文' : 'Paper',
@@ -883,14 +899,28 @@ function renderReportItem(item) {
         <div class="report-item-heading">
             <h3>${escapeHtml(item.heading || '')}</h3>
             ${sourceTypeLabel ? `<span class="report-source-chip">${sourceTypeLabel}</span>` : ''}
-            ${score > 0 ? `<span class="report-score">${score.toFixed(1)}</span>` : ''}
+            ${isAppendix && score > 0 ? `<span class="report-score">${score.toFixed(1)}</span>` : ''}
         </div>
         ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ''}
+        ${renderReportEvidence(item)}
         <div class="report-item-footer">
             ${item.meta ? `<span>${escapeHtml(item.meta)}</span>` : '<span></span>'}
             ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${t('reportOriginal')}<i class="fas fa-arrow-up-right-from-square"></i></a>` : ''}
         </div>
     </div>`;
+}
+
+function renderReportEvidence(item) {
+    const evidenceIds = item.evidence_ids || [];
+    const counterSignals = item.counter_signals || [];
+    const watchIndicators = item.watch_indicators || [];
+    if (!evidenceIds.length && !counterSignals.length && !watchIndicators.length) return '';
+    return `<details class="report-evidence">
+        <summary>${LANG === 'zh' ? '查看证据、反证与监测项' : 'Evidence, counter-signals and monitoring'}</summary>
+        ${evidenceIds.length ? `<div><strong>${LANG === 'zh' ? '证据ID' : 'Evidence IDs'}</strong>${evidenceIds.map(value => `<code>${escapeHtml(value)}</code>`).join('')}</div>` : ''}
+        ${counterSignals.length ? `<div><strong>${LANG === 'zh' ? '反证条件' : 'Counter-signals'}</strong>${counterSignals.map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div>` : ''}
+        ${watchIndicators.length ? `<div><strong>${LANG === 'zh' ? '监测指标' : 'Watch indicators'}</strong>${watchIndicators.map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div>` : ''}
+    </details>`;
 }
 
 function formatReportTime(value) {

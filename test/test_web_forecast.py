@@ -1,6 +1,7 @@
 """Tests for the forecast API filters and backward-compatible loading."""
 
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from src.web import app as web_app
@@ -61,6 +62,12 @@ class WebForecastTests(unittest.TestCase):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn("未来趋势分析", html)
         self.assertIn("反证条件与持续监测", html)
+
+        script = (Path(__file__).resolve().parents[1] / "static" / "js" / "main.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("const forecastSignals", script)
+        self.assertIn("Compatibility fallback", script)
 
     def test_forecast_api_rejects_invalid_filters(self):
         self.assertEqual(

@@ -3,7 +3,6 @@ Flask Web 应用
 
 展示 arXiv 论文分析结果
 """
-import os
 import sys
 import json
 import sqlite3
@@ -842,10 +841,10 @@ def get_wordcloud():
         
         # 转换为相对路径
         if wordcloud_path:
-            filename = os.path.basename(wordcloud_path)
+            filename = Path(wordcloud_path).name
             asset_path = project_root / 'data' / 'analysis' / filename
             try:
-                version = int(os.path.getmtime(asset_path) * 1_000_000_000)
+                version = asset_path.stat().st_mtime_ns
             except OSError:
                 version = str(analysis_data.get('generated_at') or '')
             wordcloud_url = f'/images/{filename}?v={version}'

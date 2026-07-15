@@ -2376,6 +2376,42 @@ body {
     line-height: 1.7;
 }
 
+.report-evidence {
+    margin: 0.7rem 0;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.7rem;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+}
+
+.report-evidence summary {
+    cursor: pointer;
+    color: var(--primary-color);
+    font-weight: 750;
+}
+
+.report-evidence div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
+}
+
+.report-evidence strong {
+    flex-basis: 100%;
+    color: var(--text-primary);
+}
+
+.report-evidence code,
+.report-evidence span {
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.35rem;
+    background: var(--bg-primary);
+    overflow-wrap: anywhere;
+}
+
 .report-source-chip,
 .report-score {
     flex: 0 0 auto;

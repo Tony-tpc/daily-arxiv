@@ -16,10 +16,11 @@ Web 侧栏将“论文列表”“中国政策”“国内新闻”“行业报�
 python main.py
 python src/web/app.py
 python scheduler.py
+python -m src.backfill --months 24
 python -m unittest discover -s test -p "test_*.py"
 ```
 
-配置与扩展入口见 [多源架构](docs/multi_source_architecture.md)、[数据源配置](docs/source_config_guide.md)、[Obsidian 导出](docs/obsidian_export_guide.md)、[Zotero 集成](docs/zotero_integration_guide.md)和[研究报告](docs/research_report_guide.md)。最小示例位于 `docs/examples/`。
+`backfill` 按事件发布日期回补最近 24 个月，并把不可用月份明确记录为 `partial/unavailable`。趋势分析 v2 使用六类能源研究主题、Theil–Sen 稳健趋势和来源传导证据；数据不足时只给出带缺口与反证条件的低置信情景。详见[趋势预测与回补指南](docs/trend_forecast_guide.md)。配置与扩展入口见 [多源架构](docs/multi_source_architecture.md)、[数据源配置](docs/source_config_guide.md)、[Obsidian 导出](docs/obsidian_export_guide.md)、[Zotero 集成](docs/zotero_integration_guide.md)和[研究报告](docs/research_report_guide.md)。
 
 ## ✨ 功能特性
 
@@ -35,11 +36,11 @@ python -m unittest discover -s test -p "test_*.py"
   - 中英文双语总结
   - 并发处理提升效率
 
-- 📊 **趋势分析**: 深度分析研究热点和技术趋势
-  - TF-IDF 关键词提取
-  - LDA 主题建模
-  - 词云可视化
-  - LLM 深度分析（研究热点、技术趋势、未来方向、创新研究想法、分析总结）
+- 📊 **趋势分析**: 面向科研决策的证据化预测
+  - 24 个月事件时间序列与覆盖缺口提示
+  - 1/3 个月预测区间和 6–12 个月战略情景
+  - 跨来源传导、反证条件、监测指标和证据抽屉
+  - 重要性评分只用于来源附录排序
 
 - 🌐 **Web 界面**: 现代化响应式 Web 界面
   - Bootstrap 5 设计
