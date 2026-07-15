@@ -47,7 +47,14 @@ class WebReportTests(unittest.TestCase):
 
         self.assertEqual(report['report_type'], 'weekly')
         self.assertEqual(report['document_count'], 1)
-        self.assertEqual(report['sections'][0]['items'][0]['heading'], '能源智能体')
+        self.assertEqual(
+            report['sections'][0]['items'][0]['heading'], '证据覆盖与结论边界'
+        )
+        appendix = next(
+            section for section in report['sections']
+            if section['key'] == 'appendix_papers'
+        )
+        self.assertEqual(appendix['items'][0]['heading'], '能源智能体')
 
 
 if __name__ == '__main__':

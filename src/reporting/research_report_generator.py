@@ -53,33 +53,47 @@ class ResearchReportGenerator:
             item for item in documents
             if isinstance(item, dict) and _in_period(item, start, end)
         ]
-        papers = _ranked(filtered, "paper")[: self.max_items]
-        policies = _ranked(filtered, "policy")[: self.max_items]
-        industry_news = sorted(
-            [
-                item for item in filtered
-                if item.get("source_type") in {"news", "industry_report"}
-            ],
-            key=_document_sort_key,
-            reverse=True,
-        )[: self.max_items]
+        forecast = analysis.get("trend_forecast") or {}
         sections = [
-            _document_section("hot_papers", "热点论文", papers),
-            _document_section("policy_guidance", "政策导向", policies),
+            _text_section("future_outlook", "未来趋势总览", _future_outlook(forecast)),
+            _text_section(
+                "topic_decision_cards", "主题决策卡", _topic_decision_cards(forecast)
+            ),
+            _text_section(
+                "cross_source_transmission", "跨来源传导", _lead_lag_items(forecast)
+            ),
+            _text_section(
+                "near_term_forecast", "近期 1–3 个月预测", _near_term_items(forecast)
+            ),
+            _text_section(
+                "strategic_scenarios", "战略 6–12 个月情景", _scenario_items(forecast)
+            ),
+            _text_section(
+                "research_actions", "科研行动建议", _research_action_items(forecast)
+            ),
+            _text_section(
+                "monitoring", "反证与监测清单", _monitoring_items(forecast)
+            ),
             _document_section(
-                "news_and_industry", "国内新闻与行业报告", industry_news
+                "appendix_papers", "来源附录｜论文",
+                _ranked(filtered, "paper")[: self.max_items],
             ),
-            _text_section("key_trends", "关键趋势", _trend_items(analysis)),
-            _text_section(
-                "research_inspirations", "研究启发", _inspiration_items(analysis)
+            _document_section(
+                "appendix_policies", "来源附录｜中国政策",
+                _ranked(filtered, "policy")[: self.max_items],
             ),
-            _text_section(
-                "next_actions", "后续建议", _recommendation_items(analysis)
+            _document_section(
+                "appendix_news", "来源附录｜国内新闻",
+                _ranked(filtered, "news")[: self.max_items],
+            ),
+            _document_section(
+                "appendix_industry_reports", "来源附录｜行业报告",
+                _ranked(filtered, "industry_report")[: self.max_items],
             ),
         ]
         report_id = f"{resolved_type}_{start.isoformat()}_{end.isoformat()}"
         payload = {
-            "schema_version": "1.0",
+            "schema_version": "2.0",
             "report_id": report_id,
             "report_type": resolved_type,
             "title": REPORT_TITLES[resolved_type],
@@ -88,6 +102,13 @@ class ResearchReportGenerator:
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "document_count": len(filtered),
             "source_counts": _source_counts(filtered),
+            "forecast_version": forecast.get("schema_version", "legacy"),
+            "data_quality": forecast.get("data_quality", {}),
+            "narrative_policy": {
+                "mode": "metrics_first",
+                "requires_evidence_ids": True,
+                "unsupported_claim_behavior": "omit",
+            },
             "sections": sections,
         }
         payload["markdown"] = self.render_markdown(payload)
@@ -141,6 +162,18 @@ class ResearchReportGenerator:
                 meta = _markdown_text(item.get("meta") or "")
                 if meta:
                     lines.append(f"  _{meta}_")
+                evidence_ids = [
+                    _markdown_text(value) for value in item.get("evidence_ids", [])
+                    if str(value).strip()
+                ]
+                if evidence_ids:
+                    lines.append(f"  证据：{', '.join(evidence_ids)}")
+                counter_signals = [
+                    _markdown_text(value) for value in item.get("counter_signals", [])
+                    if str(value).strip()
+                ]
+                if counter_signals:
+                    lines.append(f"  反证条件：{'；'.join(counter_signals)}")
             lines.append("")
         lines.extend(["---", "", "本报告由系统自动生成，重要判断请回查原始来源。", ""])
         return "\n".join(lines)
@@ -164,129 +197,175 @@ def _document_section(key: str, title: str, documents: List[Dict[str, Any]]) -> 
     }
 
 
-def _text_section(key: str, title: str, items: List[Dict[str, str]]) -> Dict[str, Any]:
+def _text_section(key: str, title: str, items: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {"key": key, "title": title, "items": items}
 
 
-def _trend_items(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
-    items: List[Dict[str, str]] = []
-    temporal = analysis.get("temporal_trends") or {}
-    windows = temporal.get("windows") or {}
-    for days in ("7", "30", "60"):
-        window = windows.get(days) or {}
-        rising = [
-            item for item in window.get("topic_momentum", [])
-            if item.get("status") in {"new", "rising"}
-        ][:3]
-        if rising:
-            summary = "、".join(
-                f"{item.get('name')}（{int(item.get('delta') or 0):+d}）"
-                for item in rising
-            )
-            items.append({
-                "heading": f"近 {days} 天上升主题",
-                "body": summary,
-                "meta": f"当前期 {window.get('current_document_count', 0)} 条证据",
-            })
-    directions = (analysis.get("cross_source_analysis") or {}).get("directions", [])
-    for direction in directions[:3]:
+def _future_outlook(forecast: Dict[str, Any]) -> List[Dict[str, Any]]:
+    quality = forecast.get("data_quality") or {}
+    forecasts = sorted(
+        forecast.get("forecasts", []),
+        key=lambda item: (
+            {"high": 2, "medium": 1, "low": 0}.get(item.get("confidence"), 0),
+            float((item.get("metrics") or {}).get("velocity") or 0),
+        ),
+        reverse=True,
+    )
+    quality_body = (
+        f"当前有 {quality.get('document_count', 0)} 条事件定期资料，"
+        f"覆盖 {quality.get('history_month_count', 0)} 个可用月份。"
+        + ("；".join(quality.get("gaps", [])) or "已达到基础历史覆盖要求。")
+    ) if forecast else "尚未生成趋势分析 v2；当前仅展示来源附录，不给出未来判断。"
+    items = [{
+        "heading": "证据覆盖与结论边界",
+        "body": quality_body,
+        "meta": f"截至 {forecast.get('as_of') or '未知日期'}",
+    }]
+    for item in forecasts[:3]:
+        metrics = item.get("metrics") or {}
+        mode = "定量预测" if item.get("mode") == "quantitative" else "低置信情景"
         items.append({
-            "heading": str(direction.get("direction") or "跨来源方向"),
-            "body": str(direction.get("rationale") or ""),
-            "meta": str(direction.get("judgment") or ""),
-        })
-    return items[:6]
-
-
-def _inspiration_items(analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
-    profile = analysis.get("research_profile_analysis") or {}
-    profile_items: List[Dict[str, Any]] = []
-    for item in profile.get("advantages", [])[:2]:
-        profile_items.append({
-            "heading": f"已有优势｜{item.get('name') or ''}",
-            "body": str(item.get("explanation") or ""),
-            "meta": "自身研究画像",
-        })
-    for item in profile.get("gaps", [])[:2]:
-        profile_items.append({
-            "heading": f"存在差距｜{item.get('name') or ''}",
-            "body": str(item.get("explanation") or ""),
-            "meta": "建议补充外部证据",
-        })
-    for item in profile.get("reinforcement_directions", [])[:2]:
-        profile_items.append({
-            "heading": f"值得补强｜{item.get('direction') or ''}",
-            "body": str(item.get("reason") or ""),
-            "meta": f"{item.get('priority') or 'medium'} priority",
-        })
-    follow_up = profile.get("follow_up") or {}
-    for group in ("papers", "policies", "industry_cases"):
-        for item in follow_up.get(group, [])[:1]:
-            profile_items.append({
-                "heading": f"可跟进｜{item.get('title') or ''}",
-                "body": str(item.get("reason") or ""),
-                "meta": str(item.get("source_type") or ""),
-                "url": str(item.get("url") or ""),
-                "source_type": str(item.get("source_type") or ""),
-            })
-    directions = (analysis.get("cross_source_analysis") or {}).get("directions", [])
-    templates = {
-        "triple_resonance": "优先凝练可验证课题，设计论文方法与中国能源场景的联合验证。",
-        "academic_lead": "保持方法领先，同时补查中国政策依据和国内示范案例。",
-        "policy_driven": "围绕政策目标拆解可量化科研问题，避免只做政策复述。",
-        "industry_attention": "提炼行业痛点与可复现实验设置，验证其是否具备学术增量。",
-        "emerging": "继续积累跨来源证据，暂不作高确定性方向判断。",
-    }
-    cross_source_items = [
-        {
-            "heading": str(item.get("direction") or "研究方向"),
-            "body": templates.get(str(item.get("judgment_code")), templates["emerging"]),
-            "meta": str(item.get("judgment") or ""),
-        }
-        for item in directions[:6]
-    ]
-    return (profile_items + cross_source_items)[:9]
-
-
-def _recommendation_items(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
-    directions = (analysis.get("cross_source_analysis") or {}).get("directions", [])
-    recommendations: List[Dict[str, str]] = []
-    resonance = [item for item in directions if item.get("judgment_code") == "triple_resonance"]
-    if resonance:
-        recommendations.append({
-            "heading": "优先推进三端共振方向",
-            "body": "、".join(str(item.get("direction")) for item in resonance[:3]),
-            "meta": "建议进入精读与实验设计",
-        })
-    reinforcement = (
-        analysis.get("research_profile_analysis") or {}
-    ).get("reinforcement_directions", [])
-    if reinforcement:
-        recommendations.append({
-            "heading": "按研究画像补强技术路线",
-            "body": "、".join(
-                str(item.get("direction") or "") for item in reinforcement[:3]
+            "heading": f"{item.get('topic')}｜{_trajectory_label(item.get('trajectory'))}",
+            "body": (
+                f"{mode}；近三个月归一化速度 {float(metrics.get('velocity') or 0):+.3f}，"
+                f"最近六个月持续性 {float(metrics.get('persistence') or 0):.0%}。"
+                f"驱动依据：{'；'.join(item.get('drivers', []))}"
             ),
-            "meta": "自身研究对比",
+            "meta": f"{_confidence_label(item.get('confidence'))} · {len(item.get('evidence_ids', []))} 条代表证据",
+            "evidence_ids": item.get("evidence_ids", []),
+            "counter_signals": item.get("counter_signals", []),
+            "topic_id": item.get("topic_id"),
         })
-    recommendations.extend([
+    return items
+
+
+def _topic_decision_cards(forecast: Dict[str, Any]) -> List[Dict[str, Any]]:
+    items = []
+    for item in forecast.get("forecasts", []):
+        metrics = item.get("metrics") or {}
+        items.append({
+            "heading": str(item.get("topic") or "研究主题"),
+            "body": (
+                f"方向：{_trajectory_label(item.get('trajectory'))}；"
+                f"速度 {float(metrics.get('velocity') or 0):+.3f}；"
+                f"加速度 {float(metrics.get('acceleration') or 0):+.3f}；"
+                f"持续性 {float(metrics.get('persistence') or 0):.0%}；"
+                f"来源多样性 {int(metrics.get('source_diversity') or 0)}。"
+                f"科研行动：{item.get('research_action') or ''}"
+            ),
+            "meta": f"{_confidence_label(item.get('confidence'))} · {item.get('mode')}",
+            "evidence_ids": item.get("evidence_ids", []),
+            "counter_signals": item.get("counter_signals", []),
+            "watch_indicators": item.get("watch_indicators", []),
+            "metrics": metrics,
+            "topic_id": item.get("topic_id"),
+        })
+    return items
+
+
+def _lead_lag_items(forecast: Dict[str, Any]) -> List[Dict[str, Any]]:
+    labels = {
+        "paper": "论文", "policy": "政策", "news": "国内新闻",
+        "industry_report": "行业报告",
+    }
+    items = []
+    for item in forecast.get("lead_lag", []):
+        sequence = " → ".join(
+            f"{labels.get(point.get('source_type'), point.get('source_type'))}（{point.get('onset')}）"
+            for point in item.get("sequence", [])
+        )
+        items.append({
+            "heading": str(item.get("topic") or "研究主题"),
+            "body": sequence or "尚未达到跨来源传导判定门槛。",
+            "meta": (
+                f"相隔 {item.get('lag_months')} 个月 · {item.get('limitation')}"
+                if item.get("status") == "supported"
+                else str(item.get("limitation") or "证据不足")
+            ),
+            "topic_id": item.get("topic_id"),
+        })
+    return items
+
+
+def _near_term_items(forecast: Dict[str, Any]) -> List[Dict[str, Any]]:
+    items = []
+    for item in forecast.get("forecasts", []):
+        projections = item.get("projections", [])
+        if projections:
+            body = "；".join(
+                f"{point.get('months_ahead')}个月后占比 {float(point.get('share') or 0):.1%}"
+                f"（80%区间 {float(point.get('lower') or 0):.1%}–{float(point.get('upper') or 0):.1%}）"
+                for point in projections
+            )
+        else:
+            body = "未达到定量门槛，仅保留低置信情景。缺口：" + "；".join(
+                item.get("data_gaps", [])
+            )
+        items.append({
+            "heading": str(item.get("topic") or "研究主题"),
+            "body": body,
+            "meta": _confidence_label(item.get("confidence")),
+            "evidence_ids": item.get("evidence_ids", []),
+            "counter_signals": item.get("counter_signals", []),
+            "topic_id": item.get("topic_id"),
+        })
+    return items
+
+
+def _scenario_items(forecast: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
         {
-            "heading": "核验中国政策原文",
-            "body": "对报告中的政策结论回查发文机构、发布日期、适用区域与有效状态。",
-            "meta": "证据质量",
-        },
+            "heading": str(item.get("topic") or "研究主题"),
+            "body": (
+                f"基准：{item.get('base_case') or ''} "
+                f"上行情景：{item.get('upside') or ''} "
+                f"下行情景：{item.get('downside') or ''}"
+            ),
+            "meta": _confidence_label(item.get("confidence")),
+            "evidence_ids": item.get("evidence_ids", []),
+            "counter_signals": item.get("counter_signals", []),
+            "topic_id": item.get("topic_id"),
+        }
+        for item in forecast.get("scenarios", [])
+    ]
+
+
+def _research_action_items(forecast: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
         {
-            "heading": "维护能源具身智能边界",
-            "body": "聚焦能源系统中的感知—决策—行动闭环，不扩展为机械臂或通用机器人综述。",
-            "meta": "研究聚焦",
-        },
+            "heading": str(item.get("topic") or "研究主题"),
+            "body": str(item.get("research_action") or ""),
+            "meta": "可执行科研任务",
+            "evidence_ids": item.get("evidence_ids", []),
+            "topic_id": item.get("topic_id"),
+        }
+        for item in forecast.get("forecasts", [])
+    ]
+
+
+def _monitoring_items(forecast: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
         {
-            "heading": "补齐跨来源证据",
-            "body": "对仅有单一来源的方向，下一周期定向补充论文、政策或中国行业案例。",
-            "meta": "下期采集",
-        },
-    ])
-    return recommendations[:6]
+            "heading": str(item.get("topic") or "研究主题"),
+            "body": "监测指标：" + "、".join(item.get("watch_indicators", [])),
+            "meta": "达到反证条件时下调趋势判断",
+            "counter_signals": item.get("counter_signals", []),
+            "topic_id": item.get("topic_id"),
+        }
+        for item in forecast.get("forecasts", [])
+    ]
+
+
+def _trajectory_label(value: Any) -> str:
+    return {"rising": "上升", "declining": "回落", "stable": "稳定"}.get(
+        str(value), "不确定"
+    )
+
+
+def _confidence_label(value: Any) -> str:
+    return {"high": "高置信", "medium": "中置信", "low": "低置信"}.get(
+        str(value), "置信度未知"
+    )
 
 
 def _ranked(documents: List[Dict[str, Any]], source_type: str) -> List[Dict[str, Any]]:
@@ -317,10 +396,8 @@ def _summary(document: Dict[str, Any]) -> str:
 def _document_meta(document: Dict[str, Any]) -> str:
     organization = document.get("issuing_body") or document.get("media_name") or document.get("institution") or document.get("source_name") or ""
     published = document.get("published_at") or document.get("published") or ""
-    score = _number(document.get("importance_score"))
-    score_label = f"研究价值 {score:.1f}" if score else ""
     return " · ".join(
-        item for item in (str(organization), str(published), score_label) if item
+        item for item in (str(organization), str(published)) if item
     )
 
 

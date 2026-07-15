@@ -15,7 +15,7 @@ class ResearchReportGeneratorTests(unittest.TestCase):
     def test_legacy_import_remains_compatible(self):
         self.assertIs(IntelligenceReportGenerator, ResearchReportGenerator)
 
-    def test_weekly_report_contains_fixed_sections_and_cross_source_insights(self):
+    def test_weekly_report_is_topic_first_with_source_appendices(self):
         generator = ResearchReportGenerator({'reporting': {'max_items_per_section': 4}})
         report = generator.generate(
             _documents(),
@@ -30,14 +30,18 @@ class ResearchReportGeneratorTests(unittest.TestCase):
         self.assertEqual(
             [section['key'] for section in report['sections']],
             [
-                'hot_papers', 'policy_guidance', 'news_and_industry',
-                'key_trends', 'research_inspirations', 'next_actions',
+                'future_outlook', 'topic_decision_cards', 'cross_source_transmission',
+                'near_term_forecast', 'strategic_scenarios', 'research_actions',
+                'monitoring', 'appendix_papers', 'appendix_policies',
+                'appendix_news', 'appendix_industry_reports',
             ],
         )
-        self.assertIn('近 7 天上升主题', report['markdown'])
-        self.assertIn('维护能源具身智能边界', report['markdown'])
-        self.assertIn('已有优势｜虚拟电厂自主决策', report['markdown'])
-        self.assertIn('可跟进｜能源智能体论文', report['markdown'])
+        self.assertEqual(report['schema_version'], '2.0')
+        self.assertIn('未来趋势总览', report['markdown'])
+        self.assertIn('低置信情景', report['markdown'])
+        self.assertIn('反证条件', report['markdown'])
+        self.assertIn('科研行动建议', report['markdown'])
+        self.assertNotIn('研究价值 90.0', report['markdown'])
         rendered = markdown.markdown(report['markdown'])
         self.assertNotIn('href="javascript:', rendered)
         self.assertNotIn('<script', rendered)
@@ -98,6 +102,46 @@ def _documents():
 
 def _analysis():
     return {
+        'trend_forecast': {
+            'schema_version': '2.0',
+            'as_of': '2026-07-14',
+            'data_quality': {
+                'document_count': 4, 'history_month_count': 2,
+                'gaps': ['历史月份不足'],
+            },
+            'forecasts': [{
+                'topic_id': 'grid_coordination', 'topic': '源网荷储与虚拟电厂协同',
+                'mode': 'scenario_only', 'trajectory': 'rising', 'confidence': 'low',
+                'metrics': {
+                    'velocity': 0.2, 'acceleration': 0.1, 'persistence': 0.5,
+                    'source_diversity': 3,
+                },
+                'drivers': ['论文、政策与国内案例均出现'],
+                'data_gaps': ['可用月份 2/12'],
+                'evidence_ids': ['paper-1', 'policy-1'],
+                'counter_signals': ['历史月份不足'],
+                'watch_indicators': ['可调资源聚合规模'],
+                'research_action': '建立源网荷储多主体协同基准。',
+                'projections': [],
+            }],
+            'scenarios': [{
+                'topic_id': 'grid_coordination', 'topic': '源网荷储与虚拟电厂协同',
+                'confidence': 'low', 'base_case': '保持探索',
+                'upside': '跨来源连续增长', 'downside': '验证指标没有改善',
+                'evidence_ids': ['paper-1', 'policy-1'],
+                'counter_signals': ['历史月份不足'],
+                'research_action': '建立协同基准。',
+            }],
+            'lead_lag': [{
+                'topic_id': 'grid_coordination', 'topic': '源网荷储与虚拟电厂协同',
+                'status': 'supported', 'lag_months': 2,
+                'limitation': '时间顺序不等同于因果关系',
+                'sequence': [
+                    {'source_type': 'paper', 'onset': '2026-01-01'},
+                    {'source_type': 'policy', 'onset': '2026-03-01'},
+                ],
+            }],
+        },
         'temporal_trends': {
             'windows': {
                 '7': {
