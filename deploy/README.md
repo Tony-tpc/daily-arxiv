@@ -33,6 +33,9 @@ fc-cache -f
 仍可运行，只会回退到系统默认字体。systemd 服务不依赖 Windows 路径，也不会在
 启动时联网下载字体或 NLTK 语料。
 
+仓库默认关闭 Flask debug/reloader，保证 systemd 只维护一个 Web 进程。仅在本地
+调试时临时将 `config/config.yaml` 的 `web.debug` 改为 `true`，不要用于生产部署。
+
 脚本会自动完成：
 1. 检查必要命令（`systemctl`、`sudo`、`ss` 等）。
 2. 读取 `config/config.yaml` 中的 `web.port`，并在启动前检查端口占用。
