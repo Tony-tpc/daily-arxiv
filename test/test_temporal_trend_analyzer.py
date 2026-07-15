@@ -61,6 +61,45 @@ class TemporalTrendAnalyzerTests(unittest.TestCase):
             result['windows']['7']['cross_source_comparison']['source_counts'], {}
         )
 
+    def test_event_date_wins_over_snapshot_and_document_is_counted_once(self):
+        observations = [
+            _observation(
+                '2026-07-14', 'paper-1', ['topic'], [], 'paper',
+                published_at='2026-06-01',
+            ),
+            _observation(
+                '2026-07-15', 'paper-1', ['topic'], [], 'paper',
+                published_at='2026-06-01', created_at='2026-07-15T09:00:00Z',
+            ),
+        ]
+
+        result = self.analyzer.analyze_temporal(observations, as_of='2026-07-15')
+
+        self.assertEqual(result['observation_count'], 1)
+        self.assertEqual(result['timeline'][0]['date'], '2026-06-01')
+
+    def test_missing_event_date_is_not_treated_as_snapshot_history(self):
+        observation = _observation(
+            '2026-07-14', 'undated', ['topic'], [], 'news', published_at=''
+        )
+
+        result = self.analyzer.analyze_temporal([observation], as_of='2026-07-14')
+
+        self.assertEqual(result['observation_count'], 0)
+        self.assertEqual(result['timeline'], [])
+
+    def test_empty_previous_window_reports_insufficient_baseline(self):
+        result = self.analyzer.analyze_temporal(
+            [_observation('2026-07-14', 'paper-1', ['topic'], [], 'paper')],
+            as_of='2026-07-14',
+        )
+
+        window = result['windows']['7']
+        self.assertEqual(window['baseline_status'], 'insufficient')
+        self.assertEqual(window['new_topic_emergence'], [])
+        self.assertEqual(window['topic_momentum'][0]['status'], 'baseline_insufficient')
+        self.assertIsNone(window['topic_momentum'][0]['growth_rate'])
+
     def test_invalid_as_of_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'Invalid as_of'):
             self.analyzer.analyze_temporal([], as_of='not-a-date')
@@ -207,6 +246,7 @@ def _observation(
     source_type,
     *,
     created_at='2026-07-14T08:00:00Z',
+    published_at=None,
 ):
     return {
         'snapshot_date': snapshot_date,
@@ -215,6 +255,7 @@ def _observation(
             'id': document_id,
             'title': document_id,
             'source_type': source_type,
+            'published_at': snapshot_date if published_at is None else published_at,
             'research_direction': topics,
             'entities': entities,
         },

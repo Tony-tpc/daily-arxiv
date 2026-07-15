@@ -41,13 +41,20 @@ class HistoryTrendRegressionTests(unittest.TestCase):
             {"policy": 1, "news": 1, "industry_report": 1},
         )
         self.assertEqual([point["date"] for point in result["timeline"]], [
-            "2026-07-01", "2026-07-09", "2026-07-14"
+            "2026-07-01", "2026-07-09", "2026-07-10", "2026-07-14"
         ])
 
 
 def _document(document_id, source_type, topic, organization):
+    published_dates = {
+        "paper-old": "2026-07-01",
+        "policy-new": "2026-07-09",
+        "news-new": "2026-07-10",
+        "report-new": "2026-07-14",
+    }
     return {
         "id": document_id,
+        "published_at": published_dates[document_id],
         "source_type": source_type,
         "title": f"{topic}研究",
         "tags": [topic],

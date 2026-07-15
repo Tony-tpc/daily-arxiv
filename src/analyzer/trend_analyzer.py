@@ -946,35 +946,71 @@ class TrendAnalyzer:
 def _normalize_observations(
     observations: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """Keep the latest stage for each document/date to prevent double counting."""
-    unique: Dict[tuple[str, str], Dict[str, Any]] = {}
+    """Return one event-time observation per document.
+
+    Snapshot dates describe when the collector saw a document, not when the
+    underlying research, policy, news item, or report happened. Trend
+    calculations therefore require a document event date and keep snapshot
+    time only as first-seen provenance.
+    """
+    unique: Dict[str, Dict[str, Any]] = {}
     for observation in observations:
         document = observation.get("document") or observation
         if not isinstance(document, dict):
             continue
-        observation_date = _as_date(
-            observation.get("snapshot_date")
-            or document.get("published_at")
-            or document.get("published")
-        )
-        if observation_date is None:
+        event_date = _document_event_date(document)
+        if event_date is None:
             continue
         document_id = str(
             document.get("id") or document.get("url") or document.get("title") or ""
         )
         if not document_id:
             continue
+        first_seen = _as_date(observation.get("snapshot_date"))
+        if first_seen is None:
+            first_seen = _as_date(str(observation.get("created_at") or "")[:10])
         normalized = {
-            "date": observation_date,
+            "date": event_date,
+            "event_date": event_date.isoformat(),
+            "first_seen_at": first_seen.isoformat() if first_seen else "",
             "document_id": document_id,
             "created_at": str(observation.get("created_at") or ""),
             "document": document,
         }
-        key = (observation_date.isoformat(), document_id)
-        existing = unique.get(key)
+        existing = unique.get(document_id)
         if existing is None or normalized["created_at"] >= existing["created_at"]:
-            unique[key] = normalized
+            if existing and existing.get("first_seen_at"):
+                candidates = [
+                    value for value in (
+                        existing.get("first_seen_at"), normalized.get("first_seen_at")
+                    ) if value
+                ]
+                normalized["first_seen_at"] = min(candidates) if candidates else ""
+            unique[document_id] = normalized
+        elif normalized.get("first_seen_at"):
+            candidates = [
+                value for value in (
+                    existing.get("first_seen_at"), normalized.get("first_seen_at")
+                ) if value
+            ]
+            existing["first_seen_at"] = min(candidates) if candidates else ""
     return sorted(unique.values(), key=lambda item: (item["date"], item["document_id"]))
+
+
+def _document_event_date(document: Dict[str, Any]) -> date | None:
+    """Resolve source event time without using collection metadata."""
+    for field in (
+        "published_at",
+        "published",
+        "publication_date",
+        "issued_at",
+        "release_date",
+        "date",
+    ):
+        resolved = _as_date(document.get(field))
+        if resolved is not None:
+            return resolved
+    return None
 
 
 def _document_text(document: Dict[str, Any]) -> str:
@@ -1030,16 +1066,22 @@ def _compare_periods(
     previous_topics = _signal_counter(previous, _topics)
     current_entities = _signal_counter(current, _entities)
     previous_entities = _signal_counter(previous, _entities)
-    topic_momentum = _counter_changes(current_topics, previous_topics)
-    entity_changes = _counter_changes(current_entities, previous_entities)
+    baseline_sufficient = bool(previous)
+    topic_momentum = _counter_changes(
+        current_topics, previous_topics, baseline_sufficient=baseline_sufficient
+    )
+    entity_changes = _counter_changes(
+        current_entities, previous_entities, baseline_sufficient=baseline_sufficient
+    )
     return {
         "days": days,
         "current_document_count": len(current),
         "previous_document_count": len(previous),
+        "baseline_status": "sufficient" if baseline_sufficient else "insufficient",
         "topic_momentum": topic_momentum,
         "entity_frequency_change": entity_changes,
         "new_topic_emergence": [
-            item for item in topic_momentum if item["previous_count"] == 0 and item["current_count"] > 0
+            item for item in topic_momentum if item["status"] == "new"
         ],
         "topic_decline": [
             item for item in topic_momentum if item["current_count"] < item["previous_count"]
@@ -1048,13 +1090,21 @@ def _compare_periods(
     }
 
 
-def _counter_changes(current: Counter, previous: Counter) -> List[Dict[str, Any]]:
+def _counter_changes(
+    current: Counter,
+    previous: Counter,
+    *,
+    baseline_sufficient: bool = True,
+) -> List[Dict[str, Any]]:
     changes = []
     for name in current.keys() | previous.keys():
         current_count = int(current.get(name, 0))
         previous_count = int(previous.get(name, 0))
         delta = current_count - previous_count
-        if previous_count == 0:
+        if not baseline_sufficient:
+            growth_rate = None
+            status = "baseline_insufficient" if current_count else "stable"
+        elif previous_count == 0:
             growth_rate = 1.0 if current_count else 0.0
             status = "new" if current_count else "stable"
         else:
@@ -1065,7 +1115,7 @@ def _counter_changes(current: Counter, previous: Counter) -> List[Dict[str, Any]
             "current_count": current_count,
             "previous_count": previous_count,
             "delta": delta,
-            "growth_rate": round(growth_rate, 3),
+            "growth_rate": round(growth_rate, 3) if growth_rate is not None else None,
             "status": status,
         })
     return sorted(
