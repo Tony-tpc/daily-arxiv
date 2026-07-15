@@ -76,6 +76,7 @@ class TrendAnalyzer:
         history_observations: List[Dict[str, Any]] | None = None,
         cross_source_analysis: Dict[str, Any] | None = None,
         research_profile_analysis: Dict[str, Any] | None = None,
+        trend_forecast: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """执行完整的趋势分析
         
@@ -97,6 +98,7 @@ class TrendAnalyzer:
         if not papers:
             self.logger.warning(self.text("没有当前文档，仍将分析历史趋势", "No current documents; analyzing history only"))
             return {
+                'schema_version': '2.0',
                 'date': get_date_string(),
                 'paper_count': 0,
                 'document_count': 0,
@@ -108,6 +110,7 @@ class TrendAnalyzer:
                 'temporal_trends': self.analyze_temporal(history_observations or []),
                 'cross_source_analysis': cross_source_analysis or {},
                 'research_profile_analysis': research_profile_analysis or {},
+                'trend_forecast': trend_forecast or {},
                 'generated_at': datetime.now().isoformat(),
             }
         
@@ -141,6 +144,8 @@ class TrendAnalyzer:
             'temporal_trends': self.analyze_temporal(history_observations or []),
             'cross_source_analysis': cross_source_analysis or {},
             'research_profile_analysis': research_profile_analysis or {},
+            'trend_forecast': trend_forecast or {},
+            'schema_version': '2.0',
             'generated_at': datetime.now().isoformat()
         }
         

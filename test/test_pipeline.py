@@ -213,11 +213,18 @@ class PipelineTests(unittest.TestCase):
 
         analyzer_instance = Mock()
         analyzer_instance.analyze.return_value = {'ok': True}
+        forecast_instance = Mock()
+        forecast_instance.analyze.return_value = {'schema_version': '2.0'}
+        corpus_instance = Mock()
+        corpus_instance.load_observations.return_value = []
+        corpus_instance.load_coverage.return_value = {}
         storage_instance = Mock()
         storage_instance.query_history.return_value = [{'snapshot_date': '2026-07-14'}]
 
         with patch('src.summarizer.llm_factory.LLMClientFactory.create_client', return_value=Mock()), \
              patch('src.analyzer.trend_analyzer.TrendAnalyzer', return_value=analyzer_instance), \
+             patch('src.analyzer.forecast_analyzer.ForecastAnalyzer', return_value=forecast_instance), \
+             patch('src.history.backfill.HistoricalCorpus', return_value=corpus_instance), \
              patch('src.storage.base.build_storage', return_value=storage_instance):
             from src.pipeline import analyze_stage
             analyze_stage.run(context)
@@ -228,6 +235,7 @@ class PipelineTests(unittest.TestCase):
             history_observations=storage_instance.query_history.return_value,
             cross_source_analysis=context.cross_source_result,
             research_profile_analysis=context.profile_result,
+            trend_forecast=forecast_instance.analyze.return_value,
         )
         query_kwargs = storage_instance.query_history.call_args.kwargs
         self.assertLess(query_kwargs['date_from'], query_kwargs['date_to'])

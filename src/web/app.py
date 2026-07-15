@@ -8,6 +8,7 @@ import sys
 import json
 import sqlite3
 from copy import deepcopy
+from datetime import date
 from pathlib import Path
 
 # 添加项目根目录到 Python 路径
@@ -19,6 +20,8 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 import markdown
 
 from src.analyzer.cross_source_analyzer import CrossSourceAnalyzer
+from src.analyzer.forecast_analyzer import ForecastAnalyzer
+from src.history.backfill import HistoricalCorpus
 from src.analyzer.research_profile_analyzer import ResearchProfileAnalyzer
 from src.ranking.relevance_ranker import RelevanceRanker
 from src.reporting.research_report_generator import ResearchReportGenerator
@@ -496,6 +499,112 @@ def get_stats():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/trends/forecast')
+def get_trend_forecast():
+    """Return v2 near-term forecasts and strategic scenarios with evidence."""
+    horizon = str(request.args.get('horizon', 'all')).strip().lower()
+    if horizon not in {'all', 'near', 'strategic'}:
+        return jsonify({'error': 'horizon 必须是 all、near 或 strategic'}), 400
+    topic = str(request.args.get('topic', '')).strip().casefold()
+    confidence = str(request.args.get('confidence', '')).strip().lower()
+    if confidence and confidence not in {'low', 'medium', 'high'}:
+        return jsonify({'error': 'confidence 必须是 low、medium 或 high'}), 400
+    as_of = str(request.args.get('as_of', '')).strip()
+    try:
+        analysis_data = load_json('data/analysis/latest.json') or {}
+        forecast = analysis_data.get('trend_forecast') or {}
+        if not forecast or (as_of and forecast.get('as_of') != as_of):
+            documents = _load_intelligence_documents()
+            corpus = HistoricalCorpus(
+                config.get('analysis', {}).get('history_directory', 'data/history')
+            )
+            observations = corpus.load_observations(date_to=as_of)
+            observations.extend({
+                'snapshot_id': 'current',
+                'snapshot_date': as_of or date.today().isoformat(),
+                'created_at': as_of or date.today().isoformat(),
+                'document': document,
+            } for document in documents)
+            forecast = ForecastAnalyzer(config).analyze(
+                observations,
+                coverage=corpus.load_coverage(),
+                as_of=as_of or None,
+            )
+        return jsonify(_filter_forecast_payload(
+            forecast, horizon=horizon, topic=topic, confidence=confidence
+        ))
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
+def _filter_forecast_payload(
+    payload: dict,
+    *,
+    horizon: str,
+    topic: str,
+    confidence: str,
+) -> dict:
+    """Apply UI filters without mutating the persisted analysis payload."""
+    filtered = deepcopy(payload)
+    taxonomy = filtered.get('taxonomy', [])
+    topic_ids = {
+        str(item.get('id') or '')
+        for item in taxonomy
+        if not topic or topic in " ".join([
+            str(item.get('id') or ''), str(item.get('label') or '')
+        ]).casefold()
+    }
+    if not topic:
+        topic_ids = {str(item.get('id') or '') for item in taxonomy}
+
+    def keep(item):
+        return (
+            str(item.get('topic_id') or '') in topic_ids
+            and (not confidence or item.get('confidence') == confidence)
+        )
+
+    filtered['taxonomy'] = [
+        item for item in taxonomy if str(item.get('id') or '') in topic_ids
+    ]
+    filtered['forecasts'] = [
+        item for item in filtered.get('forecasts', []) if keep(item)
+    ] if horizon in {'all', 'near'} else []
+    filtered['scenarios'] = [
+        item for item in filtered.get('scenarios', []) if keep(item)
+    ] if horizon in {'all', 'strategic'} else []
+    filtered['lead_lag'] = [
+        item for item in filtered.get('lead_lag', [])
+        if str(item.get('topic_id') or '') in topic_ids
+    ]
+    filtered['topic_series'] = {
+        key: value for key, value in filtered.get('topic_series', {}).items()
+        if key in topic_ids
+    }
+    retained = [*filtered['forecasts'], *filtered['scenarios']]
+    filtered['evidence_ids'] = list(dict.fromkeys(
+        evidence_id
+        for item in retained for evidence_id in item.get('evidence_ids', [])
+    ))
+    filtered['counter_signals'] = list(dict.fromkeys(
+        signal
+        for item in retained for signal in item.get('counter_signals', [])
+    ))
+    filtered['watch_indicators'] = list(dict.fromkeys(
+        indicator
+        for item in retained for indicator in (
+            item.get('watch_indicators') or item.get('triggers') or []
+        )
+    ))
+    filtered['filters'] = {
+        'horizon': horizon,
+        'topic': topic,
+        'confidence': confidence,
+    }
+    return filtered
 
 
 @app.route('/api/scheduler/status')

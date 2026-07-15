@@ -15,6 +15,8 @@ def run(context: PipelineContext) -> PipelineContext:
     context.logger.info(context.text("\n步骤 4: 分析研究趋势...", "\nStep 4: Analyzing research trends..."))
     try:
         from src.analyzer.trend_analyzer import TrendAnalyzer
+        from src.analyzer.forecast_analyzer import ForecastAnalyzer
+        from src.history.backfill import HistoricalCorpus
         from src.storage.base import build_storage
         from src.summarizer.llm_factory import LLMClientFactory
 
@@ -37,12 +39,47 @@ def run(context: PipelineContext) -> PipelineContext:
                 f"Could not read trend history; continuing with current batch: {exc}",
             ))
             history_observations = []
+        history_corpus = HistoricalCorpus(
+            context.config.get('analysis', {}).get(
+                'history_directory', 'data/history'
+            )
+        )
+        forecast_months = int(
+            context.config.get('analysis', {}).get('forecast', {}).get(
+                'history_months', 24
+            )
+        )
+        event_date_from = date_to - timedelta(days=forecast_months * 31)
+        historical_corpus_observations = history_corpus.load_observations(
+            date_from=event_date_from.isoformat(),
+            date_to=date_to.isoformat(),
+        )
+        current_observations = [
+            {
+                'snapshot_id': 'current',
+                'snapshot_date': date_to.isoformat(),
+                'created_at': date_to.isoformat(),
+                'document': document,
+            }
+            for document in input_records
+        ]
+        forecast_observations = (
+            historical_corpus_observations
+            + history_observations
+            + current_observations
+        )
+        trend_forecast = ForecastAnalyzer(context.config).analyze(
+            forecast_observations,
+            coverage=history_corpus.load_coverage(),
+            as_of=date_to,
+        )
         context.analysis_result = analyzer.analyze(
             input_records,
             summarized_records,
             history_observations=history_observations,
             cross_source_analysis=context.cross_source_result,
             research_profile_analysis=context.profile_result,
+            trend_forecast=trend_forecast,
         )
         if context.analysis_result:
             analyzer.print_analysis_summary(context.analysis_result)
