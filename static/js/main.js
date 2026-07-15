@@ -193,6 +193,8 @@ const state = {
     homeFilters: {sourceType: 'all', topic: '', priority: '', dateFrom: '', dateTo: ''},
     allCategories: [],
     analysis: null,
+    narrative: null,
+    narrativeView: 'paper',
     forecast: null,
     forecastTaxonomy: [],
     forecastFilters: {horizon: 'all', topic: '', confidence: ''},
@@ -401,7 +403,7 @@ async function loadAllData() {
         await Promise.all([
             loadStats(),
             loadAnalysis(),
-            loadForecast(),
+            loadNarrative(),
             loadHistory(),
             loadKnowledge(),
             loadPapers(),
@@ -507,15 +509,166 @@ async function loadAnalysis() {
         if (analysis.trend_forecast && !state.forecast) {
             state.forecast = analysis.trend_forecast;
             state.forecastTaxonomy = analysis.trend_forecast.taxonomy || [];
-            renderForecastDashboard();
         }
         renderResearchTrendModules();
         renderHomeTrendSignals();
         
     } catch (error) {
         console.error('加载分析数据失败:', error);
-        showError('forecast-topic-cards', t('loadAnalysisFailed'));
+        showError('narrative-content', t('loadAnalysisFailed'));
     }
+}
+
+async function loadNarrative(options = {}) {
+    const content = document.getElementById('narrative-content');
+    if (content) {
+        content.innerHTML = `<div class="loading"><div class="spinner"></div><p>${LANG === 'zh' ? '正在读取长篇分析…' : 'Loading long-form analysis…'}</p></div>`;
+    }
+    const params = new URLSearchParams({view: state.narrativeView});
+    if (options.refresh) params.set('refresh', '1');
+    try {
+        const response = await fetch(`/api/trends/narrative?${params.toString()}`);
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to load narrative');
+        }
+        state.narrative = await response.json();
+        renderNarrative();
+    } catch (error) {
+        console.error('加载长篇趋势分析失败:', error);
+        showError('narrative-content', LANG === 'zh' ? `长篇分析加载失败：${error.message}` : `Narrative failed: ${error.message}`);
+    }
+}
+
+function renderNarrative() {
+    const payload = state.narrative;
+    if (!payload) return;
+    renderNarrativeCoverage(payload);
+    renderNarrativeArticle(payload);
+    renderNarrativeOpportunities(payload);
+    renderNarrativeChains(payload);
+    const generated = document.getElementById('narrative-generated');
+    if (generated) {
+        const timestamp = String(payload.generated_at || '').replace('T', ' ').slice(0, 19);
+        generated.textContent = LANG === 'zh'
+            ? `生成时间 ${timestamp || '未记录'} · 正文 ${Number(payload.char_count || 0).toLocaleString()} 字`
+            : `Generated ${timestamp || 'unknown'} · ${Number(payload.char_count || 0).toLocaleString()} characters`;
+    }
+}
+
+function renderNarrativeCoverage(payload) {
+    const container = document.getElementById('narrative-coverage');
+    if (!container) return;
+    const coverage = payload.coverage || {};
+    const sourceLabels = LANG === 'zh'
+        ? {paper: '论文', policy: '中国政策', news: '国内新闻', industry_report: '行业报告'}
+        : {paper: 'Papers', policy: 'China policies', news: 'China news', industry_report: 'Industry reports'};
+    const sourceCounts = coverage.selected_source_counts || coverage.source_counts || {};
+    const chips = Object.entries(sourceCounts).map(([source, count]) =>
+        `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[source] || source)}</strong>${Number(count || 0)} ${LANG === 'zh' ? '条证据' : 'items'}</span>`
+    ).join('');
+    const partial = coverage.status === 'partial';
+    const gaps = [...(coverage.gaps || []), ...(payload.limitations || []).filter(item => !(coverage.gaps || []).includes(item))];
+    container.innerHTML = `<div class="narrative-coverage-summary">
+        <span class="narrative-status ${partial ? 'partial' : 'complete'}"><i class="fas ${partial ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i>${partial ? (LANG === 'zh' ? '部分覆盖' : 'Partial coverage') : (LANG === 'zh' ? '覆盖达标' : 'Coverage ready')}</span>
+        <span>${escapeHtml(coverage.period_start || '')}${coverage.period_end ? ` — ${escapeHtml(coverage.period_end)}` : ''}</span>
+        <span>${Number(coverage.month_count || 0)} ${LANG === 'zh' ? '个自然月' : 'months'}</span>
+    </div><div class="narrative-source-row">${chips}</div>
+    ${gaps.length ? `<details class="narrative-limitations"><summary>${LANG === 'zh' ? `结论边界与数据缺口（${gaps.length}）` : `Limitations (${gaps.length})`}</summary><ul>${gaps.map(gap => `<li>${escapeHtml(gap)}</li>`).join('')}</ul></details>` : ''}`;
+}
+
+function renderNarrativeArticle(payload) {
+    const article = document.getElementById('narrative-content');
+    const toc = document.getElementById('narrative-toc');
+    if (!article || !toc) return;
+    const sections = payload.sections || [];
+    toc.innerHTML = sections.map((section, index) =>
+        `<a href="#narrative-section-${escapeHtml(section.id)}"><span>${String(index + 1).padStart(2, '0')}</span>${escapeHtml(section.title)}</a>`
+    ).join('');
+    article.innerHTML = sections.length ? sections.map((section, index) => `<section id="narrative-section-${escapeHtml(section.id)}" class="narrative-section">
+        <div class="narrative-section-kicker">${String(index + 1).padStart(2, '0')} / ${String(sections.length).padStart(2, '0')}</div>
+        <h2>${escapeHtml(section.title)}</h2>
+        <div class="narrative-prose">${decorateNarrativeCitations(section.html || '')}</div>
+    </section>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前没有可展示的正文。' : 'No narrative is available.'}</p>`;
+    bindNarrativeEvidenceButtons(article);
+}
+
+function decorateNarrativeCitations(html) {
+    return String(html || '').replace(/\[((?:POL|P|N|R)\d{2})\]/g, (_, id) =>
+        `<button type="button" class="narrative-citation" data-evidence-id="${id}" aria-label="${LANG === 'zh' ? '查看证据' : 'Open evidence'} ${id}">${id}</button>`
+    );
+}
+
+function renderNarrativeOpportunities(payload) {
+    const section = document.getElementById('narrative-opportunity-section');
+    const container = document.getElementById('narrative-opportunities');
+    if (!section || !container) return;
+    section.hidden = state.narrativeView !== 'paper';
+    if (section.hidden) return;
+    const opportunities = payload.opportunities || [];
+    container.innerHTML = opportunities.length ? `<table class="narrative-opportunity-table"><thead><tr>
+        <th>${LANG === 'zh' ? '研究问题' : 'Research question'}</th><th>${LANG === 'zh' ? '候选方法' : 'Method'}</th><th>${LANG === 'zh' ? '对比基线' : 'Baseline'}</th><th>${LANG === 'zh' ? '验证环境' : 'Validation'}</th><th>${LANG === 'zh' ? '核心指标' : 'Metrics'}</th><th>${LANG === 'zh' ? '支撑论文' : 'Evidence'}</th>
+    </tr></thead><tbody>${opportunities.map(item => `<tr>
+        <td><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.question || '')}</span></td>
+        <td>${escapeHtml(item.method || '')}</td><td>${escapeHtml(item.baseline || '')}</td><td>${escapeHtml(item.validation || '')}</td>
+        <td>${(item.metrics || []).map(metric => `<span class="narrative-metric">${escapeHtml(metric)}</span>`).join('')}</td>
+        <td><button type="button" class="narrative-evidence-link" data-evidence-ids="${escapeHtml((item.evidence_ids || []).join(','))}">${(item.evidence_ids || []).length} ${LANG === 'zh' ? '篇' : 'items'}</button></td>
+    </tr>`).join('')}</tbody></table>` : `<p class="trend-note">${LANG === 'zh' ? '当前没有实验机会条目。' : 'No experiment opportunities.'}</p>`;
+    bindNarrativeEvidenceButtons(container);
+}
+
+function renderNarrativeChains(payload) {
+    const section = document.getElementById('narrative-chain-section');
+    const container = document.getElementById('narrative-chains');
+    if (!section || !container) return;
+    section.hidden = state.narrativeView !== 'multi_source';
+    if (section.hidden) return;
+    const chains = payload.evidence_chains || [];
+    container.innerHTML = chains.length ? chains.map(chain => `<article class="narrative-chain-card">
+        <div class="narrative-chain-heading"><div><small>${LANG === 'zh' ? '研究问题' : 'Research question'}</small><h3>${escapeHtml(chain.topic || '')}</h3></div><p>${escapeHtml(chain.question || '')}</p></div>
+        <div class="narrative-chain-track">${(chain.nodes || []).map((node, index) => `${index ? '<i class="fas fa-arrow-right narrative-chain-arrow"></i>' : ''}<button type="button" class="narrative-chain-node ${node.status === 'missing' ? 'missing' : ''}" data-evidence-ids="${escapeHtml((node.evidence_ids || []).join(','))}" ${node.status === 'missing' ? 'disabled' : ''}>
+            <span>${escapeHtml(node.label || '')}</span><strong>${node.status === 'missing' ? (LANG === 'zh' ? '证据缺口' : 'Evidence gap') : `${(node.evidence_ids || []).length} ${LANG === 'zh' ? '条' : 'items'}`}</strong><small>${escapeHtml(node.summary || '')}</small>
+        </button>`).join('')}<i class="fas fa-arrow-right narrative-chain-arrow"></i><div class="narrative-chain-experiment"><span>${LANG === 'zh' ? '可执行实验' : 'Executable experiment'}</span><strong>${escapeHtml(chain.experiment?.title || '')}</strong><small>${escapeHtml(chain.experiment?.validation || '')}</small></div></div>
+        <p class="narrative-causality-note"><i class="fas fa-shield-halved"></i>${escapeHtml(chain.causality_note || '')}</p>
+    </article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前没有可展示的证据链。' : 'No evidence chains.'}</p>`;
+    bindNarrativeEvidenceButtons(container);
+}
+
+function bindNarrativeEvidenceButtons(root) {
+    root.querySelectorAll('.narrative-citation').forEach(button => button.addEventListener('click', () => openNarrativeEvidence([button.dataset.evidenceId])));
+    root.querySelectorAll('[data-evidence-ids]').forEach(button => button.addEventListener('click', () => openNarrativeEvidence(String(button.dataset.evidenceIds || '').split(',').filter(Boolean))));
+}
+
+function openNarrativeEvidence(evidenceIds) {
+    const drawer = document.getElementById('narrative-evidence-drawer');
+    const backdrop = document.getElementById('narrative-drawer-backdrop');
+    const body = document.getElementById('narrative-evidence-body');
+    const title = document.getElementById('narrative-evidence-title');
+    if (!drawer || !backdrop || !body) return;
+    const index = state.narrative?.evidence_index || {};
+    const ids = [...new Set(evidenceIds || [])].filter(id => index[id]);
+    if (title) title.textContent = LANG === 'zh' ? `证据详情 · ${ids.length} 条` : `Evidence · ${ids.length}`;
+    body.innerHTML = ids.length ? ids.map(id => {
+        const item = index[id] || {};
+        const safeUrl = /^https?:\/\//i.test(item.url || '') ? item.url : '';
+        return `<article class="narrative-evidence-item"><div class="narrative-evidence-meta"><code>${escapeHtml(id)}</code><span>${escapeHtml(item.source_name || item.source_type || '')}</span><time>${escapeHtml(item.event_date || '')}</time></div>
+            <h3>${escapeHtml(item.title || '')}</h3><p>${escapeHtml(item.excerpt || '')}</p>
+            ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${LANG === 'zh' ? '打开原始材料' : 'Open source'} <i class="fas fa-arrow-up-right-from-square"></i></a>` : `<span class="narrative-no-link">${LANG === 'zh' ? '当前记录未提供原文链接' : 'No source URL'}</span>`}</article>`;
+    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '未找到对应证据。' : 'Evidence not found.'}</p>`;
+    backdrop.hidden = false;
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('drawer-open');
+}
+
+function closeNarrativeEvidence() {
+    const drawer = document.getElementById('narrative-evidence-drawer');
+    const backdrop = document.getElementById('narrative-drawer-backdrop');
+    if (!drawer || !backdrop) return;
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    backdrop.hidden = true;
+    document.body.classList.remove('drawer-open');
 }
 
 async function loadForecast() {
@@ -1385,7 +1538,6 @@ function renderResearchTrendModules() {
     renderTrendTimeline();
     renderSourceComparisonChart();
     renderEntityTrendChart();
-    renderForecastDashboard();
 }
 
 function renderForecastDashboard() {
@@ -1932,22 +2084,23 @@ function initEventListeners() {
         themeToggle.addEventListener('click', toggleTheme);
     }
 
-    const forecastHorizon = document.getElementById('forecast-horizon');
-    const forecastTopic = document.getElementById('forecast-topic');
-    const forecastConfidence = document.getElementById('forecast-confidence');
-    forecastHorizon?.addEventListener('change', event => {
-        state.forecastFilters.horizon = event.target.value;
-        loadForecast();
+    document.querySelectorAll('[data-narrative-view]').forEach(tab => {
+        tab.addEventListener('click', () => {
+            state.narrativeView = tab.dataset.narrativeView || 'paper';
+            document.querySelectorAll('[data-narrative-view]').forEach(item => {
+                const active = item === tab;
+                item.classList.toggle('active', active);
+                item.setAttribute('aria-selected', String(active));
+            });
+            loadNarrative();
+        });
     });
-    forecastTopic?.addEventListener('change', event => {
-        state.forecastFilters.topic = event.target.value;
-        loadForecast();
+    document.getElementById('narrative-refresh')?.addEventListener('click', () => loadNarrative({refresh: true}));
+    document.getElementById('narrative-drawer-close')?.addEventListener('click', closeNarrativeEvidence);
+    document.getElementById('narrative-drawer-backdrop')?.addEventListener('click', closeNarrativeEvidence);
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeNarrativeEvidence();
     });
-    forecastConfidence?.addEventListener('change', event => {
-        state.forecastFilters.confidence = event.target.value;
-        loadForecast();
-    });
-    document.getElementById('forecast-refresh')?.addEventListener('click', loadForecast);
     
     // 搜索
     const searchInput = document.getElementById('search-input');
@@ -2164,6 +2317,7 @@ window.dailyArxiv = {
     loadDirectory,
     loadReport,
     loadIntelligenceHome,
+    loadNarrative,
     loadForecast,
     toggleTheme
 };

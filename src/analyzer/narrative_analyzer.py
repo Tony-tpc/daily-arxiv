@@ -184,7 +184,9 @@ class NarrativeAnalyzer:
         resolved_as_of = _as_date(as_of) or date.today()
         papers = [
             item for item in _deduplicate(documents)
-            if _source_type(item) == "paper" and not is_excluded_paper(item, self.config)
+            if _source_type(item) == "paper"
+            and _event_on_or_before(item, resolved_as_of)
+            and not is_excluded_paper(item, self.config)
         ]
         selected = _select_across_months(papers, self.max_paper_evidence)
         evidence_index, document_codes = _build_evidence_index(selected, "P")
@@ -226,7 +228,11 @@ class NarrativeAnalyzer:
     ) -> Dict[str, Any]:
         """Build a source-balanced narrative across papers and three China sources."""
         resolved_as_of = _as_date(as_of) or date.today()
-        scoped = [item for item in _deduplicate(documents) if _in_scope_document(item, self.config)]
+        scoped = [
+            item for item in _deduplicate(documents)
+            if _event_on_or_before(item, resolved_as_of)
+            and _in_scope_document(item, self.config)
+        ]
         by_source = {
             source_type: [item for item in scoped if _source_type(item) == source_type]
             for source_type in SOURCE_LABELS
@@ -969,6 +975,17 @@ def _select_across_months(
             break
         cursor += 1
     return selected
+
+
+def _event_on_or_before(document: Mapping[str, Any], as_of: date) -> bool:
+    """Exclude future-dated evidence while retaining records with no usable event date."""
+    value = _as_date(
+        document.get("event_date")
+        or document.get("published_at")
+        or document.get("published")
+        or document.get("effective_date")
+    )
+    return value is None or value <= as_of
 
 
 def _selection_key(document: Mapping[str, Any]) -> tuple[int, str, str]:

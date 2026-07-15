@@ -4,7 +4,9 @@ Flask Web 应用
 展示 arXiv 论文分析结果
 """
 import sys
+import html
 import json
+import re
 import sqlite3
 from copy import deepcopy
 from datetime import date
@@ -20,6 +22,7 @@ import markdown
 
 from src.analyzer.cross_source_analyzer import CrossSourceAnalyzer
 from src.analyzer.forecast_analyzer import ForecastAnalyzer
+from src.analyzer.narrative_analyzer import NarrativeAnalyzer
 from src.history.backfill import HistoricalCorpus
 from src.analyzer.research_profile_analyzer import ResearchProfileAnalyzer
 from src.ranking.relevance_ranker import RelevanceRanker
@@ -498,6 +501,70 @@ def get_stats():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/trends/narrative')
+def get_trend_narrative():
+    """Return a cached or deterministic long-form narrative without invoking an LLM."""
+    view = str(request.args.get('view', 'paper')).strip().lower()
+    if view not in {'paper', 'multi_source'}:
+        return jsonify({'error': 'view 必须是 paper 或 multi_source'}), 400
+    as_of = str(request.args.get('as_of', '')).strip()
+    refresh = str(request.args.get('refresh', '')).strip().lower() in {'1', 'true', 'yes'}
+    try:
+        if as_of:
+            date.fromisoformat(as_of)
+        analysis_data = load_json('data/analysis/latest.json') or {}
+        cached = (analysis_data.get('narrative_analysis') or {}).get(view)
+        if cached and not refresh and (not as_of or cached.get('as_of') == as_of):
+            return jsonify(_render_narrative_payload(cached))
+
+        effective_as_of = as_of or date.today().isoformat()
+        corpus = HistoricalCorpus(
+            config.get('analysis', {}).get('history_directory', 'data/history')
+        )
+        documents = [
+            observation['document']
+            for observation in corpus.load_observations(date_to=effective_as_of)
+        ]
+        documents.extend(
+            document for document in _load_intelligence_documents()
+            if not _document_date(document) or _document_date(document) <= effective_as_of
+        )
+        analyzer = NarrativeAnalyzer(config)
+        narrative = (
+            analyzer.generate_paper(documents, as_of=effective_as_of)
+            if view == 'paper'
+            else analyzer.generate_multi_source(documents, as_of=effective_as_of)
+        )
+        return jsonify(_render_narrative_payload(narrative))
+    except ValueError as exc:
+        return jsonify({'error': f'as_of 必须是有效的 YYYY-MM-DD 日期：{exc}'}), 400
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
+def _render_narrative_payload(payload: dict) -> dict:
+    """Render Markdown after neutralising raw HTML and unsafe link schemes."""
+    rendered = deepcopy(payload)
+    for section in rendered.get('sections', []):
+        markdown_text = str(section.get('markdown') or '')
+        escaped = html.escape(markdown_text, quote=False)
+        escaped = re.sub(
+            r'\[([^\]]+)\]\((?!https?://)[^)]+\)',
+            r'\1',
+            escaped,
+            flags=re.IGNORECASE,
+        )
+        section['html'] = markdown.markdown(
+            escaped,
+            extensions=['tables', 'fenced_code', 'nl2br'],
+        )
+    for evidence in rendered.get('evidence_index', {}).values():
+        url = str(evidence.get('url') or '').strip()
+        if url and not re.match(r'^https?://', url, flags=re.IGNORECASE):
+            evidence['url'] = ''
+    return rendered
 
 
 @app.route('/api/trends/forecast')

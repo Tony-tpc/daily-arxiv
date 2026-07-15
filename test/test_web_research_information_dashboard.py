@@ -20,7 +20,7 @@ class WebResearchInformationDashboardTests(unittest.TestCase):
             'today-recommendations', 'home-source-filter', 'home-topic-filter',
             'home-priority-filter', 'home-date-from', 'home-date-to',
             'trend-chart', 'source-comparison-chart', 'entity-trend-chart',
-            'forecast-chart', 'forecast-topic-cards', 'forecast-data-quality',
+            'narrative-content', 'narrative-opportunities', 'narrative-chains',
         ):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn('今日建议阅读', html)
