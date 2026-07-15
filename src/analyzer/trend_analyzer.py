@@ -451,13 +451,11 @@ class TrendAnalyzer:
             LLM 分析结果
         """
         if not self.llm_client:
-            self.logger.warning(self.text("未提供 LLM 客户端，跳过深度分析", "LLM client not provided, skipping in-depth analysis"))
-            return {
-                'hotspots': pick_text(self.config, '需要 LLM 客户端', 'LLM client is required'),
-                'trends': pick_text(self.config, '需要 LLM 客户端', 'LLM client is required'),
-                'future_directions': pick_text(self.config, '需要 LLM 客户端', 'LLM client is required'),
-                'research_ideas': pick_text(self.config, '需要 LLM 客户端', 'LLM client is required')
-            }
+            self.logger.info(self.text(
+                "未提供 LLM 客户端，生成确定性趋势简报",
+                "LLM client not provided; generating a deterministic trend brief",
+            ))
+            return self._generate_offline_analysis(papers, keywords or [], topics or [])
         
         # 准备文档摘要信息 / Prepare document summary block
         papers_summary = []
@@ -533,6 +531,71 @@ class TrendAnalyzer:
                 'future_directions': pick_text(self.config, f'生成失败: {str(e)}', f'Generation failed: {str(e)}'),
                 'research_ideas': pick_text(self.config, f'生成失败: {str(e)}', f'Generation failed: {str(e)}')
             }
+
+    def _generate_offline_analysis(
+        self,
+        documents: List[Dict[str, Any]],
+        keywords: List[Dict[str, Any]],
+        topics: List[Dict[str, Any]],
+    ) -> Dict[str, str]:
+        """Build a useful evidence-only brief when no external LLM is configured."""
+        top_keywords = [
+            str(item.get('keyword') or '') for item in keywords[:6]
+            if str(item.get('keyword') or '').strip()
+        ]
+        source_counts = Counter(
+            str(item.get('source_type') or 'unknown') for item in documents
+        )
+        source_summary = '、'.join(
+            f'{source_type} {count} 条' for source_type, count in sorted(source_counts.items())
+        )
+        hotspot_lines = '\n'.join(f'- {keyword}' for keyword in top_keywords) or '- 暂无稳定高频信号'
+        topic_lines = '\n'.join(
+            f"- 主题 {index}：{', '.join(str(word) for word in topic.get('keywords', [])[:5])}"
+            for index, topic in enumerate(topics[:4], 1)
+        ) or '- 当前样本不足以形成稳定主题簇'
+        english_sources = ', '.join(
+            f'{source_type}: {count}' for source_type, count in sorted(source_counts.items())
+        )
+        english_hotspots = '\n'.join(f'- {keyword}' for keyword in top_keywords) or '- No stable high-frequency signal yet'
+        english_topics = '\n'.join(
+            f"- Topic {index}: {', '.join(str(word) for word in topic.get('keywords', [])[:5])}"
+            for index, topic in enumerate(topics[:4], 1)
+        ) or '- The current sample is too small for stable topic clusters'
+        return {
+            'analysis_summary': self.text(
+                f'本期基于 {len(documents)} 条中国能源多源情报生成统计简报；来源分布为 {source_summary or "暂无"}。'
+                f'高频信号集中在 {"、".join(top_keywords) or "待继续积累"}。',
+                f'This deterministic brief covers {len(documents)} multi-source Chinese energy records '
+                f'({english_sources or "no source data"}). Leading signals are '
+                f'{", ".join(top_keywords) or "still emerging"}.',
+            ),
+            'hotspots': self.text(
+                f'### 当前高频信号\n\n{hotspot_lines}',
+                f'### Current high-frequency signals\n\n{english_hotspots}',
+            ),
+            'trends': self.text(
+                f'### 结构化主题\n\n{topic_lines}',
+                f'### Structured topics\n\n{english_topics}',
+            ),
+            'future_directions': self.text(
+                '### 后续观察\n\n- 持续跟踪中国能源政策与电力市场变化\n'
+                '- 关注能源智能体在源网荷储、虚拟电厂和需求响应中的闭环决策证据\n'
+                '- 对跨来源共振方向补充论文、政策与行业验证',
+                '### Follow-up monitoring\n\n- Track Chinese energy policy and electricity-market changes\n'
+                '- Monitor closed-loop energy-agent evidence in source-grid-load-storage, VPPs, and demand response\n'
+                '- Add academic, policy, and industry evidence for cross-source resonance',
+            ),
+            'research_ideas': self.text(
+                '### 可验证研究切入点\n\n- 面向虚拟电厂构建感知—决策—控制闭环基准\n'
+                '- 将政策约束显式编码为能源智能体安全边界\n'
+                '- 比较多智能体协同策略在中国电力市场机制下的稳定性',
+                '### Verifiable research directions\n\n- Build perception-decision-control benchmarks for VPPs\n'
+                '- Encode policy constraints as energy-agent safety boundaries\n'
+                '- Compare multi-agent coordination stability under Chinese electricity-market mechanisms',
+            ),
+            'generation_mode': 'deterministic',
+        }
 
     def _build_analysis_prompt(self, papers_summary: str, keywords: str, 
                               topics: str, paper_count: int) -> str:

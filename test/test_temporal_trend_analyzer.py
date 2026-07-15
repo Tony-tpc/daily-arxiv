@@ -112,6 +112,29 @@ class TemporalTrendAnalyzerTests(unittest.TestCase):
         self.assertNotIn('目录项的基本信息', text)
         self.assertNotIn('网页导航', text)
 
+    def test_missing_llm_generates_deterministic_energy_brief(self):
+        analyzer = TrendAnalyzer.__new__(TrendAnalyzer)
+        analyzer.config = {'app': {'language': 'zh'}}
+        analyzer.language = 'zh'
+        analyzer.llm_client = None
+        analyzer.logger = Mock()
+        analyzer.text = lambda zh, en: zh
+
+        result = analyzer._generate_llm_analysis(
+            [
+                {'source_type': 'paper'},
+                {'source_type': 'policy'},
+            ],
+            keywords=[{'keyword': '虚拟电厂'}, {'keyword': '能源智能体'}],
+            topics=[{'keywords': ['源网荷储', '需求响应']}],
+        )
+
+        self.assertEqual(result['generation_mode'], 'deterministic')
+        self.assertIn('2 条中国能源多源情报', result['analysis_summary'])
+        self.assertIn('虚拟电厂', result['hotspots'])
+        self.assertIn('源网荷储', result['trends'])
+        self.assertNotIn('需要 LLM', ' '.join(result.values()))
+
     def test_mixed_source_documents_use_canonical_fields(self):
         self.analyzer.stop_words = set()
         self.analyzer.logger = Mock()
