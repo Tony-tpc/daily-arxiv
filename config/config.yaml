@@ -207,7 +207,9 @@ sources:
     max_results: 20
     recent_days: 180
     sort: "publication_date:desc"
-    topic_query: '"peer-to-peer energy trading" OR "P2P energy trading" OR "peer-to-peer electricity market" OR "peer-to-peer electricity trading" OR "peer-to-peer energy market" OR "P2P electricity market"'
+    backfill_max_results_per_month: 500
+    backfill_concept_id: "C89227174"
+    topic_query: '"energy agent" OR "autonomous energy system" OR "multi-agent reinforcement learning power system" OR "virtual power plant autonomous control" OR "source grid load storage" OR "digital twin energy system" OR "electricity market multi-agent"'
 
   rss:
     enabled: true
@@ -282,6 +284,37 @@ sources:
         url: "https://www.chinanews.com.cn/rss/china.xml"
         source_category: "policy_news"
         region: "CN"
+    backfill_feeds:
+      - name: "人民网能源频道"
+        url: "https://energy.people.com.cn/"
+        page_url_template: "https://energy.people.com.cn/GB/71890/index{page}.html"
+        page_start: 1
+        max_pages: 80
+        item_selector: "li"
+        link_selector: "a[href]"
+        date_selector: "span"
+        source_category: "news_media"
+        region: "CN"
+      - name: "中国新闻网财经"
+        url: "https://www.chinanews.com.cn/cj/"
+        page_url_template: "https://www.chinanews.com.cn/cj/index_{page}.shtml"
+        page_start: 2
+        max_pages: 80
+        item_selector: "li"
+        link_selector: "a[href]"
+        date_selector: ".dd_time, .time, span"
+        source_category: "news_media"
+        region: "CN"
+      - name: "经济观察网产业"
+        url: "https://www.eeo.com.cn/industry/"
+        page_url_template: "https://www.eeo.com.cn/industry/index_{page}.shtml"
+        page_start: 2
+        max_pages: 80
+        item_selector: "li"
+        link_selector: "a[href]"
+        date_selector: ".date, .time, span"
+        source_category: "industry_media"
+        region: "CN"
     request_timeout_seconds: 20
     deduplication: "url_and_title_hash"
     state_path: "data/state/rss.json"
@@ -340,6 +373,9 @@ sources:
         policy_level: "national"
         region: "CN"
         max_entries: 30
+        page_url_template: "https://www.ndrc.gov.cn/xxgk/zcfb/tz/index_{page}.html"
+        page_start: 1
+        max_pages: 30
       - name: "国家发展改革委规范性文件"
         url: "https://www.ndrc.gov.cn/xxgk/zcfb/ghxwj/"
         format: "html"
@@ -354,6 +390,9 @@ sources:
         policy_level: "national"
         region: "CN"
         max_entries: 30
+        page_url_template: "https://www.ndrc.gov.cn/xxgk/zcfb/ghxwj/index_{page}.html"
+        page_start: 1
+        max_pages: 30
     regions:
       - "CN"
     request_timeout_seconds: 20
@@ -580,6 +619,7 @@ outputs:
 analysis:
   # 可覆盖自动发现的微软雅黑/Noto CJK 等字体；默认留空以保持跨平台。
   wordcloud_font_path: ""
+  history_directory: "data/history"
   trend_window_days:
     - 7
     - 30

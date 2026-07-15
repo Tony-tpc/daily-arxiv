@@ -73,6 +73,51 @@ class OpenAlexSearchAdapterTests(unittest.TestCase):
         self.assertEqual(normalized[0]["source_name"], "OpenAlex")
         self.assertEqual(normalized[0]["schema_version"], "1.0")
 
+    def test_fetch_range_uses_date_filters_and_cursor_pagination(self):
+        cursors = []
+
+        def handler(request):
+            cursors.append(request.url.params["cursor"])
+            self.assertIn("from_publication_date:2025-07-01", request.url.params["filter"])
+            self.assertIn("to_publication_date:2025-07-31", request.url.params["filter"])
+            page = len(cursors)
+            return httpx.Response(200, json={
+                "results": [{
+                    "id": f"https://openalex.org/W{page}",
+                    "display_name": f"Energy agent control {page}",
+                    "publication_date": f"2025-07-0{page}",
+                    "cited_by_count": 1,
+                    "primary_topic": {"display_name": "Energy systems"},
+                    "topics": [{"display_name": "Electric power system"}],
+                    "concepts": [{"display_name": "Electric power system"}],
+                    "authorships": [],
+                    "ids": {},
+                }],
+                "meta": {"next_cursor": "next" if page == 1 else None},
+            })
+
+        config = {
+            "sources": {
+                "openalex": {"api_key": "test-key"},
+                "openalex_search": {
+                    "topic_query": "energy agent",
+                    "per_page": 100,
+                    "backfill_concept_id": "C89227174",
+                },
+            },
+        }
+        adapter = OpenAlexSearchAdapter(config)
+        adapter.client.close()
+        adapter.client = httpx.Client(transport=httpx.MockTransport(handler))
+
+        records = adapter.fetch_range("2025-07-01", "2025-07-31")
+        adapter.client.close()
+
+        self.assertEqual(cursors, ["*", "next"])
+        self.assertEqual([record["published"] for record in records], [
+            "2025-07-01", "2025-07-02"
+        ])
+
 
 if __name__ == "__main__":
     unittest.main()

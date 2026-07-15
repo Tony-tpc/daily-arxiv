@@ -34,6 +34,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         self.per_page = int(self._source_config.get("per_page", 25))
         self.select_fields = [
             "id", "doi", "title", "display_name", "publication_year",
+            "publication_date",
             "cited_by_count", "primary_topic", "topics", "concepts",
             "authorships", "referenced_works_count", "ids", "updated_date",
         ]
@@ -85,6 +86,64 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         self.save_raw_snapshot(all_results)
         self.logger.info(self.fetcher_text(f"\u2705 OpenAlex 搜索完成: {len(all_results)} 篇论文", f"\u2705 OpenAlex search complete: {len(all_results)} papers"))
         return all_results
+
+    def fetch_range(
+        self,
+        date_from: str,
+        date_to: str,
+        *,
+        max_results: int | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch one publication-date partition using cursor pagination.
+
+        Unlike ``fetch``, this method never writes the live paper snapshot. It
+        is intended for the resumable historical corpus builder.
+        """
+        limit = max(1, int(
+            max_results
+            or self._source_config.get("backfill_max_results_per_month", 500)
+        ))
+        query = str(self._source_config.get("topic_query") or "").strip()
+        filters = [
+            f"from_publication_date:{date_from}",
+            f"to_publication_date:{date_to}",
+        ]
+        concept_id = str(
+            self._source_config.get("backfill_concept_id", "C89227174") or ""
+        ).strip()
+        if concept_id:
+            filters.append(f"concepts.id:{concept_id}")
+        params = {
+            "search": query,
+            "sort": str(self._source_config.get("sort", "publication_date:asc")),
+            "per_page": str(min(100, max(1, self.per_page))),
+            "select": ",".join(self.select_fields),
+            "filter": ",".join(filters),
+            "cursor": "*",
+        }
+        headers = {"api-key": self.api_key} if self.api_key else {}
+        results: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+        while params.get("cursor") and len(results) < limit:
+            response = self.client.get(
+                f"{self.base_url}/works", params=params, headers=headers
+            )
+            response.raise_for_status()
+            payload = response.json()
+            for work in payload.get("results", []):
+                record = self._work_to_record(work)
+                key = str(record.get("openalex_id") or record.get("id") or "")
+                if not key or key in seen or self._is_survey(record) or self._is_off_topic(record):
+                    continue
+                seen.add(key)
+                results.append(record)
+                if len(results) >= limit:
+                    break
+            next_cursor = str(payload.get("meta", {}).get("next_cursor") or "")
+            if not next_cursor or next_cursor == params.get("cursor"):
+                break
+            params["cursor"] = next_cursor
+        return results
 
     def _fetch_by_concepts(self, max_results: int) -> List[Dict[str, Any]]:
         from datetime import timedelta
@@ -238,7 +297,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
             "abstract": "",
             "categories": [t for t in topics[:3]],
             "primary_category": topics[0] if topics else "",
-            "published": work.get("publication_year", ""),
+            "published": work.get("publication_date") or work.get("publication_year", ""),
             "updated": work.get("updated_date", ""),
             "pdf_url": entry_url.replace("/abs/", "/pdf/") if entry_url else doi_url,
             "entry_url": entry_url or doi_url or work.get("id", ""),

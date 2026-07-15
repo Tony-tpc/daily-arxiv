@@ -47,6 +47,7 @@ logs/*.jsonl
 data/state/*.json
 data/documents/
 data/raw/
+data/history/
 data/reports/
 data/markdown/
 data/obsidian/
