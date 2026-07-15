@@ -620,6 +620,10 @@ analysis:
   # 可覆盖自动发现的微软雅黑/Noto CJK 等字体；默认留空以保持跨平台。
   wordcloud_font_path: ""
   history_directory: "data/history"
+  narrative:
+    min_chars: 4000
+    max_chars: 6000
+    max_paper_evidence: 36
   forecast:
     history_months: 24
     min_quant_months: 12

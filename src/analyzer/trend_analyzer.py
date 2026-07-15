@@ -28,6 +28,7 @@ from sklearn.decomposition import LatentDirichletAllocation
 import nltk
 from nltk.corpus import stopwords
 
+from src.analyzer.narrative_analyzer import NarrativeAnalyzer, legacy_llm_analysis
 from src.utils import save_json, get_date_string, get_language, pick_text
 
 
@@ -77,6 +78,8 @@ class TrendAnalyzer:
         cross_source_analysis: Dict[str, Any] | None = None,
         research_profile_analysis: Dict[str, Any] | None = None,
         trend_forecast: Dict[str, Any] | None = None,
+        narrative_documents: List[Dict[str, Any]] | None = None,
+        narrative_as_of: str | date | None = None,
     ) -> Dict[str, Any]:
         """执行完整的趋势分析
         
@@ -95,7 +98,7 @@ class TrendAnalyzer:
         self.logger.info(self.text(f"分析文档数量: {len(papers)}", f"Number of documents analyzed: {len(papers)}"))
         self.logger.info("=" * 60)
         
-        if not papers:
+        if not papers and not narrative_documents:
             self.logger.warning(self.text("没有当前文档，仍将分析历史趋势", "No current documents; analyzing history only"))
             return {
                 'schema_version': '2.0',
@@ -111,6 +114,7 @@ class TrendAnalyzer:
                 'cross_source_analysis': cross_source_analysis or {},
                 'research_profile_analysis': research_profile_analysis or {},
                 'trend_forecast': trend_forecast or {},
+                'narrative_analysis': {},
                 'generated_at': datetime.now().isoformat(),
             }
         
@@ -127,9 +131,13 @@ class TrendAnalyzer:
         self.logger.info(self.text("\n步骤 3: 统计分析...", "\nStep 3: Computing statistics..."))
         statistics = self._generate_statistics(papers, summaries)
         
-        # 4. 使用 LLM 生成深度分析 / Use LLM for in-depth analysis
-        self.logger.info(self.text("\n步骤 4: 生成深度分析报告...", "\nStep 4: Generating in-depth analysis..."))
-        llm_analysis = self._generate_llm_analysis(papers, summaries, keywords, topics)
+        # 4. 生成论文长篇分析，并通过旧字段继续服务既有消费者。
+        self.logger.info(self.text("\n步骤 4: 生成证据型论文长篇分析...", "\nStep 4: Generating the evidence-grounded paper narrative..."))
+        paper_narrative = NarrativeAnalyzer(self.config, self.llm_client).generate_paper(
+            narrative_documents or papers,
+            as_of=narrative_as_of,
+        )
+        llm_analysis = legacy_llm_analysis(paper_narrative)
         
         # 组合所有分析结果 / Combine all analysis outputs
         analysis_result = {
@@ -145,7 +153,8 @@ class TrendAnalyzer:
             'cross_source_analysis': cross_source_analysis or {},
             'research_profile_analysis': research_profile_analysis or {},
             'trend_forecast': trend_forecast or {},
-            'schema_version': '2.0',
+            'narrative_analysis': {'paper': paper_narrative},
+            'schema_version': '2.1',
             'generated_at': datetime.now().isoformat()
         }
         

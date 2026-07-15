@@ -73,6 +73,7 @@ def run(context: PipelineContext) -> PipelineContext:
             coverage=history_corpus.load_coverage(),
             as_of=date_to,
         )
+        narrative_documents = _documents_from_observations(forecast_observations)
         context.analysis_result = analyzer.analyze(
             input_records,
             summarized_records,
@@ -80,6 +81,8 @@ def run(context: PipelineContext) -> PipelineContext:
             cross_source_analysis=context.cross_source_result,
             research_profile_analysis=context.profile_result,
             trend_forecast=trend_forecast,
+            narrative_documents=narrative_documents,
+            narrative_as_of=date_to,
         )
         if context.analysis_result:
             analyzer.print_analysis_summary(context.analysis_result)
@@ -88,3 +91,28 @@ def run(context: PipelineContext) -> PipelineContext:
         context.logger.info(context.text("继续执行后续步骤...", "Continuing with following steps..."))
 
     return context
+
+
+def _documents_from_observations(observations):
+    """Return the richest unique documents from mixed history observation shapes."""
+    documents = {}
+    for observation in observations:
+        document = observation.get("document", observation) if isinstance(observation, dict) else {}
+        if not isinstance(document, dict):
+            continue
+        key = str(
+            document.get("id") or document.get("canonical_url") or document.get("url")
+            or document.get("entry_url") or document.get("title") or ""
+        ).strip().casefold()
+        if not key:
+            continue
+        existing = documents.get(key)
+        richness = len(" ".join(str(document.get(field) or "") for field in (
+            "title", "summary", "abstract", "raw_text"
+        )))
+        existing_richness = len(" ".join(str(existing.get(field) or "") for field in (
+            "title", "summary", "abstract", "raw_text"
+        ))) if existing else -1
+        if richness > existing_richness:
+            documents[key] = document
+    return list(documents.values())
