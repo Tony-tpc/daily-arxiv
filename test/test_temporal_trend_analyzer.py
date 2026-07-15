@@ -135,6 +135,34 @@ class TemporalTrendAnalyzerTests(unittest.TestCase):
         self.assertIn('源网荷储', result['trends'])
         self.assertNotIn('需要 LLM', ' '.join(result.values()))
 
+    def test_markdown_report_labels_mixed_sources_as_documents(self):
+        analyzer = TrendAnalyzer.__new__(TrendAnalyzer)
+        analyzer.language = 'zh'
+        analysis = {
+            'date': '2026-07-15',
+            'document_count': 4,
+            'paper_count': 1,
+            'generated_at': '2026-07-15T00:00:00',
+            'statistics': {
+                'total_papers': 4,
+                'total_authors': 3,
+                'total_categories': 2,
+                'category_distribution': {'能源系统': 4},
+            },
+            'keywords': [],
+            'llm_analysis': {},
+            'wordcloud_path': 'wordcloud.png',
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / 'report.md'
+            analyzer._generate_markdown_report(analysis, str(output_path))
+            report = output_path.read_text(encoding='utf-8')
+
+        self.assertIn('**分析文档数**: 4', report)
+        self.assertIn('**多源文档总数**: 4', report)
+        self.assertNotIn('总论文数', report)
+
     def test_mixed_source_documents_use_canonical_fields(self):
         self.analyzer.stop_words = set()
         self.analyzer.logger = Mock()

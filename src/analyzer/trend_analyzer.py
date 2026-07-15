@@ -821,45 +821,46 @@ class TrendAnalyzer:
         llm_analysis = analysis.get('llm_analysis', {})
         statistics = analysis.get('statistics', {})
         keywords = analysis.get('keywords', [])
+        document_count = analysis.get('document_count', analysis.get('paper_count', 0))
         
         if self.language == 'en':
             report = f"""# Research Trend Analysis Report
 
     **Date**: {analysis.get('date')}  
-    **Analyzed Papers**: {analysis.get('paper_count')}  
+    **Analyzed Documents**: {document_count}
     **Generated At**: {analysis.get('generated_at')}
 
     ---
 
     ## 📊 Statistical Overview
 
-    - **Total Papers**: {statistics.get('total_papers', 0)}
-    - **Total Authors**: {statistics.get('total_authors', 0)}
-    - **Total Categories**: {statistics.get('total_categories', 0)}
+    - **Total Documents**: {document_count}
+    - **Authors / Organizations**: {statistics.get('total_authors', 0)}
+    - **Research Categories**: {statistics.get('total_categories', 0)}
 
     ### Category Distribution
 
-    | Category | Paper Count |
-    |----------|-------------|
+    | Category | Document Count |
+    |----------|----------------|
     """
         else:
             report = f"""# 研究趋势分析报告
 
     **生成日期**: {analysis.get('date')}  
-    **分析论文数**: {analysis.get('paper_count')}  
+    **分析文档数**: {document_count}
     **生成时间**: {analysis.get('generated_at')}
 
     ---
 
     ## 📊 统计概览
 
-    - **总论文数**: {statistics.get('total_papers', 0)}
-    - **涉及作者数**: {statistics.get('total_authors', 0)}
+    - **多源文档总数**: {document_count}
+    - **涉及作者 / 机构数**: {statistics.get('total_authors', 0)}
     - **研究类别数**: {statistics.get('total_categories', 0)}
 
     ### 类别分布
 
-    | 类别 | 论文数 |
+    | 类别 | 文档数 |
     |------|--------|
     """
         
