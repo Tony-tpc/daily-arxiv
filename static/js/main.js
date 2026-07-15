@@ -563,10 +563,13 @@ function renderNarrativeCoverage(payload) {
     const sourceLabels = LANG === 'zh'
         ? {paper: '论文', policy: '中国政策', news: '国内新闻', industry_report: '行业报告'}
         : {paper: 'Papers', policy: 'China policies', news: 'China news', industry_report: 'Industry reports'};
-    const sourceCounts = coverage.selected_source_counts || coverage.source_counts || {};
-    const chips = Object.entries(sourceCounts).map(([source, count]) =>
-        `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[source] || source)}</strong>${Number(count || 0)} ${LANG === 'zh' ? '条证据' : 'items'}</span>`
-    ).join('');
+    const selectedCounts = coverage.selected_source_counts || {};
+    const corpusCounts = coverage.source_counts || {};
+    const chips = payload.view === 'paper'
+        ? `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels.paper)}</strong>${Number(coverage.selected_evidence_count || 0)} ${LANG === 'zh' ? '条引用证据' : 'cited items'} / ${Number(corpusCounts.paper || coverage.document_count || 0)} ${LANG === 'zh' ? '条语料' : 'corpus items'}</span>`
+        : Object.entries(selectedCounts).map(([source, count]) =>
+            `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[source] || source)}</strong>${Number(count || 0)} ${LANG === 'zh' ? '条引用证据' : 'cited items'}</span>`
+        ).join('');
     const partial = coverage.status === 'partial';
     const gaps = [...(coverage.gaps || []), ...(payload.limitations || []).filter(item => !(coverage.gaps || []).includes(item))];
     container.innerHTML = `<div class="narrative-coverage-summary">

@@ -1,0 +1,107 @@
+"""API and rendering tests for long-form narrative views."""
+
+from __future__ import annotations
+
+import unittest
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+from src.web import app as web_app
+
+
+class WebNarrativeTests(unittest.TestCase):
+    def setUp(self):
+        web_app.app.config.update(TESTING=True)
+        self.client = web_app.app.test_client()
+
+    def test_cached_narrative_is_safely_rendered_without_running_analyzer(self):
+        payload = _cached_payload()
+        with patch.object(
+            web_app, "load_json", return_value={"narrative_analysis": {"paper": payload}}
+        ), patch.object(web_app, "NarrativeAnalyzer") as analyzer:
+            response = self.client.get("/api/trends/narrative?view=paper")
+
+        self.assertEqual(response.status_code, 200)
+        analyzer.assert_not_called()
+        data = response.get_json()
+        rendered = data["sections"][0]["html"]
+        self.assertNotIn("<script", rendered)
+        self.assertNotIn('href="javascript:', rendered)
+        self.assertIn("&lt;script&gt;", rendered)
+        self.assertEqual(data["evidence_index"]["P01"]["url"], "")
+
+    def test_refresh_uses_deterministic_analyzer_without_llm(self):
+        corpus = Mock()
+        corpus.load_observations.return_value = []
+        analyzer = Mock()
+        analyzer.generate_paper.return_value = _cached_payload()
+        analyzer_class = Mock(return_value=analyzer)
+        with patch.object(web_app, "load_json", return_value={}), \
+             patch.object(web_app, "HistoricalCorpus", return_value=corpus), \
+             patch.object(web_app, "_load_intelligence_documents", return_value=[]), \
+             patch.object(web_app, "NarrativeAnalyzer", analyzer_class):
+            response = self.client.get("/api/trends/narrative?view=paper&refresh=1")
+
+        self.assertEqual(response.status_code, 200)
+        analyzer_class.assert_called_once_with(web_app.config)
+        analyzer.generate_paper.assert_called_once()
+        self.assertNotIn("llm", analyzer_class.call_args.kwargs)
+
+    def test_narrative_api_rejects_invalid_view_and_date(self):
+        self.assertEqual(
+            self.client.get("/api/trends/narrative?view=forecast").status_code,
+            400,
+        )
+        self.assertEqual(
+            self.client.get("/api/trends/narrative?view=paper&as_of=2026-02-31").status_code,
+            400,
+        )
+
+    def test_page_uses_portable_chinese_web_font_stack(self):
+        css = (
+            Path(__file__).resolve().parents[1] / "static" / "css" / "style.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("'PingFang SC'", css)
+        self.assertIn("'Microsoft YaHei'", css)
+        self.assertIn("'Noto Sans CJK SC'", css)
+        self.assertNotIn("font-family: SimSun", css)
+
+    def test_coverage_ui_distinguishes_cited_evidence_from_corpus(self):
+        javascript = (
+            Path(__file__).resolve().parents[1] / "static" / "js" / "main.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("coverage.selected_evidence_count", javascript)
+        self.assertIn("条引用证据", javascript)
+        self.assertIn("条语料", javascript)
+
+
+def _cached_payload():
+    return {
+        "schema_version": "1.0",
+        "view": "paper",
+        "as_of": "2026-07-15",
+        "generated_at": "2026-07-15T09:00:00+00:00",
+        "generation_status": "generated",
+        "char_count": 4000,
+        "coverage": {"source_counts": {"paper": 12}},
+        "limitations": [],
+        "sections": [{
+            "id": "hotspots",
+            "title": "当前研究热点",
+            "markdown": "<script>alert(1)</script> [危险链接](javascript:alert(1)) 正文[P01]",
+            "claims": [{"evidence_ids": ["P01"]}],
+        }],
+        "opportunities": [],
+        "evidence_chains": [],
+        "evidence_index": {
+            "P01": {
+                "title": "能源系统论文",
+                "url": "javascript:alert(1)",
+                "source_type": "paper",
+            }
+        },
+    }
+
+
+if __name__ == "__main__":
+    unittest.main()

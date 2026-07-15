@@ -1,14 +1,17 @@
 {
   "include": [
     "src/analyzer/forecast_analyzer.py",
+    "src/analyzer/narrative_analyzer.py",
     "src/history",
     "src/backfill.py",
     "src/reporting/research_report_generator.py",
     "src/web/app.py",
     "test/test_backfill.py",
     "test/test_forecast_analyzer.py",
+    "test/test_narrative_analyzer.py",
     "test/test_research_report_generator.py",
     "test/test_web_forecast.py",
+    "test/test_web_narrative.py",
     "test/test_web_reports.py"
   ],
   "extraPaths": [

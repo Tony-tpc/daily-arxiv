@@ -941,7 +941,7 @@ def _build_evidence_index(
             "evidence_id": code,
             "document_id": str(document.get("id") or key),
             "source_type": _source_type(document),
-            "source_name": str(document.get("source_name") or ""),
+            "source_name": _clean_text(document.get("source_name") or ""),
             "title": _clean_text(document.get("title") or "未命名材料"),
             "event_date": str(document.get("published_at") or document.get("published") or "")[:10],
             "url": str(document.get("url") or document.get("entry_url") or document.get("pdf_url") or ""),
@@ -1273,11 +1273,20 @@ def _validate_sections(
     citations = re.findall(r"\[([A-Z]+\d+)\]", "\n".join(str(item.get("markdown") or "") for item in sections))
     if not citations:
         return False, "没有证据引用"
+    uncited = [
+        str(item.get("title") or "") for item in sections
+        if not re.search(r"\[[A-Z]+\d+\]", str(item.get("markdown") or ""))
+    ]
+    if uncited:
+        return False, f"章节缺少证据引用：{'、'.join(uncited)}"
     unknown = sorted(set(citations) - set(evidence_index))
     if unknown:
         return False, f"存在未知证据ID：{', '.join(unknown)}"
     text = " ".join(str(item.get("markdown") or "") for item in sections).casefold()
-    excluded = ["机械臂", "人形机器人", "robot arm", "humanoid robot"]
+    excluded = [
+        "机器人", "机械臂", "人形机器人", "robot arm", "humanoid robot",
+        "robotics", "robot manipulation",
+    ]
     if any(term in text for term in excluded):
         return False, "内容超出能源具身智能范围"
     return True, ""
@@ -1408,7 +1417,14 @@ def _join_cn(values: Sequence[Any]) -> str:
 
 def _clean_text(value: Any) -> str:
     text = re.sub(r"<[^>]+>", " ", str(value or ""))
-    text = re.sub(r"(?:ignore|disregard)\s+(?:all\s+)?(?:previous|above)\s+instructions?", "[已移除指令性文本]", text, flags=re.IGNORECASE)
+    injection_patterns = [
+        r"(?:ignore|disregard|override|bypass)\s+(?:all\s+)?(?:previous|above|system|developer)?\s*(?:instructions?|prompts?|rules?)",
+        r"(?:system|developer)\s+prompt",
+        r"(?:忽略|无视|覆盖|绕过|取代).{0,16}(?:指令|提示词|规则|系统消息)",
+        r"(?:系统|开发者)提示词",
+    ]
+    for pattern in injection_patterns:
+        text = re.sub(pattern, "[已移除指令性文本]", text, flags=re.IGNORECASE)
     return " ".join(text.split())
 
 
