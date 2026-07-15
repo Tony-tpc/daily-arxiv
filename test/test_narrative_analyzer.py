@@ -35,7 +35,9 @@ class NarrativeAnalyzerTests(unittest.TestCase):
         self.assertLessEqual(payload["char_count"], 6000)
         self.assertEqual(payload["coverage"]["source_counts"], {"paper": 15})
         self.assertNotIn("policy-1", str(payload))
-        self.assertNotIn("机械臂", "".join(section["markdown"] for section in payload["sections"]))
+        narrative = "".join(section["markdown"] for section in payload["sections"])
+        self.assertNotIn("机械臂", narrative)
+        self.assertNotIn("机器人", narrative)
         self.assertGreaterEqual(len(payload["opportunities"]), 5)
         allowed = set(payload["evidence_index"])
         for section in payload["sections"]:
@@ -55,6 +57,39 @@ class NarrativeAnalyzerTests(unittest.TestCase):
         self.assertEqual(payload["generation_status"], "deterministic_digest")
         self.assertGreaterEqual(payload["char_count"], 4000)
         self.assertNotIn("BAD01", str(payload))
+
+    def test_multi_source_narrative_balances_sources_and_builds_evidence_chains(self):
+        payload = NarrativeAnalyzer(self.config).generate_multi_source(_multi_source_documents())
+
+        self.assertEqual(payload["view"], "multi_source")
+        self.assertEqual(payload["coverage"]["status"], "complete")
+        self.assertEqual(
+            payload["coverage"]["selected_source_counts"],
+            {"paper": 15, "policy": 12, "news": 12, "industry_report": 12},
+        )
+        self.assertGreaterEqual(payload["char_count"], 4000)
+        self.assertLessEqual(payload["char_count"], 6000)
+        self.assertEqual(len(payload["evidence_chains"]), 5)
+        self.assertTrue(all(len(chain["nodes"]) == 4 for chain in payload["evidence_chains"]))
+        self.assertTrue(all(chain["causality_note"] for chain in payload["evidence_chains"]))
+        prefixes = {key.rstrip("0123456789") for key in payload["evidence_index"]}
+        self.assertEqual(prefixes, {"P", "POL", "N", "R"})
+
+    def test_multi_source_narrative_discloses_domestic_source_gaps(self):
+        documents = _multi_source_documents()
+        documents = [
+            item for item in documents
+            if item["source_type"] not in {"news", "industry_report"}
+        ] + [
+            item for item in documents if item["source_type"] == "news"
+        ][:1]
+        payload = NarrativeAnalyzer(self.config).generate_multi_source(documents)
+
+        self.assertEqual(payload["coverage"]["status"], "partial")
+        self.assertTrue(any("国内新闻仅1条" in gap for gap in payload["coverage"]["gaps"]))
+        self.assertTrue(any("行业报告仅0条" in gap for gap in payload["coverage"]["gaps"]))
+        self.assertIn("证据缺口", str(payload["evidence_chains"]))
+        self.assertGreaterEqual(payload["char_count"], 4000)
 
 
 def _paper_documents():
@@ -111,6 +146,32 @@ def _paper_documents():
             "abstract": "A robot arm manipulation study.", "published_at": "2025-04-01",
         },
     ])
+    return documents
+
+
+def _multi_source_documents():
+    documents = _paper_documents()[:-2]
+    source_specs = {
+        "policy": ("国家能源局", "虚拟电厂与电力市场运行规则通知"),
+        "news": ("人民网能源频道", "多地推进虚拟电厂参与需求响应"),
+        "industry_report": ("国家能源局电力可靠性管理中心", "中国电力市场与供电可靠性报告"),
+    }
+    for source_type, (source_name, title) in source_specs.items():
+        for index in range(12):
+            month = index % 6 + 1
+            documents.append({
+                "id": f"{source_type}-{index + 1}",
+                "source_type": source_type,
+                "source_name": source_name,
+                "title": f"{title} {index + 1}",
+                "summary": (
+                    "材料涉及微电网、源网荷储协同、低碳调度、电力市场、需求响应、"
+                    "能源安全和数字孪生验证。"
+                ),
+                "published_at": f"2025-{month:02d}-{index % 27 + 1:02d}",
+                "url": f"https://example.gov.cn/{source_type}-{index + 1}",
+                "region": "CN",
+            })
     return documents
 
 

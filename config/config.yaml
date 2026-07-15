@@ -285,6 +285,13 @@ sources:
         source_category: "policy_news"
         region: "CN"
     backfill_feeds:
+      - name: "国家能源局市场监管动态"
+        url: "https://www.nea.gov.cn/sjzz/jgs/"
+        item_selector: "li.clearfix"
+        link_selector: "h3 a[href]"
+        date_selector: "span.time"
+        source_category: "official_energy_news"
+        region: "CN"
       - name: "人民网能源频道"
         url: "https://energy.people.com.cn/"
         page_url_template: "https://energy.people.com.cn/GB/71890/index{page}.html"
@@ -407,6 +414,29 @@ sources:
   industry_report:
     enabled: true
     feeds:
+      - name: "国家能源局市场监管司"
+        url: "https://www.nea.gov.cn/sjzz/jgs/"
+        format: "html"
+        item_selector: "li.clearfix"
+        link_selector: "h3 a[href]"
+        date_selector: "span.time"
+        detail_content_selector: ".article-content"
+        fetch_detail: true
+        institution: "国家能源局市场监管司"
+        report_type: "official_report"
+        region: "CN"
+        title_keywords_any:
+          - "报告"
+          - "蓝皮书"
+          - "白皮书"
+        title_keywords_exclude:
+          - "预算"
+          - "决算"
+          - "网站工作年度报表"
+        topic_directions:
+          - "中国电力市场"
+          - "供电可靠性"
+        max_entries: 100
       - name: "国家能源局可靠性和质监中心"
         url: "https://prpq.nea.gov.cn/ndbg"
         format: "html"
@@ -624,6 +654,9 @@ analysis:
     min_chars: 4000
     max_chars: 6000
     max_paper_evidence: 36
+    max_source_evidence: 24
+    min_source_documents: 12
+    min_source_months: 6
   forecast:
     history_months: 24
     min_quant_months: 12

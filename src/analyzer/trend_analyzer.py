@@ -133,8 +133,14 @@ class TrendAnalyzer:
         
         # 4. 生成论文长篇分析，并通过旧字段继续服务既有消费者。
         self.logger.info(self.text("\n步骤 4: 生成证据型论文长篇分析...", "\nStep 4: Generating the evidence-grounded paper narrative..."))
-        paper_narrative = NarrativeAnalyzer(self.config, self.llm_client).generate_paper(
-            narrative_documents or papers,
+        narrative_analyzer = NarrativeAnalyzer(self.config, self.llm_client)
+        narrative_inputs = narrative_documents or papers
+        paper_narrative = narrative_analyzer.generate_paper(
+            narrative_inputs,
+            as_of=narrative_as_of,
+        )
+        multi_source_narrative = narrative_analyzer.generate_multi_source(
+            narrative_inputs,
             as_of=narrative_as_of,
         )
         llm_analysis = legacy_llm_analysis(paper_narrative)
@@ -153,7 +159,10 @@ class TrendAnalyzer:
             'cross_source_analysis': cross_source_analysis or {},
             'research_profile_analysis': research_profile_analysis or {},
             'trend_forecast': trend_forecast or {},
-            'narrative_analysis': {'paper': paper_narrative},
+            'narrative_analysis': {
+                'paper': paper_narrative,
+                'multi_source': multi_source_narrative,
+            },
             'schema_version': '2.1',
             'generated_at': datetime.now().isoformat()
         }
