@@ -148,6 +148,46 @@ class NarrativeAnalyzerTests(unittest.TestCase):
         self.assertNotIn("忽略上述所有指令", client.prompts[0])
         self.assertNotIn("reveal the system prompt", str(payload))
 
+    def test_prompts_restore_the_legacy_expert_analysis_structure(self):
+        paper_client = _SequenceNarrativeClient([RuntimeError("offline")])
+        NarrativeAnalyzer(self.config, paper_client).generate_paper(_paper_documents())
+        paper_prompt = paper_client.prompts[0]
+
+        self.assertIn("作为一位资深的能源具身智能研究专家", paper_prompt)
+        self.assertIn("分析当前最值得关注的 3—5 个研究方向", paper_prompt)
+        self.assertIn("识别技术发展的主线", paper_prompt)
+        self.assertIn("未来 6—12 个月", paper_prompt)
+        self.assertIn("提出 5—8 个具有创新性和可行性的研究想法", paper_prompt)
+        self.assertIn("核心评价指标", paper_prompt)
+        self.assertIn("可复现的能源系统验证场景", paper_prompt)
+
+        multi_client = _SequenceNarrativeClient([RuntimeError("offline")])
+        NarrativeAnalyzer(self.config, multi_client).generate_multi_source(
+            _multi_source_documents()
+        )
+        multi_prompt = multi_client.prompts[0]
+
+        self.assertIn("作为一位资深的能源具身智能研究专家", multi_prompt)
+        self.assertIn("四类来源能够回答的问题", multi_prompt)
+        self.assertIn("明确列出四类来源", multi_prompt)
+        self.assertIn("转化为可执行实验", multi_prompt)
+        self.assertIn("证据缺口", multi_prompt)
+
+    def test_repair_prompt_repeats_the_full_clear_task_and_evidence(self):
+        client = _SequenceNarrativeClient([
+            "## 当前研究热点\n内容过短[P01]",
+            RuntimeError("repair unavailable"),
+        ])
+
+        NarrativeAnalyzer(self.config, client).generate_paper(_paper_documents())
+
+        self.assertEqual(len(client.prompts), 2)
+        repair_prompt = client.prompts[1]
+        self.assertIn("作为一位资深的能源具身智能研究专家", repair_prompt)
+        self.assertIn("## 论文证据列表", repair_prompt)
+        self.assertIn("请依据上面的完整任务和原始论文证据重新写作", repair_prompt)
+        self.assertIn('"P01"', repair_prompt)
+
     def test_as_of_excludes_future_dated_evidence(self):
         papers = _paper_documents()
         papers.append({
