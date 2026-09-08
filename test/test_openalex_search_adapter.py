@@ -126,6 +126,67 @@ class OpenAlexSearchAdapterTests(unittest.TestCase):
             "2025-07-01", "2025-07-02"
         ])
 
+    def test_rate_limit_uses_crossref_metadata_then_whitelist(self):
+        def handler(request):
+            if request.url.host == "api.openalex.org":
+                return httpx.Response(429, json={"error": "rate limited"})
+            self.assertEqual(request.url.host, "api.crossref.org")
+            return httpx.Response(200, json={"message": {"items": [
+                {
+                    "DOI": "10.1109/tsg.2026.1",
+                    "title": ["Safe energy control for virtual power plants"],
+                    "container-title": ["IEEE Transactions on Smart Grid"],
+                    "ISSN": ["1949-3053", "1949-3061"],
+                    "type": "journal-article",
+                    "published": {"date-parts": [[2026, 7, 1]]},
+                    "author": [{"given": "Wei", "family": "Zhang"}],
+                    "publisher": "IEEE",
+                    "URL": "https://doi.org/10.1109/tsg.2026.1",
+                },
+                {
+                    "DOI": "10.1000/unknown",
+                    "title": ["Unknown energy journal control"],
+                    "container-title": ["Unknown Energy Journal"],
+                    "ISSN": ["0000-0000"],
+                    "type": "journal-article",
+                    "published": {"date-parts": [[2026, 7]]},
+                },
+            ]}})
+
+        config = {
+            "sources": {
+                "openalex_search": {
+                    "search_terms": ["virtual power plant reinforcement learning"],
+                    "max_results": 10,
+                    "crossref_fallback": {"enabled": True, "rows_per_query": 10},
+                },
+            },
+            "paper_quality": {
+                "enabled": True,
+                "approved_venues": [{
+                    "id": "ieee_tsg",
+                    "name": "IEEE Transactions on Smart Grid",
+                    "issn_l": "1949-3053",
+                    "quartile": "Q1",
+                }],
+            },
+        }
+        adapter = OpenAlexSearchAdapter(config)
+        adapter.client.close()
+        adapter.client = httpx.Client(transport=httpx.MockTransport(handler))
+
+        with patch.object(adapter, "save_raw_snapshot"):
+            records = adapter.fetch()
+        adapter.client.close()
+        papers = adapter.normalize(records)
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["source_name"], "Crossref")
+        self.assertEqual(records[0]["published"], "2026-07-01")
+        self.assertEqual(records[0]["journal_issn_l"], "1949-3053")
+        self.assertEqual([paper["doi"] for paper in papers], ["10.1109/tsg.2026.1"])
+        self.assertEqual(papers[0]["quality_gate"]["quartile"], "Q1")
+
 
 if __name__ == "__main__":
     unittest.main()

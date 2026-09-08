@@ -39,6 +39,10 @@ OpenAlex 的 ISSN；当来源没有 ISSN 时才回退到规范化后的精确期
 不提供可授权复用的 JCR 影响因子或分区，`quartile` 必须由本单位依据当前 JCR 或
 中科院分区手工复核并至少每年更新；未登记、分区缺失、Q3/Q4 期刊均不会被放行。
 
+若 OpenAlex 暂时返回 429 限流，`openalex_search.crossref_fallback` 可从 Crossref
+补充 DOI、期刊名、ISSN 与发表日期；它不改变研究关键词或白名单规则。建议填写
+可公开的联系邮箱到 `mailto` 以便礼貌访问；不填写也不会发送任何本地凭据。
+
 HTML 列表来源的最小定义如下：
 
 ```yaml

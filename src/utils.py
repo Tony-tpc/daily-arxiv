@@ -196,6 +196,13 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         openalex_search_config.setdefault('per_page', 25)
         openalex_search_config.setdefault('max_results', 20)
         openalex_search_config.setdefault('recent_days', 180)
+        openalex_search_config.setdefault('search_terms', [])
+        crossref_fallback = openalex_search_config.setdefault('crossref_fallback', {})
+        if isinstance(crossref_fallback, dict):
+            crossref_fallback.setdefault('enabled', False)
+            crossref_fallback.setdefault('rows_per_query', 50)
+            crossref_fallback.setdefault('from_publication_date', '')
+            crossref_fallback.setdefault('mailto', '')
 
     rss_config = sources.setdefault('rss', {})
     if isinstance(rss_config, dict):

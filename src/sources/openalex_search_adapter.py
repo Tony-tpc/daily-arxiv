@@ -60,9 +60,14 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         search_terms = self._build_search_terms()
 
         if search_terms == ["__concept_filter__"]:
-            all_results = self._fetch_by_concepts(max_results)
+            try:
+                all_results = self._fetch_by_concepts(max_results)
+            except httpx.HTTPStatusError as exc:
+                if not _is_rate_limited(exc):
+                    raise
+                all_results = self._fetch_crossref_fallback(max_results, [])
         else:
-            for term in search_terms:
+            for index, term in enumerate(search_terms):
                 if not term:
                     continue
                 params = {
@@ -72,7 +77,19 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
                     "select": ",".join(self.select_fields),
                 }
                 self.logger.info(self.fetcher_text(f"OpenAlex 搜索: {term[:60]}...", f"OpenAlex search: {term[:60]}..."))
-                works = self._search_works(params)
+                try:
+                    works = self._search_works(params)
+                except httpx.HTTPStatusError as exc:
+                    if not _is_rate_limited(exc):
+                        raise
+                    self.logger.warning(self.fetcher_text(
+                        "OpenAlex 触发限流，改用 Crossref 期刊元数据兜底。",
+                        "OpenAlex rate-limited; using the Crossref journal-metadata fallback.",
+                    ))
+                    all_results.extend(self._fetch_crossref_fallback(
+                        max_results - len(all_results), search_terms[index:]
+                    ))
+                    break
                 for work in works:
                     record = self._work_to_record(work)
                     if self._is_survey(record):
@@ -84,10 +101,123 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
                 if len(all_results) >= max_results:
                     break
 
-        all_results = all_results[:max_results]
+        all_results = _unique_records(all_results)[:max_results]
         self.save_raw_snapshot(all_results)
         self.logger.info(self.fetcher_text(f"\u2705 OpenAlex 搜索完成: {len(all_results)} 篇论文", f"\u2705 OpenAlex search complete: {len(all_results)} papers"))
         return all_results
+
+    def _fetch_crossref_fallback(
+        self,
+        max_results: int,
+        search_terms: List[str],
+    ) -> List[Dict[str, Any]]:
+        """Fetch formal journal metadata when OpenAlex is temporarily rate-limited.
+
+        Crossref is only a metadata fallback: records still pass through the
+        same scope and Q1/Q2 whitelist gate during normalization.
+        """
+        settings = self._source_config.get("crossref_fallback", {})
+        if not isinstance(settings, dict) or not settings.get("enabled", False):
+            return []
+        terms = search_terms or self._crossref_default_terms()
+        if not terms or max_results <= 0:
+            return []
+
+        rows = min(100, max(1, int(settings.get("rows_per_query", 50))))
+        date_from = str(settings.get("from_publication_date") or "").strip()
+        mailto = str(settings.get("mailto") or "").strip()
+        user_agent = "daily-arxiv/1.0"
+        if mailto:
+            user_agent += f" (mailto:{mailto})"
+
+        records: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+        for term in terms:
+            params = {
+                "query.title": term,
+                "filter": ",".join(
+                    value for value in [
+                        "type:journal-article",
+                        f"from-pub-date:{date_from}" if date_from else "",
+                    ] if value
+                ),
+                "rows": str(rows),
+                "select": (
+                    "DOI,title,container-title,ISSN,type,published,"
+                    "published-print,published-online,author,publisher,"
+                    "is-referenced-by-count,URL"
+                ),
+            }
+            try:
+                response = self.client.get(
+                    "https://api.crossref.org/works",
+                    params=params,
+                    headers={"User-Agent": user_agent},
+                )
+                response.raise_for_status()
+            except httpx.HTTPError as exc:
+                self.logger.warning(self.fetcher_text(
+                    f"Crossref 兜底检索失败: {exc}",
+                    f"Crossref fallback search failed: {exc}",
+                ))
+                continue
+
+            payload = response.json()
+            items = payload.get("message", {}).get("items", []) if isinstance(payload, dict) else []
+            for work in items:
+                if not isinstance(work, dict):
+                    continue
+                record = self._crossref_work_to_record(work)
+                key = str(record.get("doi") or record.get("id") or "").casefold()
+                if not key or key in seen or self._is_survey(record) or self._is_off_topic(record):
+                    continue
+                seen.add(key)
+                records.append(record)
+                if len(records) >= max_results:
+                    return records
+        return records
+
+    def _crossref_default_terms(self) -> List[str]:
+        configured = self._source_config.get("search_terms", [])
+        if isinstance(configured, list):
+            return [str(item).strip() for item in configured if str(item).strip()]
+        return []
+
+    @staticmethod
+    def _crossref_work_to_record(work: Dict[str, Any]) -> Dict[str, Any]:
+        doi = str(work.get("DOI") or "").strip()
+        title = _first_text(work.get("title"))
+        journal_name = _first_text(work.get("container-title"))
+        issns = _string_values(work.get("ISSN"))
+        authors = [
+            " ".join(filter(None, [
+                str(item.get("given") or "").strip(),
+                str(item.get("family") or "").strip(),
+            ])).strip()
+            for item in work.get("author", []) if isinstance(item, dict)
+        ]
+        entry_url = str(work.get("URL") or (f"https://doi.org/{doi}" if doi else "")).strip()
+        return {
+            "id": doi or entry_url,
+            "title": title,
+            "authors": [author for author in authors if author],
+            "abstract": "",
+            "categories": [],
+            "published": _crossref_date(work),
+            "entry_url": entry_url,
+            "pdf_url": entry_url,
+            "doi": doi,
+            "source_name": "Crossref",
+            "source_record_provider": "crossref_fallback",
+            "fetched_at": datetime.now().isoformat(),
+            "citation_count": int(work.get("is-referenced-by-count") or 0),
+            "publication_type": str(work.get("type") or ""),
+            "journal_name": journal_name,
+            "venue": journal_name,
+            "journal_issn_l": issns[0] if issns else "",
+            "journal_issn": issns,
+            "journal_publisher": str(work.get("publisher") or ""),
+        }
 
     def fetch_range(
         self,
@@ -371,3 +501,58 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         key = re.sub(r"[^a-z0-9 ]", "", key)
         key = re.sub(r"\s+", " ", key)
         return key
+
+
+def _is_rate_limited(error: httpx.HTTPStatusError) -> bool:
+    """Return whether an HTTP error represents a retry-later source limit."""
+    return error.response.status_code == 429
+
+
+def _first_text(value: Any) -> str:
+    values = _string_values(value)
+    return values[0] if values else ""
+
+
+def _string_values(value: Any) -> List[str]:
+    if isinstance(value, (list, tuple, set)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value or "").strip()
+    return [text] if text else []
+
+
+def _crossref_date(work: Dict[str, Any]) -> str:
+    """Extract a stable ISO-like publication date from a Crossref record."""
+    for field in ("published", "published-print", "published-online"):
+        payload = work.get(field)
+        if not isinstance(payload, dict):
+            continue
+        parts = payload.get("date-parts")
+        if not isinstance(parts, list) or not parts or not isinstance(parts[0], list):
+            continue
+        values = parts[0]
+        if not values:
+            continue
+        try:
+            year = int(values[0])
+            if len(values) == 1:
+                return f"{year:04d}"
+            month = int(values[1])
+            if len(values) == 2:
+                return f"{year:04d}-{month:02d}"
+            return f"{year:04d}-{month:02d}-{int(values[2]):02d}"
+        except (TypeError, ValueError):
+            continue
+    return ""
+
+
+def _unique_records(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Keep the first record for each DOI or provider identifier."""
+    unique: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for record in records:
+        key = str(record.get("doi") or record.get("id") or "").casefold()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        unique.append(record)
+    return unique
