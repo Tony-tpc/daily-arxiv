@@ -61,13 +61,14 @@ class PipelineTests(unittest.TestCase):
                 Mock(run=lambda ctx: _record(calls, 'cross_source', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'profile', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'analyze', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'link_audit', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'report', ctx)),
             ]
             run_pipeline(context)
 
         self.assertEqual(calls, [
             'fetch', 'normalize', 'ranking', 'linking', 'summarize', 'export',
-            'extract', 'cross_source', 'profile', 'analyze', 'report',
+            'extract', 'cross_source', 'profile', 'analyze', 'link_audit', 'report',
         ])
 
     def test_fetch_stage_retries_with_fallback_window(self):

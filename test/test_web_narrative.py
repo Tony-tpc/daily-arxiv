@@ -39,14 +39,29 @@ class WebNarrativeTests(unittest.TestCase):
             "event_date": "2026-07-10",
             "excerpt": "目录项基本信息 制发日期: 2026-06-05 正文",
         }
-        with patch.object(
-            web_app, "load_json", return_value={"narrative_analysis": {"paper": payload}}
-        ):
+        analysis = {"narrative_analysis": {"paper": payload}}
+        audit = {"views": {"paper": {"evidence": {"POL01": {
+            "document_id": "", "status": "verified",
+            "final_url": "https://www.nea.gov.cn/notice",
+        }}}}}
+        with patch.object(web_app, "load_json", side_effect=[analysis, audit]):
             response = self.client.get("/api/trends/narrative?view=paper")
 
         evidence = response.get_json()["evidence_index"]["POL01"]
         self.assertEqual(evidence["url"], "https://www.nea.gov.cn/notice")
         self.assertEqual(evidence["event_date"], "2026-06-05")
+
+    def test_evidence_without_a_matching_audit_is_not_clickable(self):
+        payload = _cached_payload()
+        payload["evidence_index"]["P01"]["url"] = "https://publisher.example/paper"
+        analysis = {"narrative_analysis": {"paper": payload}}
+        audit = {"views": {"paper": {"evidence": {}}}}
+        with patch.object(web_app, "load_json", side_effect=[analysis, audit]):
+            response = self.client.get("/api/trends/narrative?view=paper")
+
+        evidence = response.get_json()["evidence_index"]["P01"]
+        self.assertEqual(evidence["url"], "")
+        self.assertEqual(evidence["link_status"], "not_audited")
 
     def test_cached_audit_disables_an_unverified_evidence_link(self):
         payload = _cached_payload()
@@ -64,7 +79,7 @@ class WebNarrativeTests(unittest.TestCase):
         self.assertEqual(evidence["url"], "")
         self.assertEqual(evidence["link_status"], "http_404")
 
-    def test_cached_audit_keeps_inconclusive_publisher_link_available(self):
+    def test_cached_audit_disables_inconclusive_publisher_link(self):
         payload = _cached_payload()
         payload["view"] = "paper"
         payload["evidence_index"]["P01"]["document_id"] = "paper-1"
@@ -77,7 +92,7 @@ class WebNarrativeTests(unittest.TestCase):
             response = self.client.get("/api/trends/narrative?view=paper")
 
         evidence = response.get_json()["evidence_index"]["P01"]
-        self.assertEqual(evidence["url"], "https://publisher.example/paper")
+        self.assertEqual(evidence["url"], "")
         self.assertEqual(evidence["link_status"], "http_403")
 
     def test_refresh_uses_deterministic_analyzer_without_llm(self):

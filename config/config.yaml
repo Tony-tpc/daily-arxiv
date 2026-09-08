@@ -562,6 +562,15 @@ sources:
       enabled: true
       max_tokens: 900
 
+verification:
+  evidence_links:
+    # 在分析产物生成后离线核验引用链接；页面仅读取缓存，不在访问时请求外部站点。
+    enabled: true
+    analysis_path: "data/analysis/latest.json"
+    cache_path: "data/cache/evidence_link_audit.json"
+    request_timeout_seconds: 15
+    max_workers: 6
+
 # LLM 配置 / LLM settings
 llm:
   # 提供商 / Provider: openai, gemini, claude, deepseek, vllm

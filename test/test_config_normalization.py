@@ -44,6 +44,11 @@ class ConfigNormalizationTests(unittest.TestCase):
         self.assertEqual(
             normalized["storage"]["document_json_path"], "data/documents"
         )
+        self.assertTrue(normalized["verification"]["evidence_links"]["enabled"])
+        self.assertEqual(
+            normalized["verification"]["evidence_links"]["cache_path"],
+            "data/cache/evidence_link_audit.json",
+        )
 
     def test_normalize_backfills_top_level_arxiv_from_sources(self):
         config = {
@@ -117,6 +122,7 @@ class ConfigNormalizationTests(unittest.TestCase):
         self.assertTrue(config["sources"]["rss"]["enabled"])
         self.assertTrue(config["sources"]["policy"]["enabled"])
         self.assertTrue(config["sources"]["industry_report"]["enabled"])
+        self.assertTrue(config["verification"]["evidence_links"]["enabled"])
         self.assertEqual(config["sources"]["rss"]["filter_scope"], "title")
         self.assertEqual(config["scheduler"]["jobs"]["news_8h"]["hours"], 8)
         self.assertFalse(config["web"]["debug"])

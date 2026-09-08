@@ -240,6 +240,15 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         industry_config.setdefault('max_seen_items', 10000)
         industry_config.setdefault('llm_extraction', {'enabled': True, 'max_tokens': 900})
 
+    verification = normalized.setdefault('verification', {})
+    evidence_links = verification.setdefault('evidence_links', {})
+    if isinstance(evidence_links, dict):
+        evidence_links.setdefault('enabled', True)
+        evidence_links.setdefault('analysis_path', 'data/analysis/latest.json')
+        evidence_links.setdefault('cache_path', 'data/cache/evidence_link_audit.json')
+        evidence_links.setdefault('request_timeout_seconds', 15)
+        evidence_links.setdefault('max_workers', 6)
+
     if isinstance(normalized.get('arxiv'), dict):
         normalized['arxiv'].setdefault('enabled', True)
 

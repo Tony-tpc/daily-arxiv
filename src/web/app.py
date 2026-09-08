@@ -575,20 +575,16 @@ def _render_narrative_payload(payload: dict) -> dict:
         elif audit and str(audit.get('document_id') or '') == str(evidence.get('document_id') or ''):
             evidence['link_status'] = str(audit.get('status') or 'unverified')
             evidence['link_http_status'] = audit.get('http_status')
-            if _audit_blocks_evidence_link(evidence['link_status']):
-                evidence['url'] = ''
+            evidence['url'] = ''
+        elif str(evidence.get('url') or '').strip():
+            # A result must be checked against the same document identity before it is
+            # made clickable. This avoids silently carrying a stale or unrelated URL.
+            evidence['link_status'] = 'not_audited'
+            evidence['url'] = ''
         url = str(evidence.get('url') or '').strip()
         if url and not re.match(r'^https?://', url, flags=re.IGNORECASE):
             evidence['url'] = ''
     return rendered
-
-
-def _audit_blocks_evidence_link(status: object) -> bool:
-    """Block only conclusive failures; a publisher bot check is not a broken paper link."""
-    return str(status or '') in {
-        'invalid_url', 'title_mismatch', 'http_400', 'http_401',
-        'http_404', 'http_410', 'http_451',
-    }
 
 
 def _render_report_payload(payload: dict) -> dict:

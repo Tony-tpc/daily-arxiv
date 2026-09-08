@@ -20,6 +20,7 @@ def run_pipeline(context: PipelineContext) -> PipelineContext:
         'src.pipeline.cross_source_stage',
         'src.pipeline.profile_stage',
         'src.pipeline.analyze_stage',
+        'src.pipeline.link_audit_stage',
         'src.pipeline.report_stage',
     ]
 
