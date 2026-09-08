@@ -10,7 +10,11 @@ from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, Sequence
 from urllib.parse import urlparse
 
-from src.sources.policy_adapter import is_policy_in_scope
+from src.sources.policy_adapter import (
+    canonicalize_official_policy_url,
+    extract_policy_event_date,
+    is_policy_in_scope,
+)
 from src.sources.paper_normalizer import is_excluded_paper
 from src.sources.paper_quality import is_high_impact_paper
 from src.sources.rss_adapter import is_news_in_scope
@@ -942,14 +946,26 @@ def _build_evidence_index(
         code = f"{prefix}{index:02d}"
         key = _document_key(document)
         codes[key] = code
+        source_type = _source_type(document)
+        event_date = str(document.get("published_at") or document.get("published") or "")[:10]
+        url = str(document.get("url") or document.get("entry_url") or document.get("pdf_url") or "")
+        if source_type == "policy":
+            official_date = extract_policy_event_date(
+                " ".join(
+                    str(document.get(field) or "")
+                    for field in ("raw_text", "content", "summary", "abstract")
+                )
+            )
+            event_date = official_date or event_date
+            url = canonicalize_official_policy_url(url)
         evidence[code] = {
             "evidence_id": code,
             "document_id": str(document.get("id") or key),
-            "source_type": _source_type(document),
+            "source_type": source_type,
             "source_name": _clean_text(document.get("source_name") or ""),
             "title": _clean_text(document.get("title") or "未命名材料"),
-            "event_date": str(document.get("published_at") or document.get("published") or "")[:10],
-            "url": str(document.get("url") or document.get("entry_url") or document.get("pdf_url") or ""),
+            "event_date": event_date,
+            "url": url,
             "excerpt": _excerpt(document, 520),
         }
     return evidence, codes

@@ -97,6 +97,63 @@ class PolicySourceAdapterTests(unittest.TestCase):
         self.assertEqual(first[0]["published_at"], "2026-07-10")
         self.assertEqual(client.get.call_args_list[2].kwargs["headers"]["If-None-Match"], '"cn-v1"')
 
+    @patch("src.sources.policy_adapter.save_json")
+    @patch("src.sources.rss_adapter.load_json", return_value=None)
+    @patch("src.sources.rss_adapter.httpx.Client")
+    def test_fetch_prefers_detail_date_and_https_for_official_policy(
+        self, client_class, _load_json, _save_json
+    ):
+        self.config["sources"]["policy"]["feeds"] = [{
+            "name": "国家能源局",
+            "url": "https://policy.example/list",
+            "format": "html",
+            "item_selector": ".policy-list li",
+            "link_selector": "a[href]",
+            "date_selector": "span",
+            "detail_content_selector": ".article-content",
+            "issuing_body": "国家能源局",
+            "region": "CN",
+        }]
+        listing = self._response(
+            b'<ul class="policy-list"><li><a href="http://www.nea.gov.cn/notice">Energy policy</a><span>2026/07/10</span></li></ul>'
+        )
+        detail = self._response(
+            '<html><head><title>Energy policy - National Energy Administration</title></head><main class="article-content">制发日期：2026年6月5日。Binding energy policy.</main></html>'
+        )
+        client_class.return_value.get.side_effect = [listing, detail]
+        adapter = PolicySourceAdapter(self.config)
+
+        records = adapter.fetch()
+
+        self.assertEqual(records[0]["url"], "https://www.nea.gov.cn/notice")
+        self.assertEqual(records[0]["published_at"], "2026-06-05")
+
+    @patch("src.sources.policy_adapter.save_json")
+    @patch("src.sources.rss_adapter.load_json", return_value=None)
+    @patch("src.sources.rss_adapter.httpx.Client")
+    def test_fetch_drops_mismatched_policy_detail_title(
+        self, client_class, _load_json, _save_json
+    ):
+        self.config["sources"]["policy"]["feeds"] = [{
+            "name": "国家能源局",
+            "url": "https://policy.example/list",
+            "format": "html",
+            "item_selector": ".policy-list li",
+            "link_selector": "a[href]",
+            "detail_content_selector": ".article-content",
+            "issuing_body": "国家能源局",
+            "region": "CN",
+        }]
+        listing = self._response(
+            b'<ul class="policy-list"><li><a href="/one">Energy policy</a></li></ul>'
+        )
+        detail = self._response(
+            b'<html><head><title>Unrelated document</title></head><main class="article-content">Text</main></html>'
+        )
+        client_class.return_value.get.side_effect = [listing, detail]
+
+        self.assertEqual(PolicySourceAdapter(self.config).fetch(), [])
+
     def test_policy_title_filter_keeps_energy_policy_and_drops_general_policy(self):
         self.config["sources"]["policy"]["title_keywords_any"] = [
             "能源", "电力", "电网", "电价", "储能", "节能降碳"

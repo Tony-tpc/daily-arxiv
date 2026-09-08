@@ -7,7 +7,7 @@ import hashlib
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
 from bs4 import BeautifulSoup
@@ -18,6 +18,52 @@ from src.utils import save_json
 
 from .rss_adapter import RSSSourceAdapter
 from .structured_metadata import clean_optional, parse_json_object, string_list, unique
+
+
+_OFFICIAL_HTTPS_HOSTS = {
+    "nea.gov.cn",
+    "www.nea.gov.cn",
+    "ndrc.gov.cn",
+    "www.ndrc.gov.cn",
+}
+_POLICY_DATE_PATTERN = re.compile(
+    r"(?:制发日期|成文日期|发布日期|发布时间|公开日期)\s*[^0-9]{0,12}"
+    r"(20\d{2})\s*[年./-]\s*(\d{1,2})\s*[月./-]\s*(\d{1,2})"
+)
+
+
+def canonicalize_official_policy_url(value: Any) -> str:
+    """Use HTTPS for configured official policy hosts while preserving other URLs."""
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    parts = urlsplit(raw)
+    host = (parts.hostname or "").casefold()
+    if parts.scheme.casefold() == "http" and host in _OFFICIAL_HTTPS_HOSTS:
+        return urlunsplit(("https", parts.netloc, parts.path, parts.query, ""))
+    return raw
+
+
+def extract_policy_event_date(value: Any) -> str:
+    """Return the official issuance date stated in a Chinese policy page, if present."""
+    match = _POLICY_DATE_PATTERN.search(str(value or ""))
+    if not match:
+        return ""
+    year, month, day = (int(part) for part in match.groups())
+    try:
+        return datetime(year, month, day).date().isoformat()
+    except ValueError:
+        return ""
+
+
+def _policy_detail_title_matches(listing_title: str, detail_title: str) -> bool:
+    """Reject a listing link only when its fetched official page has a different title."""
+    def normalize(value: str) -> str:
+        return re.sub(r"[^0-9a-z\u4e00-\u9fff]", "", value.casefold())
+
+    listing = normalize(listing_title)
+    detail = normalize(detail_title)
+    return not listing or not detail or listing in detail or detail in listing
 
 
 def is_policy_in_scope(
@@ -192,7 +238,9 @@ class PolicySourceAdapter(RSSSourceAdapter):
                 if link is None or not link.get("href"):
                     continue
                 title = self._clean_text(link.get("title") or link.get_text(" ", strip=True))
-                url = self._canonical_url(urljoin(source_url, str(link["href"])))
+                url = canonicalize_official_policy_url(
+                    self._canonical_url(urljoin(source_url, str(link["href"])))
+                )
                 if not title or not url:
                     continue
                 if not is_policy_in_scope({"title": title}, self.config, source):
@@ -207,7 +255,19 @@ class PolicySourceAdapter(RSSSourceAdapter):
                 )
                 published_at = self._clean_text(date_node.get_text(" ", strip=True) if date_node else "")
                 published_at = published_at.strip("() ").replace("/", "-")
-                content = self._fetch_detail_text(url, source) if source.get("fetch_detail", True) else title
+                content, official_date, detail_title = (
+                    self._fetch_detail(url, source)
+                    if source.get("fetch_detail", True)
+                    else (title, "", "")
+                )
+                if detail_title and not _policy_detail_title_matches(title, detail_title):
+                    self.logger.warning(
+                        "Policy link title mismatch; skipping %s (listing=%r, detail=%r)",
+                        url,
+                        title,
+                        detail_title,
+                    )
+                    continue
                 content = content or title
                 records.append(
                     {
@@ -215,7 +275,7 @@ class PolicySourceAdapter(RSSSourceAdapter):
                         "title": title,
                         "url": url,
                         "author": str(source.get("issuing_body") or source.get("name", "")),
-                        "published_at": published_at,
+                        "published_at": official_date or published_at,
                         "collected_at": now,
                         "summary": content[:1000],
                         "content": content,
@@ -232,7 +292,8 @@ class PolicySourceAdapter(RSSSourceAdapter):
                 self.state["seen"][dedup_key] = now
         return records
 
-    def _fetch_detail_text(self, url: str, source: Dict[str, Any]) -> str:
+    def _fetch_detail(self, url: str, source: Dict[str, Any]) -> tuple[str, str, str]:
+        """Fetch policy text plus the official page title and issuance date."""
         try:
             response = self.client.get(
                 url,
@@ -242,12 +303,15 @@ class PolicySourceAdapter(RSSSourceAdapter):
             soup = BeautifulSoup(response.content, "html.parser")
             selector = str(source.get("detail_content_selector", "article"))
             content_node = soup.select_one(selector)
-            if content_node is None:
-                return ""
-            return self._clean_text(content_node.get_text(" ", strip=True))
+            content = self._clean_text(
+                content_node.get_text(" ", strip=True) if content_node is not None else ""
+            )
+            page_text = self._clean_text(soup.get_text(" ", strip=True))
+            detail_title = self._clean_text(soup.title.get_text(" ", strip=True) if soup.title else "")
+            return content, extract_policy_event_date(page_text), detail_title
         except httpx.HTTPError as exc:
             self.logger.warning("Policy detail fetch failed for %s: %s", url, exc)
-            return ""
+            return "", "", ""
 
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

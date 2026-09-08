@@ -29,6 +29,7 @@ from src.ranking.relevance_ranker import RelevanceRanker
 from src.reporting.research_report_generator import ResearchReportGenerator
 from src.sources.paper_normalizer import normalize_paper_records
 from src.sources.paper_quality import is_high_impact_paper
+from src.sources.policy_adapter import canonicalize_official_policy_url, extract_policy_event_date
 from src.storage.base import build_storage
 from src.utils import load_config, load_json, get_language
 
@@ -556,6 +557,11 @@ def _render_narrative_payload(payload: dict) -> dict:
     for section in rendered.get('sections', []):
         section['html'] = _safe_markdown_html(section.get('markdown') or '')
     for evidence in rendered.get('evidence_index', {}).values():
+        if str(evidence.get('source_type') or '') == 'policy':
+            evidence['url'] = canonicalize_official_policy_url(evidence.get('url'))
+            official_date = extract_policy_event_date(evidence.get('excerpt'))
+            if official_date:
+                evidence['event_date'] = official_date
         url = str(evidence.get('url') or '').strip()
         if url and not re.match(r'^https?://', url, flags=re.IGNORECASE):
             evidence['url'] = ''

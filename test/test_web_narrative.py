@@ -30,6 +30,24 @@ class WebNarrativeTests(unittest.TestCase):
         self.assertIn("&lt;script&gt;", rendered)
         self.assertEqual(data["evidence_index"]["P01"]["url"], "")
 
+    def test_cached_policy_evidence_uses_verified_https_url_and_issue_date(self):
+        payload = _cached_payload()
+        payload["evidence_index"]["POL01"] = {
+            "title": "国家能源局政策",
+            "source_type": "policy",
+            "url": "http://www.nea.gov.cn/notice",
+            "event_date": "2026-07-10",
+            "excerpt": "目录项基本信息 制发日期: 2026-06-05 正文",
+        }
+        with patch.object(
+            web_app, "load_json", return_value={"narrative_analysis": {"paper": payload}}
+        ):
+            response = self.client.get("/api/trends/narrative?view=paper")
+
+        evidence = response.get_json()["evidence_index"]["POL01"]
+        self.assertEqual(evidence["url"], "https://www.nea.gov.cn/notice")
+        self.assertEqual(evidence["event_date"], "2026-06-05")
+
     def test_refresh_uses_deterministic_analyzer_without_llm(self):
         corpus = Mock()
         corpus.load_observations.return_value = []
