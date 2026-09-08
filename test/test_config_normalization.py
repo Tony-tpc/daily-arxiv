@@ -5,6 +5,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 project_root = Path(__file__).parent.parent
@@ -68,6 +69,31 @@ class ConfigNormalizationTests(unittest.TestCase):
             normalized = normalize_config({})
             self.assertEqual(normalized["sources"]["openalex"]["api_key"], "env-key")
             self.assertEqual(normalized["sources"]["openalex"]["email"], "env@example.com")
+        finally:
+            if previous_api_key is None:
+                os.environ.pop("OPENALEX_API_KEY", None)
+            else:
+                os.environ["OPENALEX_API_KEY"] = previous_api_key
+            if previous_email is None:
+                os.environ.pop("OPENALEX_EMAIL", None)
+            else:
+                os.environ["OPENALEX_EMAIL"] = previous_email
+
+    def test_load_config_loads_dotenv_before_openalex_defaults(self):
+        previous_api_key = os.environ.pop("OPENALEX_API_KEY", None)
+        previous_email = os.environ.pop("OPENALEX_EMAIL", None)
+
+        def populate_dotenv():
+            os.environ["OPENALEX_API_KEY"] = "dotenv-key"
+            os.environ["OPENALEX_EMAIL"] = "dotenv@example.com"
+
+        try:
+            with patch("src.utils.load_dotenv", side_effect=populate_dotenv) as mocked_dotenv:
+                config = load_config("config/config.yaml")
+
+            mocked_dotenv.assert_called_once_with()
+            self.assertEqual(config["sources"]["openalex"]["api_key"], "dotenv-key")
+            self.assertEqual(config["sources"]["openalex"]["email"], "dotenv@example.com")
         finally:
             if previous_api_key is None:
                 os.environ.pop("OPENALEX_API_KEY", None)

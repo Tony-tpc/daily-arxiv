@@ -19,6 +19,10 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     Returns:
         配置字典
     """
+    # Configuration can reference credentials supplied through ``.env``.  Keep
+    # this at the configuration boundary so every entry point (including the
+    # Flask web server) sees the same settings as ``main.py`` and the scheduler.
+    load_env()
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
     return normalize_config(config)
