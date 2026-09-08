@@ -43,6 +43,13 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     normalized.setdefault('negative_keywords', [])
     normalized.setdefault('priority_rules', [])
 
+    paper_quality = normalized.setdefault('paper_quality', {})
+    paper_quality.setdefault('enabled', False)
+    paper_quality.setdefault('require_formal_journal_article', True)
+    paper_quality.setdefault('accepted_publication_types', ['article', 'journal-article'])
+    paper_quality.setdefault('maximum_allowed_quartile', 'Q2')
+    paper_quality.setdefault('approved_venues', [])
+
     research_profile = normalized.setdefault('research_profile', {})
     research_profile.setdefault('topic', '')
     research_profile.setdefault('focus', [])
@@ -177,6 +184,8 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
                 'referenced_works_count',
                 'ids',
                 'updated_date',
+                'type',
+                'primary_location',
             ],
         )
 

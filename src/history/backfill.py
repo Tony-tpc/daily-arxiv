@@ -23,6 +23,7 @@ from src.sources.openalex_search_adapter import OpenAlexSearchAdapter
 from src.sources.policy_adapter import PolicySourceAdapter, is_policy_in_scope
 from src.sources.rss_adapter import RSSSourceAdapter, is_news_in_scope
 from src.sources.paper_normalizer import is_excluded_paper
+from src.sources.paper_quality import is_high_impact_paper
 
 
 SOURCE_TYPES = {
@@ -302,8 +303,11 @@ class BackfillService:
             return is_policy_in_scope(document, self.config)
         if source_type == "news":
             return is_news_in_scope(document, self.config)
-        if source_type == "paper" and is_excluded_paper(document, self.config):
-            return False
+        if source_type == "paper":
+            return (
+                not is_excluded_paper(document, self.config)
+                and is_high_impact_paper(document, self.config)
+            )
         searchable = " ".join([
             str(document.get("title") or ""),
             " ".join(str(value) for value in document.get("tags", [])),

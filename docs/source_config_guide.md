@@ -14,6 +14,31 @@
 | `policy` | 中国政策文件 | HTML selectors、`issuing_body`、`policy_level` |
 | `industry_report` | 中国能源行业报告 | selectors、`institution`、标题白/黑名单 |
 
+## 高影响力论文白名单
+
+`paper_quality` 是论文的准入门槛，不是排序加分项。启用后，只有
+`accepted_publication_types` 中的正式期刊论文，且期刊名或 ISSN 精确匹配
+`approved_venues`，并且其登记分区不低于 `maximum_allowed_quartile`，才会进入
+列表、报告和趋势分析。未知期刊、会议论文与预印本会被直接排除。
+
+```yaml
+paper_quality:
+  enabled: true
+  require_formal_journal_article: true
+  accepted_publication_types: ["article", "journal-article"]
+  maximum_allowed_quartile: "Q2"
+  approved_venues:
+    - id: ieee_tsg
+      name: "IEEE Transactions on Smart Grid"
+      issn_l: "1949-3053"
+      quartile: "Q1"
+```
+
+不要用 `publisher: IEEE` 作为准入条件：它会误收录会议论文。系统优先使用
+OpenAlex 的 ISSN；当来源没有 ISSN 时才回退到规范化后的精确期刊名匹配。OpenAlex
+不提供可授权复用的 JCR 影响因子或分区，`quartile` 必须由本单位依据当前 JCR 或
+中科院分区手工复核并至少每年更新；未登记、分区缺失、Q3/Q4 期刊均不会被放行。
+
 HTML 列表来源的最小定义如下：
 
 ```yaml

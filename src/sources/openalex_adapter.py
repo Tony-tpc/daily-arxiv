@@ -13,6 +13,8 @@ import httpx
 
 from src.utils import load_json, save_json
 
+from .paper_quality import enrich_openalex_venue_metadata
+
 
 class OpenAlexAdapter:
     """Lightweight OpenAlex enrichment client with local JSON caching."""
@@ -35,6 +37,7 @@ class OpenAlexAdapter:
                 "title",
                 "display_name",
                 "publication_year",
+                "publication_date",
                 "cited_by_count",
                 "primary_topic",
                 "topics",
@@ -43,6 +46,8 @@ class OpenAlexAdapter:
                 "referenced_works_count",
                 "ids",
                 "updated_date",
+                "type",
+                "primary_location",
             ],
         )
         self.cache_path = self.source_config.get("cache_path", "data/cache/openalex_works.json")
@@ -94,6 +99,7 @@ class OpenAlexAdapter:
         enriched["openalex_referenced_works_count"] = work.get("referenced_works_count", 0)
         enriched["openalex_updated_date"] = work.get("updated_date")
         enriched["openalex_enriched_at"] = datetime.now().isoformat()
+        enriched = enrich_openalex_venue_metadata(enriched, work)
         if enriched.get("doi"):
             enriched["doi"] = self._normalize_doi(enriched.get("doi"))
         elif work.get("doi"):

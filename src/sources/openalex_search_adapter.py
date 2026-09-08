@@ -12,6 +12,7 @@ from src.utils import get_date_string, save_json
 
 from .base import BaseSourceAdapter
 from .paper_normalizer import extract_arxiv_id, normalize_paper_records
+from .paper_quality import enrich_openalex_venue_metadata
 
 
 class OpenAlexSearchAdapter(BaseSourceAdapter):
@@ -35,7 +36,8 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         self.select_fields = [
             "id", "doi", "title", "display_name", "publication_year",
             "publication_date",
-            "cited_by_count", "primary_topic", "topics", "concepts",
+            "cited_by_count", "primary_topic", "topics", "concepts", "type",
+            "primary_location",
             "authorships", "referenced_works_count", "ids", "updated_date",
         ]
         self.client = httpx.Client(timeout=self.timeout)
@@ -290,7 +292,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
         doi = doi_raw.replace("https://doi.org/", "") if doi_raw else ""
         doi_url = f"https://doi.org/{doi}" if doi else ""
 
-        return {
+        record = {
             "id": arxiv_id or work.get("id", "").split("/")[-1],
             "title": work.get("display_name") or work.get("title", ""),
             "authors": authors,
@@ -317,6 +319,7 @@ class OpenAlexSearchAdapter(BaseSourceAdapter):
             "openalex_enriched_at": datetime.now().isoformat(),
             "impact_bracket": self._bracket(work.get("cited_by_count", 0)),
         }
+        return enrich_openalex_venue_metadata(record, work)
 
     @staticmethod
     def _bracket(cites: int) -> str:

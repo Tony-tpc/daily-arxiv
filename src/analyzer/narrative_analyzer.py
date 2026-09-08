@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 from src.sources.policy_adapter import is_policy_in_scope
 from src.sources.paper_normalizer import is_excluded_paper
+from src.sources.paper_quality import is_high_impact_paper
 from src.sources.rss_adapter import is_news_in_scope
 
 
@@ -187,6 +188,7 @@ class NarrativeAnalyzer:
             if _source_type(item) == "paper"
             and _event_on_or_before(item, resolved_as_of)
             and not is_excluded_paper(item, self.config)
+            and is_high_impact_paper(item, self.config)
         ]
         selected = _select_across_months(papers, self.max_paper_evidence)
         evidence_index, document_codes = _build_evidence_index(selected, "P")
@@ -863,7 +865,10 @@ def _multi_source_limitations(coverage: Mapping[str, Any]) -> List[str]:
 def _in_scope_document(document: Dict[str, Any], config: Mapping[str, Any]) -> bool:
     source_type = _source_type(document)
     if source_type == "paper":
-        return not is_excluded_paper(document, dict(config))
+        return (
+            not is_excluded_paper(document, dict(config))
+            and is_high_impact_paper(document, config)
+        )
     if source_type not in {"policy", "news", "industry_report"}:
         return False
     if not _is_domestic_source(document, config):

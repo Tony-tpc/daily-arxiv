@@ -8,6 +8,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from src.models.document_schema import SourceType, create_document
 
+from .paper_quality import evaluate_paper_quality
+
 
 PAPER_SOURCE_NAMES = {"arxiv", "openalex_search"}
 
@@ -149,6 +151,10 @@ def normalize_paper_record(
         "provenance": provenance,
         "canonical_url": str(result.get("canonical_url") or entry_url),
     })
+    quality_gate = evaluate_paper_quality(result, config)
+    result["quality_gate"] = quality_gate
+    if not quality_gate["allowed"]:
+        return None
     return result
 
 

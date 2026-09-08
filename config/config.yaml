@@ -13,6 +13,81 @@ tracking_topics:
   - "embodied intelligence for energy systems"
   - "energy systems"
 
+# 论文准入白名单：只让已登记的 Q1/Q2 正式期刊论文进入后续排序、报告和趋势分析。
+# 不以出版社名称或引用量替代分区；名单应每年依据本单位可访问的 JCR/中科院分区复核。
+paper_quality:
+  enabled: true
+  require_formal_journal_article: true
+  accepted_publication_types: ["article", "journal-article"]
+  maximum_allowed_quartile: "Q2"
+  approved_venues:
+    - id: ieee_tsg
+      name: "IEEE Transactions on Smart Grid"
+      issn_l: "1949-3053"
+      publisher: "IEEE"
+      quartile: "Q1"
+    - id: ieee_tps
+      name: "IEEE Transactions on Power Systems"
+      issn_l: "0885-8950"
+      publisher: "IEEE"
+      quartile: "Q1"
+    - id: ieee_tse
+      name: "IEEE Transactions on Sustainable Energy"
+      issn_l: "1949-3029"
+      publisher: "IEEE"
+      quartile: "Q1"
+    - id: ieee_tii
+      name: "IEEE Transactions on Industrial Informatics"
+      issn_l: "1551-3203"
+      publisher: "IEEE"
+      quartile: "Q1"
+    - id: ieee_iotj
+      name: "IEEE Internet of Things Journal"
+      issn_l: "2327-4662"
+      publisher: "IEEE"
+      quartile: "Q1"
+    - id: applied_energy
+      name: "Applied Energy"
+      issn_l: "0306-2619"
+      publisher: "Elsevier"
+      quartile: "Q1"
+    - id: energy
+      name: "Energy"
+      issn_l: "0360-5442"
+      publisher: "Elsevier"
+      quartile: "Q1"
+    - id: energy_conversion_management
+      name: "Energy Conversion and Management"
+      issn_l: "0196-8904"
+      publisher: "Elsevier"
+      quartile: "Q1"
+    - id: renewable_sustainable_reviews
+      name: "Renewable and Sustainable Energy Reviews"
+      issn_l: "1364-0321"
+      publisher: "Elsevier"
+      quartile: "Q1"
+    - id: renewable_energy
+      name: "Renewable Energy"
+      issn_l: "0960-1481"
+      publisher: "Elsevier"
+      quartile: "Q1"
+    - id: international_jepes
+      name: "International Journal of Electrical Power and Energy Systems"
+      aliases: ["International Journal of Electrical Power & Energy Systems"]
+      issn_l: "0142-0615"
+      publisher: "Elsevier"
+      quartile: "Q1"
+    - id: nature_energy
+      name: "Nature Energy"
+      issn_l: "2058-7546"
+      publisher: "Nature Portfolio"
+      quartile: "Q1"
+    - id: joule
+      name: "Joule"
+      issn_l: "2542-4351"
+      publisher: "Cell Press"
+      quartile: "Q1"
+
 # 研究边界：聚焦能源系统中的具身智能，不跟踪通用机器人与机械臂方向。
 research_profile:
   topic: "能源系统中的具身智能与自主决策"
@@ -191,6 +266,7 @@ sources:
       - "title"
       - "display_name"
       - "publication_year"
+      - "publication_date"
       - "cited_by_count"
       - "primary_topic"
       - "topics"
@@ -199,12 +275,15 @@ sources:
       - "referenced_works_count"
       - "ids"
       - "updated_date"
+      - "type"
+      - "primary_location"
 
   openalex_search:
     enabled: true
     request_timeout_seconds: 20
-    per_page: 25
-    max_results: 20
+    # 白名单会在规范化阶段排除非正式期刊和未登记期刊，扩大候选池以避免结果过少。
+    per_page: 100
+    max_results: 100
     recent_days: 180
     sort: "publication_date:desc"
     backfill_max_results_per_month: 500

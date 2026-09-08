@@ -23,7 +23,7 @@ class OpenAlexAdapterTests(unittest.TestCase):
                     'request_timeout_seconds': 20,
                     'cache_path': 'data/cache/test_openalex_cache.json',
                     'max_title_search_results': 5,
-                    'select_fields': ['id', 'doi', 'display_name', 'cited_by_count', 'topics', 'primary_topic', 'authorships', 'referenced_works', 'referenced_works_count', 'updated_date'],
+                    'select_fields': ['id', 'doi', 'display_name', 'cited_by_count', 'topics', 'primary_topic', 'authorships', 'referenced_works', 'referenced_works_count', 'updated_date', 'type', 'primary_location'],
                 }
             }
         }
@@ -45,6 +45,12 @@ class OpenAlexAdapterTests(unittest.TestCase):
             'referenced_works': ['https://openalex.org/W456'],
             'referenced_works_count': 1,
             'updated_date': '2026-01-01',
+            'type': 'article',
+            'primary_location': {'source': {
+                'display_name': 'IEEE Transactions on Smart Grid',
+                'issn_l': '1949-3053',
+                'issn': ['1949-3053'],
+            }},
         }
         response.raise_for_status.return_value = None
         client.get.return_value = response
@@ -57,6 +63,8 @@ class OpenAlexAdapterTests(unittest.TestCase):
         self.assertEqual(enriched['citation_count'], 42)
         self.assertIn('Tsinghua University', enriched['openalex_institutions'])
         self.assertEqual(enriched['doi'], '10.1000/example')
+        self.assertEqual(enriched['publication_type'], 'article')
+        self.assertEqual(enriched['journal_name'], 'IEEE Transactions on Smart Grid')
 
     @patch('src.sources.openalex_adapter.save_json')
     @patch('src.sources.openalex_adapter.load_json', return_value=None)

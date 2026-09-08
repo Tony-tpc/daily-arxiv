@@ -23,6 +23,8 @@ const I18N = {
         relevanceReason: '推荐依据',
         relatedTopicsLabel: '相关主题',
         citationsLabel: '引用次数',
+        journalLabel: '期刊',
+        whitelistQuartileLabel: '白名单分区',
         primaryTopicLabel: 'OpenAlex 主主题',
         institutionsLabel: '机构',
         referencesLabel: '参考文献数',
@@ -98,6 +100,8 @@ const I18N = {
         relevanceReason: 'Rationale',
         relatedTopicsLabel: 'Related topics',
         citationsLabel: 'Citations',
+        journalLabel: 'Journal',
+        whitelistQuartileLabel: 'Whitelist quartile',
         primaryTopicLabel: 'OpenAlex primary topic',
         institutionsLabel: 'Institutions',
         referencesLabel: 'Referenced works',
@@ -1270,6 +1274,12 @@ function renderOpenAlexPanel(card) {
     const meta = card.source_metadata || {};
     const items = [];
 
+    if (meta.journal_name) {
+        items.push(`<span><strong>${t('journalLabel')}:</strong> ${escapeHtml(meta.journal_name)}</span>`);
+    }
+    if (meta.journal_quartile) {
+        items.push(`<span><strong>${t('whitelistQuartileLabel')}:</strong> ${escapeHtml(meta.journal_quartile)}</span>`);
+    }
     if (meta.citation_count !== undefined && meta.citation_count !== null) {
         items.push(`<span><strong>${t('citationsLabel')}:</strong> ${escapeHtml(String(meta.citation_count))}</span>`);
     }
@@ -1302,6 +1312,9 @@ function renderCompactInfoBar(card, paper) {
         else if (bracket === 'high') badge = ' <span class=\"impact-badge impact-high\">\u{2b50} \u9ad8\u5f71\u54cd</span>';
         else if (bracket === 'notable') badge = ` <span class=\"impact-badge impact-notable\">\u{1f4c8} \u5f15\u7528 ${cites}</span>`;
         parts.push(`<span><i class="fas fa-quote-right"></i> ${escapeHtml(String(cites))}${badge}</span>`);
+    }
+    if (meta.journal_quartile) {
+        parts.push(`<span><i class="fas fa-circle-check"></i> ${escapeHtml(t('whitelistQuartileLabel'))} ${escapeHtml(meta.journal_quartile)}</span>`);
     }
     if (meta.openalex_primary_topic) {
         parts.push(`<span><i class="fas fa-tag"></i> ${escapeHtml(meta.openalex_primary_topic)}</span>`);

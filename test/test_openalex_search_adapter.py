@@ -19,6 +19,12 @@ class OpenAlexSearchAdapterTests(unittest.TestCase):
                     "doi": "https://doi.org/10.1000/energy.1",
                     "display_name": "Multi-Agent Coordination for Virtual Power Plants",
                     "publication_year": 2026,
+                    "type": "article",
+                    "primary_location": {"source": {
+                        "display_name": "IEEE Transactions on Smart Grid",
+                        "issn_l": "1949-3053",
+                        "issn": ["1949-3053"],
+                    }},
                     "cited_by_count": 28,
                     "primary_topic": {"display_name": "Energy systems"},
                     "topics": [{"display_name": "Virtual power plant"}],
@@ -67,6 +73,8 @@ class OpenAlexSearchAdapterTests(unittest.TestCase):
         self.assertEqual(records[0]["doi"], "10.1000/energy.1")
         self.assertEqual(records[0]["impact_bracket"], "high")
         self.assertEqual(records[0]["openalex_institutions"], ["Tsinghua University"])
+        self.assertEqual(records[0]["publication_type"], "article")
+        self.assertEqual(records[0]["journal_issn_l"], "1949-3053")
 
         normalized = adapter.normalize(records)
         self.assertEqual(normalized[0]["source_type"], "paper")

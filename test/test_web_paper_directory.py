@@ -51,6 +51,9 @@ class WebPaperDirectoryTests(unittest.TestCase):
                     'title': '&lt;span&gt;Energy agent control&lt;/span&gt;',
                     'abstract': 'Virtual power plant and energy storage coordination.',
                     'categories': ['eess.SY'],
+                    'publication_type': 'article',
+                    'journal_name': 'IEEE Transactions on Smart Grid',
+                    'journal_issn_l': '1949-3053',
                 },
                 {
                     'id': 'robot-paper',

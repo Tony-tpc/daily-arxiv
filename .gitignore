@@ -25,6 +25,7 @@ venv/
 env/
 ENV/
 .venv
+.codex-test-venv/
 
 # IDE
 .vscode/

@@ -122,6 +122,11 @@ def build_web_card_payload(
     pdf_url = raw_record.get("pdf_url") or payload.get("url") or primary_url
     source_url = raw_record.get("entry_url") or payload.get("url") or ""
     description = payload.get("summary") or payload.get("raw_text") or ""
+    quality_gate = raw_record.get("quality_gate")
+    if not isinstance(quality_gate, dict):
+        quality_gate = payload.get("quality_gate")
+    if not isinstance(quality_gate, dict):
+        quality_gate = {}
 
     source_metadata = {
         key: value
@@ -145,6 +150,12 @@ def build_web_card_payload(
             "openalex_referenced_works_count": raw_record.get("openalex_referenced_works_count"),
             "openalex_updated_date": raw_record.get("openalex_updated_date"),
             "impact_bracket": raw_record.get("impact_bracket", ""),
+            "journal_name": raw_record.get("journal_name") or payload.get("journal_name"),
+            "journal_issn_l": raw_record.get("journal_issn_l") or payload.get("journal_issn_l"),
+            "journal_publisher": raw_record.get("journal_publisher") or payload.get("journal_publisher"),
+            "publication_type": raw_record.get("publication_type") or payload.get("publication_type"),
+            "journal_quartile": quality_gate.get("quartile"),
+            "quality_gate_reason": quality_gate.get("reason"),
         }.items()
         if value not in (None, "", [], {})
     }

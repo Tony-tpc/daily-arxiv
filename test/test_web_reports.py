@@ -1,6 +1,7 @@
 """Tests for the website report reader and API."""
 
 import unittest
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
@@ -46,7 +47,7 @@ class WebReportTests(unittest.TestCase):
     def test_latest_report_fallback_generates_read_only_preview(self):
         documents = [{
             'id': 'paper-1', 'source_type': 'paper', 'title': '能源智能体',
-            'published_at': '2026-07-14', 'importance_score': 80,
+            'published_at': date.today().isoformat(), 'importance_score': 80,
         }]
         with patch.object(web_app, '_load_intelligence_documents', return_value=documents), \
              patch.object(web_app, 'load_json', return_value={}):
