@@ -658,9 +658,12 @@ function openNarrativeEvidence(evidenceIds, evidenceIndex = null) {
     body.innerHTML = ids.length ? ids.map(id => {
         const item = index[id] || {};
         const safeUrl = /^https?:\/\//i.test(item.url || '') ? item.url : '';
+        const auditNote = item.link_status && item.link_status !== 'verified'
+            ? `<span class="narrative-no-link">${LANG === 'zh' ? `近期链接核验状态：${escapeHtml(item.link_status)}。${safeUrl ? '该站点可能限制自动访问，请打开后核对标题。' : '为避免跳转到无关或失效页面，已禁止跳转。'}` : `Recent link verification status: ${escapeHtml(item.link_status)}.${safeUrl ? ' The host may limit automated access; verify the title after opening.' : ' Navigation is disabled to avoid an unrelated or unavailable page.'}`}</span>`
+            : '';
         return `<article class="narrative-evidence-item"><div class="narrative-evidence-meta"><code>${escapeHtml(id)}</code><span>${escapeHtml(item.source_name || item.source_type || '')}</span><time>${escapeHtml(item.event_date || '')}</time></div>
             <h3>${escapeHtml(item.title || '')}</h3><p>${escapeHtml(item.excerpt || '')}</p>
-            ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${LANG === 'zh' ? '打开原始材料' : 'Open source'} <i class="fas fa-arrow-up-right-from-square"></i></a>` : `<span class="narrative-no-link">${LANG === 'zh' ? '当前记录未提供原文链接' : 'No source URL'}</span>`}</article>`;
+            ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${LANG === 'zh' ? '打开原始材料' : 'Open source'} <i class="fas fa-arrow-up-right-from-square"></i></a>` : `${auditNote || `<span class="narrative-no-link">${LANG === 'zh' ? '当前记录未提供原文链接' : 'No source URL'}</span>`}`}</article>`;
     }).join('') : `<p class="trend-note">${LANG === 'zh' ? '未找到对应证据。' : 'Evidence not found.'}</p>`;
     backdrop.hidden = false;
     drawer.classList.add('open');

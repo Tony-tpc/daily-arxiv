@@ -48,6 +48,38 @@ class WebNarrativeTests(unittest.TestCase):
         self.assertEqual(evidence["url"], "https://www.nea.gov.cn/notice")
         self.assertEqual(evidence["event_date"], "2026-06-05")
 
+    def test_cached_audit_disables_an_unverified_evidence_link(self):
+        payload = _cached_payload()
+        payload["view"] = "paper"
+        payload["evidence_index"]["P01"]["document_id"] = "paper-1"
+        payload["evidence_index"]["P01"]["url"] = "https://example.org/paper"
+        analysis = {"narrative_analysis": {"paper": payload}}
+        audit = {"views": {"paper": {"evidence": {"P01": {
+            "document_id": "paper-1", "status": "http_404", "http_status": 404,
+        }}}}}
+        with patch.object(web_app, "load_json", side_effect=[analysis, audit]):
+            response = self.client.get("/api/trends/narrative?view=paper")
+
+        evidence = response.get_json()["evidence_index"]["P01"]
+        self.assertEqual(evidence["url"], "")
+        self.assertEqual(evidence["link_status"], "http_404")
+
+    def test_cached_audit_keeps_inconclusive_publisher_link_available(self):
+        payload = _cached_payload()
+        payload["view"] = "paper"
+        payload["evidence_index"]["P01"]["document_id"] = "paper-1"
+        payload["evidence_index"]["P01"]["url"] = "https://publisher.example/paper"
+        analysis = {"narrative_analysis": {"paper": payload}}
+        audit = {"views": {"paper": {"evidence": {"P01": {
+            "document_id": "paper-1", "status": "http_403", "http_status": 403,
+        }}}}}
+        with patch.object(web_app, "load_json", side_effect=[analysis, audit]):
+            response = self.client.get("/api/trends/narrative?view=paper")
+
+        evidence = response.get_json()["evidence_index"]["P01"]
+        self.assertEqual(evidence["url"], "https://publisher.example/paper")
+        self.assertEqual(evidence["link_status"], "http_403")
+
     def test_refresh_uses_deterministic_analyzer_without_llm(self):
         corpus = Mock()
         corpus.load_observations.return_value = []

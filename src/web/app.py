@@ -554,18 +554,41 @@ def get_trend_narrative():
 def _render_narrative_payload(payload: dict) -> dict:
     """Render Markdown after neutralising raw HTML and unsafe link schemes."""
     rendered = deepcopy(payload)
+    audit_views = (load_json('data/cache/evidence_link_audit.json') or {}).get('views', {})
+    audit_records = (audit_views.get(str(rendered.get('view') or ''), {}) or {}).get('evidence', {})
     for section in rendered.get('sections', []):
         section['html'] = _safe_markdown_html(section.get('markdown') or '')
-    for evidence in rendered.get('evidence_index', {}).values():
+    for evidence_id, evidence in rendered.get('evidence_index', {}).items():
         if str(evidence.get('source_type') or '') == 'policy':
             evidence['url'] = canonicalize_official_policy_url(evidence.get('url'))
             official_date = extract_policy_event_date(evidence.get('excerpt'))
             if official_date:
                 evidence['event_date'] = official_date
+        audit = audit_records.get(str(evidence_id), {})
+        if (
+            audit
+            and str(audit.get('document_id') or '') == str(evidence.get('document_id') or '')
+            and audit.get('status') == 'verified'
+        ):
+            evidence['url'] = str(audit.get('final_url') or evidence.get('url') or '')
+            evidence['link_status'] = 'verified'
+        elif audit and str(audit.get('document_id') or '') == str(evidence.get('document_id') or ''):
+            evidence['link_status'] = str(audit.get('status') or 'unverified')
+            evidence['link_http_status'] = audit.get('http_status')
+            if _audit_blocks_evidence_link(evidence['link_status']):
+                evidence['url'] = ''
         url = str(evidence.get('url') or '').strip()
         if url and not re.match(r'^https?://', url, flags=re.IGNORECASE):
             evidence['url'] = ''
     return rendered
+
+
+def _audit_blocks_evidence_link(status: object) -> bool:
+    """Block only conclusive failures; a publisher bot check is not a broken paper link."""
+    return str(status or '') in {
+        'invalid_url', 'title_mismatch', 'http_400', 'http_401',
+        'http_404', 'http_410', 'http_451',
+    }
 
 
 def _render_report_payload(payload: dict) -> dict:
