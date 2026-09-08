@@ -28,6 +28,7 @@ from src.analyzer.research_profile_analyzer import ResearchProfileAnalyzer
 from src.ranking.relevance_ranker import RelevanceRanker
 from src.reporting.research_report_generator import ResearchReportGenerator
 from src.sources.paper_normalizer import normalize_paper_records
+from src.sources.paper_quality import is_high_impact_paper
 from src.storage.base import build_storage
 from src.utils import load_config, load_json, get_language
 
@@ -92,6 +93,7 @@ def _load_papers_data() -> dict:
     canonical_papers = [
         document for document in _load_intelligence_documents()
         if str(document.get('source_type') or '').lower() == 'paper'
+        and is_high_impact_paper(document, config)
     ]
     if canonical_papers:
         latest_date = max(
@@ -167,7 +169,11 @@ def _load_intelligence_documents() -> list[dict]:
         document_id = str(document.get('id') or document.get('url') or document.get('title') or '')
         if document_id:
             unique_documents[document_id] = document
-    return list(unique_documents.values())
+    return [
+        document for document in unique_documents.values()
+        if str(document.get('source_type') or '').lower() != 'paper'
+        or is_high_impact_paper(document, config)
+    ]
 
 
 def _load_latest_report(report_type: str = "weekly") -> dict:

@@ -48,6 +48,9 @@ class WebReportTests(unittest.TestCase):
         documents = [{
             'id': 'paper-1', 'source_type': 'paper', 'title': '能源智能体',
             'published_at': date.today().isoformat(), 'importance_score': 80,
+            'publication_type': 'article',
+            'journal_name': 'IEEE Transactions on Smart Grid',
+            'journal_issn_l': '1949-3053',
         }]
         with patch.object(web_app, '_load_intelligence_documents', return_value=documents), \
              patch.object(web_app, 'load_json', return_value={}):

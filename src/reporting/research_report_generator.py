@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import quote, urlparse
 
+from src.sources.paper_quality import is_high_impact_paper
+
 
 REPORT_TITLES = {
     "weekly": "中国能源具身智能研究信息周报",
@@ -51,7 +53,14 @@ class ResearchReportGenerator:
         analysis = analysis or {}
         filtered = [
             item for item in documents
-            if isinstance(item, dict) and _in_period(item, start, end)
+            if (
+                isinstance(item, dict)
+                and _in_period(item, start, end)
+                and (
+                    str(item.get("source_type") or "").lower() != "paper"
+                    or is_high_impact_paper(item, self.config)
+                )
+            )
         ]
         forecast = analysis.get("trend_forecast") or {}
         narratives = analysis.get("narrative_analysis") or {}

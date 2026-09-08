@@ -21,6 +21,20 @@ class WebPaperDirectoryTests(unittest.TestCase):
             'title': 'Energy agent for virtual power plant control',
             'published_at': '2026-07-14',
             'categories': ['eess.SY'],
+            'publication_type': 'article',
+            'journal_name': 'IEEE Transactions on Smart Grid',
+            'journal_issn_l': '1949-3053',
+        }, {
+            'id': 'unverified-paper',
+            'schema_version': '1.0',
+            'source_type': 'paper',
+            'source_name': 'OpenAlex',
+            'title': 'Unverified Energy Paper',
+            'published_at': '2026-07-14',
+            'categories': ['eess.SY'],
+            'publication_type': 'article',
+            'journal_name': 'Unknown Energy Journal',
+            'journal_issn_l': '0000-0000',
         }]
         legacy = {
             'papers': [{
