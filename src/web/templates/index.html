@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
+    <link rel="preload" href="{{ url_for('static', filename='fonts/InterVariable.woff2') }}" as="font" type="font/woff2" crossorigin>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -19,7 +20,7 @@
     <header class="top-navbar">
         <div class="navbar-brand">
             <button type="button" class="btn-icon mobile-menu-btn" id="mobile-menu-btn" aria-controls="sidebar" aria-expanded="false" aria-label="{{ '打开导航' if language == 'zh' else 'Open navigation' }}"><i class="fas fa-bars" aria-hidden="true"></i></button>
-            <span class="brand-mark" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
+            <span class="brand-mark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="m13 3-8 11h6l-1 7 9-12h-6l1-6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
             <div class="brand-text"><strong>{{ title }}</strong><span>{{ description }}</span></div>
         </div>
         <div class="navbar-actions">
@@ -50,9 +51,18 @@
         </aside>
         <main class="main-content" id="main-content" tabindex="-1">
             <section id="overview-section" class="content-section active" aria-labelledby="overview-title">
-                <div class="section-header">
-                    <div><h1 id="overview-title">{{ '能源情报概览' if language == 'zh' else 'Energy intelligence overview' }}</h1><p class="section-desc">{{ '汇集关键资料，跟踪研究信号与政策变化。' if language == 'zh' else 'Track key research, policy developments and source coverage.' }}</p></div>
-                    <a href="#reports" data-section="reports" class="btn-paper btn-primary"><i class="fas fa-book-open"></i>{{ '阅读研究报告' if language == 'zh' else 'Read research report' }}</a>
+                <p class="page-eyebrow">{{ '工作台 / 概览' if language == 'zh' else 'Workspace / Overview' }}</p>
+                <div class="overview-hero">
+                    <div class="hero-copy">
+                        <span class="eyebrow">ENERGY INSIGHTS</span>
+                        <h1 id="overview-title">{{ '探索能源未来，' if language == 'zh' else 'Explore the future.' }}<br><span>{{ '从一条好线索开始。' if language == 'zh' else 'Start with an insight.' }}</span></h1>
+                        <p>{{ '连接论文、政策与产业动态，让每一次阅读都有依据。' if language == 'zh' else 'Connect research, policy and industry with evidence that matters.' }}</p>
+                        <div class="hero-actions"><a href="#papers" data-section="papers" class="btn-paper btn-primary">{{ '探索研究资料' if language == 'zh' else 'Explore research' }} <i class="fas fa-arrow-right" aria-hidden="true"></i></a><a href="#reports" data-section="reports" class="hero-secondary">{{ '阅读研究报告' if language == 'zh' else 'Read the research report' }}</a></div>
+                    </div>
+                    <figure class="hero-visual">
+                        <img src="{{ url_for('static', filename='images/energy/wind.webp') }}" alt="{{ '日出时的风电场，能源主题示意' if language == 'zh' else 'Wind farm at sunrise, an illustrative energy photograph' }}" width="1400" height="933" fetchpriority="high" data-energy-image>
+                        <figcaption><span>01 / {{ '风向未来' if language == 'zh' else 'A new direction' }}</span><small>{{ '主题示意' if language == 'zh' else 'Illustrative photo' }}</small></figcaption>
+                    </figure>
                 </div>
                 <div class="overview-scope"><span>{{ '多源信息速览' if language == 'zh' else 'Source snapshot' }} <span class="scope-note">{{ '· 当前筛选结果' if language == 'zh' else '· Current filters' }}</span></span><span id="workspace-data-date">{{ '分析生成时间：读取中' if language == 'zh' else 'Analysis generated: loading' }}</span></div>
                 <div class="source-snapshot" id="source-snapshot" aria-live="polite"></div>
@@ -133,6 +143,7 @@
 
             <!-- 论文列表部分 -->
             <section id="papers-section" class="content-section">
+                <p class="page-eyebrow">{{ '研究资料 / 论文' if language == 'zh' else 'Library / Papers' }}</p>
                 <div class="section-header">
                     <div><h1>{{ '论文列表' if language == 'zh' else 'Papers' }}</h1><p class="section-desc" id="papers-result-count" aria-live="polite">—</p></div>
                     <div class="search-box">
@@ -203,6 +214,7 @@
                 ('industry-reports', 'industry_report', 'industry-report', '行业报告', 'Industry reports', '能源产业发展、技术应用与行业研究资料。', 'Energy industry research, development and technology adoption.')
             ] %}
             <section id="{{ section }}-section" class="content-section source-directory" data-source-type="{{ source }}">
+                <p class="page-eyebrow">{{ '研究资料 / ' + zh if language == 'zh' else 'Library / ' + en }}</p>
                 <div class="section-header directory-header">
                     <div><h1>{{ zh if language == 'zh' else en }}</h1><p class="section-desc">{{ description_zh if language == 'zh' else description_en }}</p></div>
                     <span class="directory-total" id="{{ prefix }}-total" aria-live="polite">—</span>
@@ -234,13 +246,13 @@
                         </select>
                         <button type="button" id="report-refresh" class="report-refresh-btn"><i class="fas fa-rotate"></i>{{ '刷新' if language == 'zh' else 'Refresh' }}</button>
                     </div>
-                <div class="section-header report-page-header">
+                <div class="section-header report-page-header reading-cover">
                     <div>
 
                         <h1 id="report-title">{{ '中国能源具身智能研究信息周报' if language == 'zh' else 'Energy Embodied Intelligence Weekly' }}</h1>
                         <p class="section-desc" id="report-period">{{ '正在读取最新报告…' if language == 'zh' else 'Loading the latest report…' }}</p>
                     </div>
-
+                    <figure class="reading-cover-image"><img src="{{ url_for('static', filename='images/energy/solar-thumb.webp') }}" width="480" height="320" alt="{{ '光伏电站主题示意图' if language == 'zh' else 'Illustrative solar farm photograph' }}" loading="lazy" decoding="async" data-energy-image><figcaption>{{ '主题示意' if language == 'zh' else 'Illustrative photo' }}</figcaption></figure>
                 </div>
                 <p class="analysis-disclosure">{{ '系统分析与 AI 生成内容，请结合引用材料核实。下列数量为报告周期内的资料；正文可引用更长时间范围的历史证据。' if language == 'zh' else 'System analysis and AI-generated content: verify against cited sources. Counts below cover the report period; the narrative may use a wider historical evidence window.' }}</p>
                 <div id="report-limitations" class="report-limitations"></div>
@@ -260,9 +272,12 @@
 
             <!-- 长篇趋势分析部分 -->
             <section id="analysis-section" class="content-section">
-                <div class="section-header">
+                <div class="section-header reading-cover">
+                    <div>
                     <h1 id="narrative-page-title">{{ '论文研究报告' if language == 'zh' else 'Paper research report' }}</h1>
                     <p class="section-desc" id="narrative-page-description">{{ '围绕研究问题、方法差异和实验依据，阅读连贯的论文分析。' if language == 'zh' else 'A continuous analysis of research questions, methods, and experimental evidence.' }}</p>
+                    </div>
+                    <figure class="reading-cover-image"><img src="{{ url_for('static', filename='images/energy/storage-thumb.webp') }}" width="480" height="320" alt="{{ '太阳能与电池储能设备主题示意图' if language == 'zh' else 'Illustrative solar and battery storage photograph' }}" loading="lazy" decoding="async" data-energy-image><figcaption>{{ '主题示意' if language == 'zh' else 'Illustrative photo' }}</figcaption></figure>
                 </div>
 
                 <div class="narrative-toolbar">
@@ -311,6 +326,7 @@
             <!-- 统计数据部分 -->
             <section id="statistics-section" class="content-section">
                 <div id="statistics-error" hidden></div>
+                <p class="page-eyebrow">{{ '研究观察 / 统计' if language == 'zh' else 'Research observatory / Statistics' }}</p>
                 <div class="section-header">
                     <h1>{{ '统计数据' if language == 'zh' else 'Statistics' }}</h1>
                     <p class="section-desc">{{ '统计范围随图表注明；分析语料与当前论文页是不同样本。' if language == 'zh' else 'Each chart states its sample; the analysis corpus differs from the current paper page.' }}</p>

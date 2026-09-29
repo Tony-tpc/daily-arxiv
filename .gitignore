@@ -61,6 +61,7 @@ data/cache/
 data/library/
 data/imports/
 data/private/
+data/ui-review/
 
 # OS
 .DS_Store

@@ -6,6 +6,7 @@ Flask Web 应用
 import sys
 import html
 import json
+import mimetypes
 import re
 import sqlite3
 from copy import deepcopy
@@ -33,6 +34,10 @@ from src.sources.policy_adapter import canonicalize_official_policy_url, extract
 from src.storage.base import build_storage
 from src.utils import load_config, load_json, get_language
 
+
+# Keep static asset types consistent when the Windows registry lacks these entries.
+mimetypes.add_type('image/webp', '.webp')
+mimetypes.add_type('font/woff2', '.woff2')
 
 # 创建 Flask 应用
 # 指定模板和静态文件路径为项目根目录
