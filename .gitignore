@@ -26,6 +26,7 @@ env/
 ENV/
 .venv
 .codex-test-venv/
+.runtime-venv/
 
 # IDE
 .vscode/
@@ -53,6 +54,9 @@ data/reports/
 data/markdown/
 data/obsidian/
 data/zotero/
+data/cache/
+data/library/
+data/imports/
 
 # OS
 .DS_Store

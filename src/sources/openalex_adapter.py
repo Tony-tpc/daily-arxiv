@@ -50,6 +50,7 @@ class OpenAlexAdapter:
                 "primary_location",
             ],
         )
+        self.select_fields = list(dict.fromkeys([*self.select_fields, 'abstract_inverted_index', 'is_retracted']))
         self.cache_path = self.source_config.get("cache_path", "data/cache/openalex_works.json")
         self.cache = load_json(self.cache_path) or {"by_key": {}}
         self.client = httpx.Client(timeout=self.timeout)
@@ -88,6 +89,10 @@ class OpenAlexAdapter:
             return record
 
         enriched = dict(record)
+        from .openalex_search_adapter import reconstruct_abstract
+        if not enriched.get('abstract'):
+            enriched['abstract'] = reconstruct_abstract(work.get('abstract_inverted_index'))
+        enriched['is_retracted'] = bool(enriched.get('is_retracted') or work.get('is_retracted'))
         enriched["openalex_id"] = work.get("id")
         enriched["citation_count"] = work.get("cited_by_count", 0)
         enriched["openalex_topics"] = [topic.get("display_name") for topic in work.get("topics", []) if topic.get("display_name")]
@@ -207,7 +212,7 @@ class OpenAlexAdapter:
         headers = {}
         api_key = self.source_config.get("api_key", "")
         if api_key:
-            headers["api-key"] = api_key
+            headers["Authorization"] = f"Bearer {api_key}"
 
         response = self.client.get(f"{self.base_url}{path}", params=params, headers=headers)
         if response.status_code == 404 and treat_not_found_as_miss:

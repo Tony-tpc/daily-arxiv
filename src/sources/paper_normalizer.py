@@ -18,13 +18,14 @@ def normalize_paper_records(
     records: Iterable[Dict[str, Any]],
     source_name: str,
     config: Dict[str, Any],
+    *, enforce_quality: bool = True,
 ) -> List[Dict[str, Any]]:
     """Return valid canonical papers, excluding out-of-scope research directions."""
     normalized: List[Dict[str, Any]] = []
     for record in records:
         if not isinstance(record, dict):
             continue
-        document = normalize_paper_record(record, source_name, config)
+        document = normalize_paper_record(record, source_name, config, enforce_quality=enforce_quality)
         if document is not None:
             normalized.append(document)
     return normalized
@@ -34,6 +35,7 @@ def normalize_paper_record(
     record: Dict[str, Any],
     source_name: str,
     config: Dict[str, Any],
+    *, enforce_quality: bool = True,
 ) -> Optional[Dict[str, Any]]:
     """Map one legacy arXiv/OpenAlex record to the unified document schema."""
     result = dict(record)
@@ -61,7 +63,7 @@ def normalize_paper_record(
     )
     if not arxiv_id and source_name == "arxiv" and not record_id.upper().startswith("W"):
         arxiv_id = extract_arxiv_id(record_id) or record_id
-    if not (arxiv_id or doi or categories):
+    if not (arxiv_id or doi or categories or result.get('journal_name')):
         return None
 
     source_label = str(result.get("source_name") or "").strip()
@@ -153,7 +155,7 @@ def normalize_paper_record(
     })
     quality_gate = evaluate_paper_quality(result, config)
     result["quality_gate"] = quality_gate
-    if not quality_gate["allowed"]:
+    if enforce_quality and not quality_gate["allowed"]:
         return None
     return result
 

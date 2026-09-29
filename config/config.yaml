@@ -281,9 +281,8 @@ sources:
   openalex_search:
     enabled: true
     request_timeout_seconds: 20
-    # 白名单会在规范化阶段排除非正式期刊和未登记期刊，扩大候选池以避免结果过少。
     per_page: 100
-    max_results: 100
+    max_pages_per_run: 40
     recent_days: 180
     sort: "publication_date:desc"
     # 每一条为独立检索式，优先覆盖能源设备自主决策、源网荷储与电力市场。
@@ -292,15 +291,19 @@ sources:
       - "multi-agent reinforcement learning power system"
       - "energy system digital twin autonomous control"
       - "electricity market multi-agent"
-    # OpenAlex 限流时仅补充 Crossref 的正式期刊元数据，仍执行同一份 Q1/Q2 白名单。
-    crossref_fallback:
-      enabled: true
-      rows_per_query: 50
-      from_publication_date: "2024-01-01"
-      mailto: ""
-    backfill_max_results_per_month: 500
-    backfill_concept_id: "C89227174"
     topic_query: '"energy agent" OR "autonomous energy system" OR "multi-agent reinforcement learning power system" OR "virtual power plant autonomous control" OR "source grid load storage" OR "digital twin energy system" OR "electricity market multi-agent"'
+
+  crossref:
+    enabled: true
+    per_page: 100
+    max_pages_per_run: 40
+    recent_days: 180
+    mailto: ""
+    search_terms:
+      - "virtual power plant reinforcement learning"
+      - "multi-agent reinforcement learning power system"
+      - "energy system digital twin autonomous control"
+      - "electricity market multi-agent"
 
   rss:
     enabled: true

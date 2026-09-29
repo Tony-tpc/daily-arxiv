@@ -137,6 +137,11 @@ def is_high_impact_paper(record: Mapping[str, Any], config: Mapping[str, Any]) -
     return bool(evaluate_paper_quality(record, config).get("allowed"))
 
 
+def approved_venue_issns(config: Mapping[str, Any]) -> list[str]:
+    return sorted({_text(v.get('issn_l')) for v in _settings(config).get('approved_venues', [])
+                   if v.get('issn_l')})
+
+
 def _settings(config: Mapping[str, Any]) -> Mapping[str, Any]:
     settings = config.get(QUALITY_CONFIG_KEY, {}) if isinstance(config, Mapping) else {}
     return settings if isinstance(settings, Mapping) else {}

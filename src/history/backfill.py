@@ -278,12 +278,13 @@ class BackfillService:
     ) -> FetchResult:
         if source_name == "openalex_search":
             adapter = OpenAlexSearchAdapter(self.config)
-            raw = adapter.fetch_range(
+            fetched = adapter.fetch_range(
                 period_start.isoformat(), period_end.isoformat()
             )
+            adapter.close()
             return FetchResult(
-                adapter.normalize(raw),
-                metadata={"transport": "openalex_cursor", "raw_count": len(raw)},
+                adapter.normalize(fetched.records), fetched.status, fetched.errors,
+                metadata=fetched.metadata,
             )
 
         adapter: Any

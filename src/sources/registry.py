@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Type
 
 from .arxiv_adapter import ArxivSourceAdapter
+from .crossref_adapter import CrossrefAdapter
 from .base import BaseSourceAdapter
 from .industry_report_adapter import IndustryReportSourceAdapter
 from .openalex_search_adapter import OpenAlexSearchAdapter
@@ -50,6 +51,7 @@ def build_source_registry(config: Dict[str, Any]) -> SourceRegistry:
     registry = SourceRegistry(config)
     registry.register("arxiv", ArxivSourceAdapter)
     registry.register("openalex_search", OpenAlexSearchAdapter)
+    registry.register("crossref", CrossrefAdapter)
     registry.register("rss", RSSSourceAdapter)
     registry.register("policy", PolicySourceAdapter)
     registry.register("industry_report", IndustryReportSourceAdapter)
