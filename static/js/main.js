@@ -939,6 +939,12 @@ function renderDocumentRow(document, sourceType) {
         policy: document.issuing_body, news: document.media_name, industry_report: document.institution}[sourceType];
     const sourceName = specificSource || card.source_name || document.source_name;
     const summary = card.summary || card.description || document.summary || document.abstract || document.raw_text || t('noAbstract');
+    const originalAbstract = document.abstract || document.raw_text;
+    const summaryLabel = sourceType === 'paper' && summary === originalAbstract
+        ? (LANG === 'zh' ? '原始摘要' : 'Original abstract')
+        : sourceType === 'paper' && !originalAbstract
+            ? (LANG === 'zh' ? '摘要状态' : 'Abstract status')
+            : (LANG === 'zh' ? '系统摘要' : 'System summary');
     const badges = [...new Set([...(card.badges || document.categories || document.tags || []), ...(suggestion.related_topics || [])])];
     const knowledge = sourceType === 'paper' ? state.knowledgeByPaperId[document.id] : null;
     const pdf = links.pdf_url || document.pdf_url;
@@ -959,7 +965,7 @@ function renderDocumentRow(document, sourceType) {
         <div class="document-actions">
             <details class="document-details"><summary>${LANG === 'zh' ? '展开资料与分析依据' : 'Expand document and analysis'}</summary>
                 <div class="document-details-body">
-                    <h4>${LANG === 'zh' ? '系统摘要' : 'System summary'}</h4><p class="paper-abstract">${escapeHtml(summary)}</p>
+                    <h4>${summaryLabel}</h4><p class="paper-abstract">${escapeHtml(summary)}</p>
                     ${sourceType === 'paper' && (document.authors || card.authors_or_orgs || []).length ? `<p class="paper-meta">${LANG === 'zh' ? '作者' : 'Authors'}：${escapeHtml((document.authors || card.authors_or_orgs).join(', '))}</p>` : ''}
                     ${document.abstract && document.abstract !== summary ? `<h4>${LANG === 'zh' ? '原始摘要' : 'Original abstract'}</h4><p class="paper-abstract">${escapeHtml(document.abstract)}</p>` : ''}
                     <div class="paper-meta">${renderCompactInfoBar(card, document)}</div>
@@ -1439,7 +1445,10 @@ function renderCompactInfoBar(card, paper) {
     if (meta.journal_name) parts.push(meta.journal_name);
     if (meta.citation_count != null) parts.push(t('citationsLabel') + ' ' + meta.citation_count);
     if (meta.cas_partition) parts.push(`中科院 ${meta.cas_edition_year} · ${meta.cas_partition} 区`);
-    if (meta.abstract_status === 'missing') parts.push('摘要待补齐');
+    if (meta.abstract_status) parts.push(meta.abstract_status === 'missing'
+        ? (LANG === 'zh' ? '摘要待补齐' : 'Abstract missing')
+        : (LANG === 'zh' ? '摘要已获取' : 'Abstract available'));
+    if (meta.discovered_via?.length) parts.push((LANG === 'zh' ? '来源：' : 'Sources: ') + meta.discovered_via.join(' / '));
     if (meta.openalex_primary_topic) parts.push(meta.openalex_primary_topic);
     if (meta.openalex_institutions?.length) parts.push(meta.openalex_institutions.slice(0, 2).join(', '));
     return parts.map(value => `<span>${escapeHtml(String(value))}</span>`).join('');

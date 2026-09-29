@@ -146,6 +146,13 @@ test('papers expose original English abstract alongside system summary and citat
     const app = workspace();
     const html = app.run(`renderDocumentRow({id:'p',title:'Solar photovoltaics',published:'2021-03-29',abstract:'Full original abstract',summary:'系统摘要内容',authors:['Author'],journal_name:'Joule',citation_count:720},'paper')`);
     for (const value of ['Full original abstract','系统摘要内容','2021-03-29','Joule','720']) assert.ok(html.includes(value));
+    const raw = app.run(`renderDocumentRow({id:'raw',abstract:'Publisher abstract',web_card:{summary:'Publisher abstract',source_metadata:{abstract_status:'available',discovered_via:['openalex_search','crossref']}}},'paper')`);
+    assert.match(raw, /<h4>原始摘要<\/h4>/);
+    assert.doesNotMatch(raw, /<h4>系统摘要<\/h4>/);
+    for (const value of ['摘要已获取','openalex_search / crossref']) assert.ok(raw.includes(value));
+    const absent = app.run(`renderDocumentRow({id:'absent',web_card:{source_metadata:{abstract_status:'missing'}}},'paper')`);
+    assert.match(absent, /摘要待补齐/);
+    assert.doesNotMatch(absent, /<h4>系统摘要<\/h4>/);
 });
 
 test('paper result feedback distinguishes category total, loaded page, and local matches', () => {

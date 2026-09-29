@@ -123,7 +123,7 @@ def evaluate_paper_quality(record: Mapping[str, Any], config: Mapping[str, Any])
     excluded = {"review", "editorial", "erratum", "correction", "retraction", "survey", "tutorial"}
     if excluded.intersection(types) or re.search(r"\b(review|survey|editorial|erratum|corrigendum|retraction|bibliometric|meta-analysis)\b|综述|述评|撤稿|勘误", title):
         return _decision(False, "not_original_research")
-    if re.search(r'\bthis (?:survey|review|tutorial)\b|\bthis (?:paper|article) (?:presents|provides|offers) (?:a|an) (?:comprehensive |systematic |critical )?(?:survey|review|tutorial)\b', abstract):
+    if re.search(r'\bthis (?:survey|review|tutorial)\b|\bthis (?:paper|article) (?:presents|provides|offers) (?:a|an) (?:(?:comprehensive|systematic|critical|brief|detailed|extensive) )?(?:survey|review|tutorial|overview)\b', abstract):
         return _decision(False, 'not_original_research')
     if types[0] not in _DEFAULT_ACCEPTED_TYPES:
         return _decision(False, "not_a_formal_journal_article")

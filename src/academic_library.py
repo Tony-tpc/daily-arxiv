@@ -25,8 +25,9 @@ def in_research_scope(record: dict, config: dict) -> bool:
     settings = config.get('paper_discovery', {})
     if not settings.get('require_topic_match', True):
         return True
-    text = ' '.join([str(record.get('title') or ''), str(record.get('abstract') or record.get('raw_text') or ''),
-                     ' '.join(record.get('categories') or [])]).casefold()
+    # Aggregator topics are broad associations, not evidence of the paper's scope.
+    text = ' '.join([str(record.get('title') or ''),
+                     str(record.get('abstract') or record.get('raw_text') or '')]).casefold()
     energy = settings.get('energy_terms', ['energy system', 'energy systems', 'energy management',
              'energy storage', 'energy trading', 'energy market', 'electricity', 'power system',
              'power systems', 'power grid', 'microgrid', 'microgrids', 'virtual power plant',
@@ -34,7 +35,9 @@ def in_research_scope(record: dict, config: dict) -> bool:
              'photovoltaic', 'renewable energy', 'distributed energy resource', 'distributed generation',
              'smart grid', 'wind power', 'wind farm', 'solar power', 'frequency regulation',
              'energy hub', 'integrated energy', 'building energy', 'energy building', 'demand-side',
-             'power market', '储能', '能源', '电力', '电网', '微电网'])
+             'power market', 'district heating', 'smart meter', 'smart meters', 'electric vehicle',
+             'electric vehicles', 'distribution grid', 'distribution grids', 'power distribution',
+             'pumped storage', 'fuel cell', 'electric energy', '储能', '能源', '电力', '电网', '微电网'])
     methods = settings.get('method_terms', ['reinforcement learning', 'multi-agent', 'multiagent', 'control',
               'autonomous', 'game', 'bidding', 'mechanism', 'digital twin', 'optimization', 'optimisation',
               '强化学习', '多智能体', '控制', '博弈', '自主', '优化', '数字孪生'])

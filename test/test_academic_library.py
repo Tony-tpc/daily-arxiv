@@ -89,9 +89,13 @@ class AcademicLibraryTests(unittest.TestCase):
         library = PaperLibrary(self.config)
         report = library.ingest([paper(abstract='This paper presents a comprehensive review of energy systems.'),
             paper(id='radio', doi='10.1000/radio', title='Energy-efficient radio resource control',
-                  abstract='Reinforcement learning optimizes wireless data transmission energy.')])
+                  abstract='Reinforcement learning optimizes wireless data transmission energy.',
+                  categories=['Smart Grid and Power Systems']),
+            paper(id='brief', doi='10.1000/brief', title='Advances in energy system control',
+                  abstract='This article provides a brief review of distributed control.')])
         self.assertEqual(report['admitted_count'], 0)
         self.assertEqual(report['rejection_reasons']['outside_research_scope'], 1)
+        self.assertEqual(report['rejection_reasons']['not_original_research'], 2)
 
     def test_different_dois_cannot_merge_through_title_or_bridge(self):
         records = [paper(), paper(id='bridge', doi=''), paper(id='other', doi='10.1000/b')]
