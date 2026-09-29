@@ -13,7 +13,7 @@ const I18N = {
         noWordcloud: '暂无词云数据',
         wordcloudLoadFailed: '词云加载失败',
         noPaperData: '暂无论文数据',
-        unknown: 'Unknown',
+        unknown: '未提供',
         authorLabel: '作者',
         sourceLabel: '来源',
         priorityLabel: '优先级',
@@ -71,7 +71,7 @@ const I18N = {
         reportOriginal: '查看原始来源',
         reportPeriod: '报告周期',
         reportGenerated: '生成于',
-        noIntelligence: '暂无符合条件的科研信息',
+        noIntelligence: '尚无可展示的科研资料',
         signalInsufficient: '历史信号不足，运行多源采集后将在此展示',
         schedulerPending: '待运行',
         schedulerEmpty: '本轮无新增',
@@ -148,7 +148,7 @@ const I18N = {
         reportOriginal: 'Open source',
         reportPeriod: 'Period',
         reportGenerated: 'Generated',
-        noIntelligence: 'No matching research information',
+        noIntelligence: 'No research information is available yet',
         signalInsufficient: 'Run multi-source collection to build historical signals',
         schedulerPending: 'Pending',
         schedulerEmpty: 'No new records',
@@ -190,9 +190,9 @@ const state = {
     searchQuery: '',
     allPapers: [],
     directories: {
-        policy: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance'},
-        news: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance'},
-        industry_report: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance'}
+        policy: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance', page: 1, totalPages: 0},
+        news: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance', page: 1, totalPages: 0},
+        industry_report: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance', page: 1, totalPages: 0}
     },
     homeFilters: {sourceType: 'all', topic: '', priority: '', dateFrom: '', dateTo: ''},
     allCategories: [],
@@ -211,7 +211,12 @@ const state = {
     sourceComparisonChart: null,
     entityTrendChart: null,
     forecastChart: null,
-    currentDate: new Date(),
+    paperTotal: 0,
+    papersLoaded: false,
+    knowledgeFailed: false,
+    categoriesFailed: false,
+    paperSort: 'relevance',
+    requestVersions: {},
     theme: localStorage.getItem('theme') || 'light'
 };
 
@@ -219,15 +224,16 @@ const state = {
 document.addEventListener('DOMContentLoaded', async function() {
     initTheme();
     initNavigation();
-    initCalendar();
+    initMobileMenu();
+    initScrollBehavior();
+    initWorkspaceControls();
+    initReaderToc();
     initEventListeners();
     
     // 加载数据
     await loadAllData();
     
-    // 初始化UI组件
-    initScrollBehavior();
-    initMobileMenu();
+
 });
 
 // ==================== 主题切换 ==================== //
@@ -238,174 +244,240 @@ function initTheme() {
     const themeToggle = document.getElementById('theme-toggle');
     const icon = themeToggle.querySelector('i');
     icon.className = state.theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    themeToggle.setAttribute('aria-pressed', String(state.theme === 'dark'));
+    configureChartTheme();
 }
 
 function toggleTheme() {
     state.theme = state.theme === 'light' ? 'dark' : 'light';
     localStorage.setItem('theme', state.theme);
     initTheme();
+    renderResearchTrendModules();
 }
 
 // ==================== 导航 ==================== //
+
+const SECTIONS = ['overview', 'papers', 'policies', 'news', 'industry-reports', 'reports', 'analysis', 'statistics'];
+let evidenceReturnFocus = null;
+let menuReturnFocus = null;
+
 function initNavigation() {
-    const navItems = document.querySelectorAll('.nav-item');
-    
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const section = item.dataset.section;
-            navigateToSection(section);
-        });
+    document.addEventListener('click', event => {
+        const link = event.target.closest('[data-section]');
+        if (!link || !SECTIONS.includes(link.dataset.section)) return;
+        event.preventDefault();
+        navigateToSection(link.dataset.section);
     });
-    
-    // 处理链接点击
-    document.querySelectorAll('[data-section]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            const section = link.dataset.section;
-            if (section) {
-                e.preventDefault();
-                navigateToSection(section);
-            }
-        });
-    });
-}
-
-function navigateToSection(sectionName) {
-    // 更新状态
-    state.currentSection = sectionName;
-    
-    // 更新导航栏
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.section === sectionName);
-    });
-    
-    // 切换内容区域
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.toggle('active', section.id === `${sectionName}-section`);
-    });
-    
-    // 关闭移动端菜单
-    closeMobileMenu();
-    
-    // 滚动到顶部
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ==================== 移动端菜单 ==================== //
-function initMobileMenu() {
-    const mobileBtn = document.getElementById('mobile-menu-btn');
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle-btn');
-    
-    if (mobileBtn) {
-        mobileBtn.addEventListener('click', toggleMobileMenu);
-    }
-    
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', closeMobileMenu);
-    }
-    
-    // 点击遮罩关闭
-    document.addEventListener('click', (e) => {
-        if (sidebar && sidebar.classList.contains('open')) {
-            if (!sidebar.contains(e.target) && !mobileBtn.contains(e.target)) {
-                closeMobileMenu();
-            }
+    const restoreRoute = () => {
+        const section = window.location.hash.slice(1);
+        if (SECTIONS.includes(section)) navigateToSection(section, false);
+        else if (!section) navigateToSection('overview', false);
+    };
+    window.addEventListener('hashchange', restoreRoute);
+    window.addEventListener('popstate', restoreRoute);
+    restoreRoute();
+    document.addEventListener('click', event => {
+        const anchor = event.target.closest('#narrative-toc a, #report-toc a');
+        if (!anchor) return;
+        const target = document.getElementById(anchor.getAttribute('href').slice(1));
+        if (target) {
+            event.preventDefault();
+            target.scrollIntoView({behavior: 'auto', block: 'start'});
+            target.setAttribute('tabindex', '-1');
+            target.focus({preventScroll: true});
         }
     });
+}
+
+function navigateToSection(sectionName, updateHistory = true) {
+    if (!SECTIONS.includes(sectionName)) return;
+    state.currentSection = sectionName;
+    if (updateHistory && window.location.hash !== '#' + sectionName) history.pushState(null, '', '#' + sectionName);
+    closeNarrativeEvidence();
+    closeMobileMenu();
+    document.querySelectorAll('.nav-item').forEach(item => {
+        const active = item.dataset.section === sectionName;
+        item.classList.toggle('active', active);
+        if (active) item.setAttribute('aria-current', 'page');
+        else item.removeAttribute('aria-current');
+    });
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.toggle('active', section.id === sectionName + '-section');
+    });
+    if (sectionName === 'statistics') requestAnimationFrame(() => renderResearchTrendModules());
+    window.scrollTo({top: 0, behavior: 'auto'});
+}
+
+function initMobileMenu() {
+    document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileMenu);
+    document.getElementById('sidebar-toggle-btn').addEventListener('click', closeMobileMenu);
+    document.getElementById('sidebar-backdrop').addEventListener('click', closeMobileMenu);
+    window.matchMedia('(min-width: 1024px)').addEventListener('change', closeMobileMenu);
+    document.addEventListener('keydown', event => {
+        const drawer = document.getElementById('narrative-evidence-drawer');
+        const sidebar = document.getElementById('sidebar');
+        const modal = drawer.classList.contains('open') ? drawer : sidebar.classList.contains('open') ? sidebar : null;
+        if (!modal) return;
+        if (event.key === 'Escape') {
+            if (modal === drawer) closeNarrativeEvidence();
+            else closeMobileMenu();
+        } else if (event.key === 'Tab') trapFocus(event, modal);
+    });
+}
+
+function trapFocus(event, root) {
+    const items = [...root.querySelectorAll('a[href], button:not([disabled]), input, select, summary, [tabindex="0"]')]
+        .filter(item => item.getClientRects().length);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    }
 }
 
 function toggleMobileMenu() {
     const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('open');
+    if (sidebar.classList.contains('open')) return closeMobileMenu();
+    menuReturnFocus = document.activeElement;
+    sidebar.classList.add('open');
+    sidebar.setAttribute('role', 'dialog');
+    sidebar.setAttribute('aria-modal', 'true');
+    sidebar.setAttribute('aria-label', LANG === 'zh' ? '主导航' : 'Main navigation');
+    document.getElementById('sidebar-backdrop').hidden = false;
+    document.getElementById('mobile-menu-btn').setAttribute('aria-expanded', 'true');
+    document.getElementById('main-content').inert = true;
+    document.querySelector('.top-navbar').inert = true;
+    document.body.classList.add('menu-open');
+    document.getElementById('sidebar-toggle-btn').focus();
 }
 
 function closeMobileMenu() {
     const sidebar = document.getElementById('sidebar');
+    if (!sidebar.classList.contains('open')) return;
     sidebar.classList.remove('open');
+    sidebar.removeAttribute('role');
+    sidebar.removeAttribute('aria-modal');
+    document.getElementById('sidebar-backdrop').hidden = true;
+    document.getElementById('mobile-menu-btn').setAttribute('aria-expanded', 'false');
+    document.getElementById('main-content').inert = false;
+    document.querySelector('.top-navbar').inert = false;
+    document.body.classList.remove('menu-open');
+    menuReturnFocus?.focus();
 }
 
-// ==================== 日历 ==================== //
-function initCalendar() {
-    renderCalendar(state.currentDate);
-    
-    document.getElementById('prev-month')?.addEventListener('click', () => {
-        state.currentDate.setMonth(state.currentDate.getMonth() - 1);
-        renderCalendar(state.currentDate);
-    });
-    
-    document.getElementById('next-month')?.addEventListener('click', () => {
-        state.currentDate.setMonth(state.currentDate.getMonth() + 1);
-        renderCalendar(state.currentDate);
-    });
+function configureChartTheme() {
+    if (typeof Chart === 'undefined') return;
+    const style = getComputedStyle(document.documentElement);
+    Chart.defaults.color = style.getPropertyValue('--text-secondary').trim();
+    Chart.defaults.borderColor = style.getPropertyValue('--border-color').trim();
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.font.size = 11;
+    Chart.defaults.maintainAspectRatio = false;
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.padding = 16;
+    Chart.defaults.animation = false;
 }
 
-function renderCalendar(date) {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    
-    // 更新标题
-    const monthNames = I18N[LANG].monthNames;
-    document.getElementById('current-month').textContent = LANG === 'en'
-        ? `${monthNames[month]} ${year}`
-        : `${year}年${monthNames[month]}`;
-    
-    // 获取月份第一天和最后一天
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDay = firstDay.getDay(); // 0 (周日) - 6 (周六)
-    const totalDays = lastDay.getDate();
-    
-    // 生成日历网格
-    const calendarBody = document.getElementById('calendar-body');
-    calendarBody.innerHTML = '';
-    
-    // 星期标题
-    const weekDays = I18N[LANG].weekDays;
-    weekDays.forEach(day => {
-        const dayHeader = document.createElement('div');
-        dayHeader.className = 'calendar-day-header';
-        dayHeader.textContent = day;
-        dayHeader.style.cssText = 'font-weight: 600; color: var(--text-secondary); text-align: center; padding: 0.5rem 0;';
-        calendarBody.appendChild(dayHeader);
+// Each view owns its filters. Navigation does not reload or reset them.
+function initWorkspaceControls() {
+    document.getElementById('paper-filter-clear').addEventListener('click', () => {
+        state.searchQuery = '';
+        state.selectedCategory = '';
+        state.selectedPriority = '';
+        state.paperSort = 'relevance';
+        document.getElementById('search-input').value = '';
+        document.getElementById('paper-category-filter').value = '';
+        document.getElementById('paper-priority-filter').value = '';
+        document.getElementById('paper-sort').value = 'relevance';
+        loadPapers(1);
     });
-    
-    // 填充空白日期
-    for (let i = 0; i < startDay; i++) {
-        const emptyDay = document.createElement('div');
-        emptyDay.className = 'calendar-day empty';
-        calendarBody.appendChild(emptyDay);
-    }
-    
-    // 填充日期
-    const today = new Date();
-    for (let day = 1; day <= totalDays; day++) {
-        const dayElement = document.createElement('div');
-        dayElement.className = 'calendar-day';
-        dayElement.textContent = day;
-        
-        // 标记今天
-        if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
-            dayElement.classList.add('active');
-        }
-        
-        // TODO: 检查是否有数据，添加 has-data 类
-        // dayElement.classList.add('has-data');
-        
-        dayElement.addEventListener('click', () => {
-            // TODO: 加载特定日期的数据
-            console.log(`Selected date: ${year}-${month + 1}-${day}`);
+    document.getElementById('home-filter-clear').addEventListener('click', () => {
+        state.homeFilters = {sourceType: 'all', topic: '', priority: '', dateFrom: '', dateTo: ''};
+        document.querySelectorAll('.intelligence-filter-grid input').forEach(input => { input.value = ''; });
+        document.getElementById('home-source-filter').value = 'all';
+        document.getElementById('home-priority-filter').value = '';
+        loadIntelligenceHome();
+    });
+    document.querySelectorAll('[data-directory-clear]').forEach(button => {
+        button.addEventListener('click', () => {
+            const type = button.dataset.directoryClear;
+            Object.assign(state.directories[type], {search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance'});
+            const toolbar = button.closest('.filter-bar');
+            toolbar.querySelectorAll('input').forEach(input => { input.value = ''; });
+            toolbar.querySelector('[data-directory-priority]').value = '';
+            toolbar.querySelector('[data-directory-sort]').value = 'relevance';
+            loadDirectory(type);
         });
-        
-        calendarBody.appendChild(dayElement);
-    }
+    });
+    document.querySelectorAll('.intelligence-filter-grid input').forEach(input => {
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Enter') document.getElementById('home-filter-apply').click();
+        });
+    });
+    document.querySelector('.narrative-tabs').addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        const tabs = [...document.querySelectorAll('[data-narrative-view]')];
+        const index = tabs.indexOf(document.activeElement);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+            : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+        event.preventDefault();
+        tabs[next].click();
+        tabs[next].focus();
+    });
+}
+
+function initReaderToc() {
+    const media = window.matchMedia('(max-width: 767px)');
+    const sync = () => document.querySelectorAll('.reader-toc').forEach(toc => { toc.open = !media.matches; });
+    media.addEventListener('change', sync);
+    sync();
+}
+
+function wrapReadingTables(root) {
+    root.querySelectorAll('table').forEach(table => {
+        if (table.parentElement.classList.contains('table-scroll')) return;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-scroll';
+        wrapper.tabIndex = 0;
+        wrapper.setAttribute('role', 'region');
+        wrapper.setAttribute('aria-label', LANG === 'zh' ? '数据表，可横向滚动' : 'Data table, scroll horizontally');
+        table.replaceWith(wrapper);
+        wrapper.append(table);
+    });
+}
+
+function renderPager(container, page, totalPages, onPage) {
+    if (!container) return;
+    if (!totalPages) { container.innerHTML = ''; return; }
+    const previous = LANG === 'zh' ? '上一页' : 'Previous';
+    const next = LANG === 'zh' ? '下一页' : 'Next';
+    const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+    const numbers = Array.from({length: Math.min(5, totalPages)}, (_, offset) => start + offset);
+    container.innerHTML = `<span>${LANG === 'zh' ? `第 ${page} / ${totalPages} 页` : `Page ${page} of ${totalPages}`}</span>
+        <button type="button" class="page-link" data-page="${page - 1}" ${page <= 1 ? 'disabled' : ''}>${previous}</button>
+        ${numbers.map(number => `<button type="button" class="page-link" data-page="${number}" aria-label="${LANG === 'zh' ? `第 ${number} 页` : `Page ${number}`}" ${number === page ? 'aria-current="page"' : ''}>${number}</button>`).join('')}
+        <button type="button" class="page-link" data-page="${page + 1}" ${page >= totalPages ? 'disabled' : ''}>${next}</button>`;
+    container.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+        const selected = Number(button.dataset.page);
+        if (selected >= 1 && selected <= totalPages) onPage(selected);
+    }));
+}
+
+function renderDirectoryPagination(sourceType) {
+    const directory = state.directories[sourceType];
+    const prefix = sourceType === 'industry_report' ? 'industry-report' : sourceType;
+    renderPager(document.getElementById(prefix + '-pagination'), directory.page, directory.totalPages,
+        page => loadDirectory(sourceType, page));
 }
 
 // ==================== 数据加载 ==================== //
 async function loadAllData() {
     try {
         await Promise.all([
-            loadStats(),
             loadAnalysis(),
             loadNarrative(),
             loadHistory(),
@@ -419,8 +491,10 @@ async function loadAllData() {
             loadIntelligenceHome(),
             loadSchedulerStatus()
         ]);
-        renderPapers(filterPapers(state.allPapers));
-        renderFeaturedPapers(state.allPapers.slice(0, 5));
+        if (state.papersLoaded) {
+            renderPapers(filterPapers(state.allPapers));
+            renderFeaturedPapers(state.allPapers.slice(0, 5));
+        }
         renderResearchTrendModules();
         renderResearchMatrix();
         renderComparisonTable();
@@ -433,7 +507,9 @@ async function loadAllData() {
 async function loadKnowledge() {
     try {
         const response = await fetch('/api/knowledge');
-        if (!response.ok) {
+        if (!response.ok && response.status !== 404) throw new Error('Knowledge unavailable');
+        state.knowledgeFailed = false;
+        if (response.status === 404) {
             state.knowledgeByPaperId = {};
             state.facetSchema = [];
             return;
@@ -446,10 +522,12 @@ async function loadKnowledge() {
             return index;
         }, {});
     } catch (error) {
+        state.knowledgeFailed = true;
         console.warn('加载结构化知识失败:', error);
         state.knowledgeByPaperId = {};
         state.facetSchema = [];
     }
+    renderPaperSupportStatus();
 }
 
 async function loadHistory() {
@@ -468,44 +546,23 @@ async function loadHistory() {
     }
 }
 
-async function loadStats() {
-    try {
-        const response = await fetch('/api/stats');
-        if (!response.ok) throw new Error('Failed to load stats');
-        
-        const stats = await response.json();
-        
-        // 更新统计卡片
-        updateElement('total-papers', stats.papers_count || 0);
-        updateElement('total-summaries', stats.summaries_count || 0);
-        
-        // 更新最后更新时间
-        if (stats.last_update) {
-            updateElement('last-update-time', stats.last_update);
-        }
-        
-        // 从分析数据获取更多统计
-        const analysisRes = await fetch('/api/analysis');
-        if (analysisRes.ok) {
-            const analysis = await analysisRes.json();
-            const keywords = analysis.keywords || [];
-            const categories = Object.keys(analysis.statistics?.category_distribution || {});
-            
-            updateElement('total-categories', categories.length);
-            updateElement('hot-topics', Math.min(keywords.length, 10));
-        }
-    } catch (error) {
-        console.error('加载统计数据失败:', error);
-    }
-}
+
 
 async function loadAnalysis() {
+    const version = (state.requestVersions.analysis || 0) + 1;
+    state.requestVersions.analysis = version;
     try {
         const response = await fetch('/api/analysis');
         if (!response.ok) throw new Error('Failed to load analysis');
         
         const analysis = await response.json();
+        if (state.requestVersions.analysis !== version) return;
         state.analysis = analysis;
+        const dataDate = analysis.generated_at || analysis.date || '';
+        const dateLabel = dataDate ? formatReportTime(dataDate) : (LANG === 'zh' ? '未记录' : 'Not recorded');
+        updateElement('workspace-data-date', (analysis.generated_at ? (LANG === 'zh' ? '分析生成时间：' : 'Analysis generated: ') : (LANG === 'zh' ? '分析产物日期：' : 'Analysis date: ')) + dateLabel);
+        updateElement('last-update-time', dateLabel);
+        document.getElementById('statistics-error').hidden = true;
         
         // 加载词云
         await loadWordcloud();
@@ -518,12 +575,22 @@ async function loadAnalysis() {
         renderHomeTrendSignals();
         
     } catch (error) {
+        if (state.requestVersions.analysis !== version) return;
         console.error('加载分析数据失败:', error);
-        showError('narrative-content', t('loadAnalysisFailed'));
+        updateElement('workspace-data-date', LANG === 'zh' ? '分析数据暂不可用' : 'Analysis unavailable');
+        document.getElementById('statistics-error').hidden = false;
+        showError('statistics-error', t('loadAnalysisFailed'));
     }
 }
 
 async function loadNarrative(options = {}) {
+    const version = (state.requestVersions.narrative || 0) + 1;
+    state.requestVersions.narrative = version;
+    document.getElementById('narrative-opportunity-section').hidden = true;
+    document.getElementById('narrative-chain-section').hidden = true;
+    updateElement('narrative-generated', t('loading'));
+    document.getElementById('narrative-coverage').innerHTML = '';
+    document.getElementById('narrative-toc').innerHTML = '';
     const content = document.getElementById('narrative-content');
     if (content) {
         content.innerHTML = `<div class="loading"><div class="spinner"></div><p>${LANG === 'zh' ? '正在读取长篇分析…' : 'Loading long-form analysis…'}</p></div>`;
@@ -536,10 +603,16 @@ async function loadNarrative(options = {}) {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.error || 'Failed to load narrative');
         }
-        state.narrative = await response.json();
+        const payload = await response.json();
+        if (state.requestVersions.narrative !== version) return;
+        state.narrative = payload;
         renderNarrative();
     } catch (error) {
+        if (state.requestVersions.narrative !== version) return;
         console.error('加载长篇趋势分析失败:', error);
+        updateElement('narrative-generated', LANG === 'zh' ? '分析暂不可用' : 'Analysis unavailable');
+        document.getElementById('narrative-coverage').innerHTML = '';
+        document.getElementById('narrative-toc').innerHTML = '';
         showError('narrative-content', LANG === 'zh' ? `长篇分析加载失败：${error.message}` : `Narrative failed: ${error.message}`);
     }
 }
@@ -553,7 +626,7 @@ function renderNarrative() {
     renderNarrativeChains(payload);
     const generated = document.getElementById('narrative-generated');
     if (generated) {
-        const timestamp = String(payload.generated_at || '').replace('T', ' ').slice(0, 19);
+        const timestamp = formatReportTime(payload.generated_at);
         generated.textContent = LANG === 'zh'
             ? `生成时间 ${timestamp || '未记录'} · 正文 ${Number(payload.char_count || 0).toLocaleString()} 字`
             : `Generated ${timestamp || 'unknown'} · ${Number(payload.char_count || 0).toLocaleString()} characters`;
@@ -577,7 +650,7 @@ function renderNarrativeCoverage(payload) {
     const partial = coverage.status === 'partial';
     const gaps = [...(coverage.gaps || []), ...(payload.limitations || []).filter(item => !(coverage.gaps || []).includes(item))];
     container.innerHTML = `<div class="narrative-coverage-summary">
-        <span class="narrative-status ${partial ? 'partial' : 'complete'}"><i class="fas ${partial ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i>${partial ? (LANG === 'zh' ? '部分覆盖' : 'Partial coverage') : (LANG === 'zh' ? '覆盖达标' : 'Coverage ready')}</span>
+        <span class="narrative-status ${partial ? 'partial' : ''}">${partial ? (LANG === 'zh' ? '部分覆盖' : 'Partial coverage') : (LANG === 'zh' ? '来源覆盖' : 'Source coverage')}</span>
         <span>${escapeHtml(coverage.period_start || '')}${coverage.period_end ? ` — ${escapeHtml(coverage.period_end)}` : ''}</span>
         <span>${Number(coverage.month_count || 0)} ${LANG === 'zh' ? '个自然月' : 'months'}</span>
     </div><div class="narrative-source-row">${chips}</div>
@@ -593,11 +666,11 @@ function renderNarrativeArticle(payload) {
         `<a href="#narrative-section-${escapeHtml(section.id)}"><span>${String(index + 1).padStart(2, '0')}</span>${escapeHtml(section.title)}</a>`
     ).join('');
     article.innerHTML = sections.length ? sections.map((section, index) => `<section id="narrative-section-${escapeHtml(section.id)}" class="narrative-section">
-        <div class="narrative-section-kicker">${String(index + 1).padStart(2, '0')} / ${String(sections.length).padStart(2, '0')}</div>
         <h2>${escapeHtml(section.title)}</h2>
         <div class="narrative-prose">${decorateNarrativeCitations(section.html || '')}</div>
     </section>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前没有可展示的正文。' : 'No narrative is available.'}</p>`;
     bindNarrativeEvidenceButtons(article);
+    wrapReadingTables(article);
 }
 
 function decorateNarrativeCitations(html) {
@@ -663,22 +736,31 @@ function openNarrativeEvidence(evidenceIds, evidenceIndex = null) {
             : '';
         return `<article class="narrative-evidence-item"><div class="narrative-evidence-meta"><code>${escapeHtml(id)}</code><span>${escapeHtml(item.source_name || item.source_type || '')}</span><time>${escapeHtml(item.event_date || '')}</time></div>
             <h3>${escapeHtml(item.title || '')}</h3><p>${escapeHtml(item.excerpt || '')}</p>
-            ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${LANG === 'zh' ? '打开原始材料' : 'Open source'} <i class="fas fa-arrow-up-right-from-square"></i></a>` : `${auditNote || `<span class="narrative-no-link">${LANG === 'zh' ? '当前记录未提供原文链接' : 'No source URL'}</span>`}`}</article>`;
+            ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${LANG === 'zh' ? '打开原始材料' : 'Open source'} <i class="fas fa-arrow-up-right-from-square"></i></a>${auditNote}` : `${auditNote || `<span class="narrative-no-link">${LANG === 'zh' ? '当前记录未提供原文链接' : 'No source URL'}</span>`}`}</article>`;
     }).join('') : `<p class="trend-note">${LANG === 'zh' ? '未找到对应证据。' : 'Evidence not found.'}</p>`;
+    evidenceReturnFocus = document.activeElement;
     backdrop.hidden = false;
+    drawer.inert = false;
+    document.querySelector('.main-wrapper').inert = true;
+    document.querySelector('.top-navbar').inert = true;
     drawer.classList.add('open');
     drawer.setAttribute('aria-hidden', 'false');
     document.body.classList.add('drawer-open');
+    document.getElementById('narrative-drawer-close').focus();
 }
 
 function closeNarrativeEvidence() {
     const drawer = document.getElementById('narrative-evidence-drawer');
     const backdrop = document.getElementById('narrative-drawer-backdrop');
-    if (!drawer || !backdrop) return;
+    if (!drawer || !backdrop || !drawer.classList.contains('open')) return;
+    drawer.inert = true;
+    document.querySelector('.main-wrapper').inert = false;
+    document.querySelector('.top-navbar').inert = false;
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
     backdrop.hidden = true;
     document.body.classList.remove('drawer-open');
+    evidenceReturnFocus?.focus({preventScroll: true});
 }
 
 async function loadForecast() {
@@ -717,24 +799,33 @@ function populateForecastTopics() {
 async function loadWordcloud() {
     try {
         const response = await fetch('/api/wordcloud');
+        if (response.status === 404) {
+            document.getElementById('wordcloud-container').innerHTML = emptyState(t('noWordcloud'));
+            return;
+        }
         if (!response.ok) throw new Error('Failed to load wordcloud');
         
         const data = await response.json();
         const container = document.getElementById('wordcloud-container');
         
         if (data.url) {
-            container.innerHTML = `<img src="${data.url}" alt="Wordcloud" class="fade-in">`;
+            container.innerHTML = `<img src="${escapeHtml(data.url)}" alt="${LANG === 'zh' ? '研究热点词云' : 'Research word cloud'}">`;
+            container.querySelector('img').addEventListener('error', () => showError('wordcloud-container', t('wordcloudLoadFailed')));
         } else {
-            container.innerHTML = `<p style="color: var(--text-secondary);">${t('noWordcloud')}</p>`;
+            container.innerHTML = `<p>${t('noWordcloud')}</p>`;
         }
     } catch (error) {
         console.error('加载词云失败:', error);
-        const container = document.getElementById('wordcloud-container');
-        container.innerHTML = `<p style="color: var(--text-secondary);">${t('wordcloudLoadFailed')}</p>`;
+        showError('wordcloud-container', t('wordcloudLoadFailed'));
     }
 }
 
 async function loadPapers(page = 1) {
+    const version = (state.requestVersions.papers || 0) + 1;
+    state.requestVersions.papers = version;
+    state.currentPage = page;
+    state.papersLoaded = false;
+    renderPagination(0, page);
     try {
         showLoading('papers-list');
         
@@ -745,11 +836,14 @@ async function loadPapers(page = 1) {
         });
         
         const response = await fetch(`/api/papers?${params}`);
-        if (!response.ok) throw new Error('Failed to load papers');
-        
-        const data = await response.json();
+        if (!response.ok && response.status !== 404) throw new Error('Failed to load papers');
+        const data = response.status === 404 ? {papers: [], total: 0, total_pages: 0} : await response.json();
+        if (state.requestVersions.papers !== version) return;
+        state.papersLoaded = true;
         state.allPapers = data.papers || [];
         state.currentPage = page;
+        state.paperTotal = Number(data.total || 0);
+        sortPapers(state.paperSort);
         
         // 渲染论文列表
         renderPapers(filterPapers(state.allPapers));
@@ -763,8 +857,11 @@ async function loadPapers(page = 1) {
         renderComparisonTable();
         
     } catch (error) {
+        if (state.requestVersions.papers !== version) return;
         console.error('加载论文失败:', error);
         showError('papers-list', LANG === 'en' ? 'Failed to load papers' : '加载论文失败');
+        showError('featured-papers', LANG === 'en' ? 'Failed to load papers' : '加载论文失败');
+        updateElement('papers-result-count', '—');
     }
 }
 
@@ -774,93 +871,98 @@ async function loadCategories() {
         if (!response.ok) throw new Error('Failed to load categories');
         
         const categories = await response.json();
+        state.categoriesFailed = false;
         state.allCategories = categories;
         
-        // 渲染类别列表（侧边栏）
-        renderCategoryList(categories);
         
         // 渲染类别筛选（论文列表页）
         renderCategoryFilter(categories);
         
     } catch (error) {
+        state.categoriesFailed = true;
         console.error('加载类别失败:', error);
     }
+    renderPaperSupportStatus();
 }
 
 // ==================== 渲染函数 ==================== //
+function renderPaperSupportStatus() {
+    const container = document.getElementById('paper-support-status');
+    if (!container) return;
+    const failed = [state.knowledgeFailed ? (LANG === 'zh' ? '结构化知识' : 'Structured knowledge') : '', state.categoriesFailed ? (LANG === 'zh' ? '论文类别' : 'Paper categories') : ''].filter(Boolean);
+    container.hidden = !failed.length;
+    if (failed.length) showError('paper-support-status', LANG === 'zh' ? `${failed.join('、')}暂不可用，已加载资料仍可阅读。` : `${failed.join(', ')} unavailable; loaded documents remain readable.`);
+}
+
 function renderPapers(papers) {
     const container = document.getElementById('papers-list');
-    
-    if (!papers || papers.length === 0) {
-        container.innerHTML = `<p style="text-align: center; color: var(--text-secondary); padding: 3rem;">${t('noPaperData')}</p>`;
-        return;
-    }
-    
-    container.innerHTML = papers.map(paper => {
-        const knowledge = state.knowledgeByPaperId[paper.id];
-        const card = paper.web_card || {};
-        const links = card.links || {};
-        const suggestion = card.reading_suggestion || {};
-        const title = card.title || paper.title;
-        const primaryUrl = links.primary_url || paper.entry_url || '#';
-        const sourceUrl = links.source_url || paper.entry_url || primaryUrl;
-        const pdfUrl = links.pdf_url || paper.pdf_url || sourceUrl;
-        const authorLine = card.author_line || (paper.authors ? paper.authors.slice(0, 3).join(', ') : t('unknown'));
-        const publishedAt = card.published_at || paper.published || 'N/A';
-        const summaryText = card.summary || card.description || paper.summary || paper.abstract || t('noAbstract');
-        const badges = card.badges || paper.categories || [];
-        const relatedTopics = suggestion.related_topics || [];
-        const priority = normalizePriority(card.read_priority || suggestion.read_priority);
-        return `
-        <div class="paper-card fade-in priority-card-${priority}">
-            <div class="paper-header">
-                <div>
-                    <h3 class="paper-title">
-                        <a href="${primaryUrl}" target="_blank">${escapeHtml(title)}</a>
-                    </h3>
-                    <div class="paper-meta">
-                        <span class="paper-meta-item">
-                            <i class="fas fa-calendar"></i>
-                            ${publishedAt}
-                        </span>
-                        <span class="paper-meta-item">
-                            <i class="fas fa-user"></i>
-                            ${escapeHtml(authorLine || t('unknown'))}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            ${renderRankingPanel(card)}
-            <p class="paper-abstract">${escapeHtml(summaryText)}</p>
-            <div class="paper-meta" style="margin-bottom:0.375rem">
-                ${renderCompactInfoBar(card, paper)}
-            </div>
-            ${renderKnowledgePanel(knowledge)}
-            ${renderRelatedDocuments(card)}
-            <div class="paper-categories">
-                ${badges.map(cat => 
-                    `<span class="category-badge">${escapeHtml(cat)}</span>`
-                ).join('')}
-                ${relatedTopics.map(topic =>
-                    `<span class="category-badge">${escapeHtml(topic)}</span>`
-                ).join('')}
-            </div>
-            <div class="paper-actions">
-                <a href="${pdfUrl}" target="_blank" class="btn-paper btn-primary">
-                    <i class="fas fa-file-pdf"></i>
-                    PDF
-                </a>
-                <a href="${sourceUrl}" target="_blank" class="btn-paper btn-secondary">
-                    <i class="fas fa-external-link-alt"></i>
-                    arXiv
-                </a>
-            </div>
+    updateElement('papers-result-count', LANG === 'zh'
+        ? `类别范围共 ${state.paperTotal} 篇 · 本页匹配 ${papers.length} 篇，共加载 ${state.allPapers.length} 篇`
+        : `${state.paperTotal} in category scope · ${papers.length} matches / ${state.allPapers.length} loaded on this page`);
+    updateElement('paper-applied-filters', filterDescription({search: state.searchQuery, topic: state.selectedCategory, priority: state.selectedPriority}));
+    container.innerHTML = papers.length
+        ? papers.map(paper => renderDocumentRow(paper, 'paper')).join('')
+        : emptyState(state.searchQuery || state.selectedPriority || state.selectedCategory
+            ? (LANG === 'zh' ? '没有匹配的论文，请调整或清除筛选。' : 'No matching papers. Adjust or clear filters.')
+            : t('noPapers'));
+}
+
+function sourceLink(url, label, className = 'btn-paper btn-secondary') {
+    return /^https?:\/\//i.test(url || '')
+        ? `<a href="${escapeHtml(url)}" class="${className}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)} <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>`
+        : '';
+}
+
+function renderDocumentRow(document, sourceType) {
+    const card = document.web_card || document;
+    const links = card.links || {};
+    const suggestion = card.reading_suggestion || {};
+    const title = card.title || document.title || '';
+    const url = links.source_url || links.primary_url || document.url || document.entry_url || '';
+    const date = card.published_at || document.published_at || document.published || '';
+    const organization = card.author_line || card.source_name || document.source_name || (document.authors || []).slice(0, 3).join(', ');
+    const specificSource = {paper: card.source_metadata?.journal_name || document.journal_name,
+        policy: document.issuing_body, news: document.media_name, industry_report: document.institution}[sourceType];
+    const sourceName = specificSource || card.source_name || document.source_name;
+    const summary = card.summary || card.description || document.summary || document.abstract || document.raw_text || t('noAbstract');
+    const badges = [...new Set([...(card.badges || document.categories || document.tags || []), ...(suggestion.related_topics || [])])];
+    const knowledge = sourceType === 'paper' ? state.knowledgeByPaperId[document.id] : null;
+    const pdf = links.pdf_url || document.pdf_url;
+    const citationCount = card.source_metadata?.citation_count ?? document.citation_count;
+    const facts = sourceType === 'policy' ? [
+        [LANG === 'zh' ? '地域' : 'Region', document.region],
+        [LANG === 'zh' ? '生效日期' : 'Effective date', document.effective_date]
+    ] : sourceType === 'industry_report' ? [
+        [LANG === 'zh' ? '主题' : 'Topics', (document.themes || []).join('、')]
+    ] : [];
+    return `<article class="document-row">
+        <div class="document-heading">
+            <div><h3>${sourceLink(url, title, '') || escapeHtml(title)}</h3>
+                <div class="paper-meta">${sourceName ? `<span>${escapeHtml(sourceName)}</span>` : ''}${organization && organization !== sourceName ? `<span>${escapeHtml(organization)}</span>` : ''}<time>${escapeHtml(String(date).slice(0, 10) || (LANG === 'zh' ? '发布日期未提供' : 'Publication date unavailable'))}</time>${sourceType === 'paper' && citationCount != null ? `<span>${LANG === 'zh' ? '引用' : 'Citations'} ${Number(citationCount)}</span>` : ''}${facts.filter(([, value]) => value).map(([label, value]) => `<span>${label}：${escapeHtml(value)}</span>`).join('')}</div>
+            </div>${renderRankingPanel(card, true)}
         </div>
-    `;
-    }).join('');
+        <p class="document-summary clamp-two">${escapeHtml(summary)}</p>
+        <div class="document-actions">
+            <details class="document-details"><summary>${LANG === 'zh' ? '展开资料与分析依据' : 'Expand document and analysis'}</summary>
+                <div class="document-details-body">
+                    <h4>${LANG === 'zh' ? '系统摘要' : 'System summary'}</h4><p class="paper-abstract">${escapeHtml(summary)}</p>
+                    ${sourceType === 'paper' && (document.authors || card.authors_or_orgs || []).length ? `<p class="paper-meta">${LANG === 'zh' ? '作者' : 'Authors'}：${escapeHtml((document.authors || card.authors_or_orgs).join(', '))}</p>` : ''}
+                    ${document.abstract && document.abstract !== summary ? `<h4>${LANG === 'zh' ? '原始摘要' : 'Original abstract'}</h4><p class="paper-abstract">${escapeHtml(document.abstract)}</p>` : ''}
+                    <div class="paper-meta">${renderCompactInfoBar(card, document)}</div>
+                    ${renderRankingPanel({...card, ranking_applicable_dimensions: document.ranking_applicable_dimensions})}
+                    ${renderKnowledgePanel(knowledge)}
+                    ${renderRelatedDocuments(card)}
+                    <div class="paper-categories">${badges.map(tag => `<span class="category-badge">${escapeHtml(tag)}</span>`).join('')}</div>
+                </div>
+            </details>
+            <div class="paper-actions">${pdf && pdf !== url ? sourceLink(pdf, /\.pdf(?:[?#]|$)|\/pdf\//i.test(pdf) ? 'PDF' : (LANG === 'zh' ? '全文入口' : 'Full text')) : ''}${sourceLink(url, t('originalSource'))}</div>
+        </div>
+    </article>`;
 }
 
 async function loadIntelligenceHome() {
+    const version = (state.requestVersions.home || 0) + 1;
+    state.requestVersions.home = version;
     showLoading('today-recommendations');
     const filters = state.homeFilters;
     const params = new URLSearchParams({
@@ -876,12 +978,19 @@ async function loadIntelligenceHome() {
         const response = await fetch(`/api/research-information?${params}`);
         if (!response.ok) throw new Error('Failed to load research information');
         const payload = await response.json();
-        updateElement('intelligence-result-count', `${payload.total || 0} ${LANG === 'zh' ? '条' : 'items'}`);
+        if (state.requestVersions.home !== version) return;
+        updateElement('intelligence-result-count', LANG === 'zh'
+            ? `匹配 ${payload.total || 0} 条 · 展示 ${(payload.documents || []).length} 条`
+            : `${payload.total || 0} matches · ${(payload.documents || []).length} shown`);
+        updateElement('home-applied-filters', filterDescription(filters));
         renderTodayRecommendations(payload.documents || []);
         renderSourceSnapshot(payload.source_counts || {});
     } catch (error) {
+        if (state.requestVersions.home !== version) return;
         console.error('加载科研信息首页失败:', error);
-        showError('today-recommendations', t('noIntelligence'));
+        showError('today-recommendations', LANG === 'zh' ? '重点信息加载失败' : 'Failed to load priority information');
+        updateElement('intelligence-result-count', '—');
+        document.getElementById('source-snapshot').innerHTML = emptyState(LANG === 'zh' ? '来源数量暂不可用' : 'Source counts unavailable');
     }
 }
 
@@ -889,7 +998,8 @@ function renderTodayRecommendations(documents) {
     const container = document.getElementById('today-recommendations');
     if (!container) return;
     if (!documents.length) {
-        container.innerHTML = `<p class="trend-note">${t('noIntelligence')}</p>`;
+        container.innerHTML = emptyState(hasFilters(state.homeFilters)
+            ? (LANG === 'zh' ? '没有符合当前条件的资料，可清除筛选后重新查看。' : 'No matches. Clear filters to see available sources.') : t('noIntelligence'));
         return;
     }
     const labels = LANG === 'zh'
@@ -899,12 +1009,13 @@ function renderTodayRecommendations(documents) {
         const card = document.web_card || document;
         const suggestion = card.reading_suggestion || document.reading_suggestion || {};
         const url = card.links?.source_url || card.links?.primary_url || document.url || document.entry_url || '';
-        const safeUrl = /^https?:\/\//i.test(url) ? url : '';
         const sourceType = card.source_type || document.source_type || 'paper';
+        const summary = card.summary || card.description || document.summary || document.abstract || '';
         return `<article class="recommendation-card">
-            <header><span class="report-source-chip">${labels[sourceType] || escapeHtml(sourceType)}</span><h3>${escapeHtml(card.title || document.title || '')}</h3><span class="report-score">${Number(card.importance_score || document.importance_score || 0).toFixed(1)}</span></header>
-            <p>${escapeHtml(suggestion.why_relevant || card.summary || document.summary || document.abstract || '')}</p>
-            <footer><span>${escapeHtml(suggestion.recommended_action || '')}</span>${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${t('originalSource')} <i class="fas fa-arrow-up-right-from-square"></i></a>` : ''}</footer>
+            <h3>${sourceLink(url, card.title || document.title || '', '') || escapeHtml(card.title || document.title || '')}</h3>
+            <div class="recommendation-meta"><span>${labels[sourceType] || escapeHtml(sourceType)}</span><span>${escapeHtml(card.source_name || document.source_name || '')}</span><time>${escapeHtml(String(card.published_at || document.published_at || document.published || '').slice(0, 10) || (LANG === 'zh' ? '发布日期未提供' : 'Publication date unavailable'))}</time></div>
+            <p class="clamp-two">${escapeHtml(summary)}</p>
+            <footer>${renderRankingPanel(card, true)}<details class="recommendation-details"><summary>${LANG === 'zh' ? '摘要与推荐依据' : 'Summary and rationale'}</summary><div><p><small>${LANG === 'zh' ? '系统摘要' : 'System summary'}</small><br>${escapeHtml(summary)}</p>${suggestion.why_relevant ? `<p><small>${t('relevanceReason')}</small><br>${escapeHtml(suggestion.why_relevant)}</p>` : ''}${sourceLink(url, t('originalSource'))}</div></details></footer>
         </article>`;
     }).join('');
 }
@@ -918,7 +1029,7 @@ function renderSourceSnapshot(counts) {
         ['news', 'news', 'fa-newspaper', LANG === 'zh' ? '国内新闻' : 'China news'],
         ['industry_report', 'industry-reports', 'fa-industry', LANG === 'zh' ? '行业报告' : 'Industry reports']
     ];
-    container.innerHTML = items.map(([type, section, icon, label]) => `<button type="button" class="source-snapshot-item" data-home-section="${section}"><i class="fas ${icon}"></i><span>${label}</span><strong>${Number(counts[type] || 0)}</strong></button>`).join('');
+    container.innerHTML = items.map(([type, section, icon, label]) => `<button type="button" class="source-snapshot-item" data-home-section="${section}" title="${LANG === 'zh' ? '打开资料目录（保留该页条件）' : 'Open directory with its own filters'}"><span>${label}</span><strong>${Number(counts[type] || 0)}</strong></button>`).join('');
     container.querySelectorAll('[data-home-section]').forEach(button => {
         button.addEventListener('click', () => navigateToSection(button.dataset.homeSection));
     });
@@ -934,11 +1045,17 @@ function renderHomeTrendSignals() {
             : (LANG === 'zh' ? '低置信情景' : 'Low-confidence scenario');
         return {
             title: item.topic || item.topic_id,
-            body: `${trajectoryLabel(item.trajectory)} · ${confidenceLabel(item.confidence)} · ${mode} · ${LANG === 'zh' ? '持续性' : 'persistence'} ${Math.round(Number(metrics.persistence || 0) * 100)}%`
+            body: `${trajectoryLabel(item.trajectory)} · ${confidenceLabel(item.confidence)} · ${mode}`,
+            gaps: (item.data_gaps || []).join('；'),
+            evidenceIds: item.evidence_ids || []
         };
     });
     if (forecastSignals.length) {
-        container.innerHTML = forecastSignals.map(item => `<div class="home-trend-signal"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div>`).join('');
+        container.innerHTML = `<p class="signal-scope">${LANG === 'zh' ? '系统预测 · 截至' : 'System forecast · As of'} ${escapeHtml(state.forecast.as_of || '—')}</p>` + forecastSignals.map((item, index) => `<div class="home-trend-signal"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span>${item.gaps ? `<span>${escapeHtml(item.gaps)}</span>` : ''}${item.evidenceIds.length ? `<button class="narrative-evidence-link" type="button" data-signal-index="${index}">${LANG === 'zh' ? '查看依据' : 'View evidence'} · ${item.evidenceIds.length}</button>` : ''}</div>`).join('');
+        container.querySelectorAll('[data-signal-index]').forEach(button => button.addEventListener('click', () => {
+            const ids = forecastSignals[Number(button.dataset.signalIndex)].evidenceIds;
+            openNarrativeEvidence(ids, documentEvidenceIndex(ids));
+        }));
         return;
     }
     // Compatibility fallback for analysis artifacts created before schema 2.0.
@@ -957,10 +1074,13 @@ function renderHomeTrendSignals() {
 async function loadSchedulerStatus() {
     const container = document.getElementById('scheduler-job-status');
     if (!container) return;
+    const version = (state.requestVersions.scheduler || 0) + 1;
+    state.requestVersions.scheduler = version;
     try {
         const response = await fetch('/api/scheduler/status');
         if (!response.ok) throw new Error('Failed to load scheduler status');
         const payload = await response.json();
+        if (state.requestVersions.scheduler !== version) return;
         if (!payload.enabled) {
             container.innerHTML = `<p class="trend-note">${t('schedulerDisabled')}</p>`;
             return;
@@ -983,32 +1103,52 @@ async function loadSchedulerStatus() {
             </article>`;
         }).join('') || `<p class="trend-note">${t('schedulerPending')}</p>`;
     } catch (error) {
+        if (state.requestVersions.scheduler !== version) return;
         console.warn('加载调度状态失败:', error);
-        container.innerHTML = `<p class="trend-note">${t('schedulerLoadFailed')}</p>`;
+        showError('scheduler-job-status', t('schedulerLoadFailed'));
     }
 }
 
 async function loadReport(reportType) {
+    const version = (state.requestVersions.report || 0) + 1;
+    state.requestVersions.report = version;
     const selectedType = reportType || document.getElementById('report-type')?.value || 'weekly';
     showLoading('intelligence-report');
+    updateElement('report-period', t('loading'));
+    document.getElementById('report-limitations').innerHTML = '';
+    document.getElementById('report-toc').innerHTML = '';
+    ['document', 'paper', 'policy', 'industry'].forEach(key => updateElement('report-' + key + '-count', '—'));
     try {
         const response = await fetch(`/api/reports/latest?report_type=${encodeURIComponent(selectedType)}`);
         if (!response.ok) throw new Error('Failed to load report');
-        state.report = await response.json();
+        const payload = await response.json();
+        if (state.requestVersions.report !== version) return;
+        state.report = payload;
         renderIntelligenceReport(state.report);
     } catch (error) {
+        if (state.requestVersions.report !== version) return;
         console.error('加载研究报告失败:', error);
+        updateElement('report-title', LANG === 'zh' ? '研究报告' : 'Research report');
+        showError('home-report-entry', t('reportLoadFailed'));
+        updateElement('report-period', t('reportLoadFailed'));
+        ['document', 'paper', 'policy', 'industry'].forEach(key => updateElement('report-' + key + '-count', '—'));
+        document.getElementById('report-toc').innerHTML = '';
         showError('intelligence-report', t('reportLoadFailed'));
     }
 }
 
 function renderIntelligenceReport(report) {
+    const home = document.getElementById('home-report-entry');
+    if (home) home.innerHTML = `<a href="#reports" data-section="reports">${escapeHtml(report.title || '')}</a><p>${escapeHtml(report.period_start || '—')} — ${escapeHtml(report.period_end || '—')}</p><p>${t('reportGenerated')} ${escapeHtml(formatReportTime(report.generated_at))}</p><p>${LANG === 'zh' ? '本期收录' : 'Period sample'} ${Number(report.document_count || 0)} ${LANG === 'zh' ? '条资料' : 'documents'}</p>`;
     updateElement('report-title', report.title || '');
     updateElement(
         'report-period',
         `${t('reportPeriod')}：${report.period_start || '—'} — ${report.period_end || '—'} · ${t('reportGenerated')} ${formatReportTime(report.generated_at)}`
     );
     const sourceCounts = report.source_counts || {};
+    const quality = report.data_quality || {};
+    const limitations = document.getElementById('report-limitations');
+    if (limitations) limitations.innerHTML = `<p>${LANG === 'zh' ? '正文历史证据范围' : 'Historical evidence window'}：${escapeHtml(quality.period_start || '—')} — ${escapeHtml(quality.period_end || '—')} · ${quality.document_count ?? '—'} ${LANG === 'zh' ? '条语料' : 'corpus items'} · ${quality.selected_evidence_count ?? '—'} ${LANG === 'zh' ? '条引用证据' : 'cited items'}</p>${(quality.gaps || []).length ? `<details><summary>${LANG === 'zh' ? '数据缺口与结论边界' : 'Data gaps and limitations'} (${quality.gaps.length})</summary><ul>${quality.gaps.map(gap => `<li>${escapeHtml(gap)}</li>`).join('')}</ul></details>` : ''}`;
     updateElement('report-document-count', Number(report.document_count || 0));
     updateElement('report-paper-count', Number(sourceCounts.paper || 0));
     updateElement('report-policy-count', Number(sourceCounts.policy || 0));
@@ -1020,27 +1160,19 @@ function renderIntelligenceReport(report) {
     const container = document.getElementById('intelligence-report');
     if (!container) return;
     const sections = report.sections || [];
+    document.getElementById('report-toc').innerHTML = sections.map((section, index) =>
+        '<a href="#report-section-' + index + '"><span>' + String(index + 1).padStart(2, '0') + '</span>' + escapeHtml(section.title || '') + '</a>'
+    ).join('');
     if (!sections.length) {
         container.innerHTML = `<div class="report-empty">${t('reportEmpty')}</div>`;
         return;
     }
-    const icons = {
-        hot_papers: 'fa-file-circle-check',
-        policy_guidance: 'fa-landmark-flag',
-        news_and_industry: 'fa-industry',
-        key_trends: 'fa-arrow-trend-up',
-        research_inspirations: 'fa-lightbulb',
-        next_actions: 'fa-list-check',
-        narrative_paper_opportunities: 'fa-flask',
-        narrative_multi_source_chains: 'fa-link'
-    };
     container.innerHTML = sections.map((section, index) => {
         const items = section.items || [];
         const isNarrative = section.kind === 'narrative';
-        return `<article class="report-section-card ${isNarrative ? 'report-section-narrative' : ''} report-section-${escapeHtml(section.key || '')}">
+        return `<article id="report-section-${index}" class="report-section-card ${isNarrative ? 'report-section-narrative' : ''} report-section-${escapeHtml(section.key || '')}">
             <header>
                 <span class="report-section-index">${String(index + 1).padStart(2, '0')}</span>
-                <i class="fas ${isNarrative ? 'fa-book-open' : (icons[section.key] || 'fa-file-lines')}"></i>
                 <h2>${escapeHtml(section.title || '')}</h2>
                 <span class="report-section-count">${isNarrative ? `${Number(section.char_count || 0).toLocaleString()} ${LANG === 'zh' ? '字' : 'chars'}` : items.length}</span>
             </header>
@@ -1049,6 +1181,7 @@ function renderIntelligenceReport(report) {
             </div>
         </article>`;
     }).join('');
+    wrapReadingTables(container);
     container.querySelectorAll('.report-narrative-body').forEach(section => {
         const evidenceIndex = report.evidence_indexes?.[section.dataset.reportView] || {};
         section.querySelectorAll('.narrative-citation').forEach(button => {
@@ -1099,19 +1232,23 @@ function formatReportTime(value) {
     const parsed = new Date(value || '');
     if (Number.isNaN(parsed.getTime())) return value || '—';
     return new Intl.DateTimeFormat(LANG === 'zh' ? 'zh-CN' : 'en', {
-        month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
     }).format(parsed);
 }
 
-async function loadDirectory(sourceType) {
+async function loadDirectory(sourceType, page = 1) {
     const directory = state.directories[sourceType];
     if (!directory) return;
     const ids = directoryIds(sourceType);
+    directory.page = page;
+    const version = (state.requestVersions[sourceType] || 0) + 1;
+    state.requestVersions[sourceType] = version;
     showLoading(ids.list);
+    document.getElementById((sourceType === 'industry_report' ? 'industry-report' : sourceType) + '-pagination').innerHTML = '';
     const params = new URLSearchParams({
         source_type: sourceType,
-        page: 1,
-        per_page: 100,
+        page: page,
+        per_page: 20,
         search: directory.search,
         topic: directory.topic,
         priority: directory.priority,
@@ -1123,13 +1260,24 @@ async function loadDirectory(sourceType) {
         const response = await fetch(`/api/documents?${params}`);
         if (!response.ok) throw new Error('Failed to load directory');
         const payload = await response.json();
+        if (state.requestVersions[sourceType] !== version) return;
+        directory.totalPages = Number(payload.total_pages || 0);
         directory.documents = payload.documents || [];
         directory.total = Number(payload.total || 0);
-        updateElement(ids.total, `${directory.total} ${sourceType === 'industry_report' && LANG === 'zh' ? '份' : LANG === 'zh' ? '条' : 'items'}`);
-        updateElement(ids.navCount, directory.total);
+        if (!hasFilters(directory)) {
+            directory.unfilteredTotal = directory.total;
+            updateElement(ids.navCount, directory.total);
+        }
+        updateElement(ids.total, LANG === 'zh'
+            ? `资料总数 ${directory.unfilteredTotal ?? '—'} · 匹配 ${directory.total} · 本页 ${directory.documents.length}`
+            : `${directory.unfilteredTotal ?? '—'} total · ${directory.total} matched · ${directory.documents.length} on page`);
+        updateElement((sourceType === 'industry_report' ? 'industry-report' : sourceType) + '-applied-filters', filterDescription(directory));
+        renderDirectoryPagination(sourceType);
         renderDirectoryDocuments(sourceType, directory.documents);
     } catch (error) {
+        if (state.requestVersions[sourceType] !== version) return;
         console.error(`加载 ${sourceType} 目录失败:`, error);
+        updateElement(ids.total, '—');
         showError(ids.list, LANG === 'zh' ? '目录加载失败' : 'Failed to load directory');
     }
 }
@@ -1142,43 +1290,12 @@ function directoryIds(sourceType) {
 function renderDirectoryDocuments(sourceType, documents) {
     const container = document.getElementById(directoryIds(sourceType).list);
     if (!container) return;
-    if (!documents.length) {
-        const empty = {
-            policy: ['fa-landmark', t('emptyPolicyTitle'), t('emptyPolicyHint')],
-            news: ['fa-newspaper', t('emptyNewsTitle'), t('emptyNewsHint')],
-            industry_report: ['fa-industry', t('emptyReportTitle'), t('emptyReportHint')]
-        }[sourceType];
-        container.innerHTML = `<div class="directory-empty"><i class="fas ${empty[0]}"></i><strong>${empty[1]}</strong><span>${empty[2]}</span></div>`;
-        return;
-    }
-
-    const icon = {policy: 'fa-landmark', news: 'fa-newspaper', industry_report: 'fa-industry'}[sourceType];
-    container.innerHTML = documents.map(document => {
-        const card = document.web_card || document;
-        const links = card.links || {};
-        const suggestion = card.reading_suggestion || {};
-        const sourceUrl = links.source_url || links.primary_url || document.url || '#';
-        const title = card.title || document.title || '';
-        const publishedAt = card.published_at || document.published_at || 'N/A';
-        const organization = card.author_line || card.source_name || document.source_name || t('unknown');
-        const summary = card.summary || card.description || document.summary || document.raw_text || t('noAbstract');
-        const badges = card.badges || document.tags || [];
-        const priority = normalizePriority(card.read_priority || suggestion.read_priority);
-        return `<article class="paper-card intelligence-card fade-in priority-card-${priority}">
-            <div class="paper-header"><div>
-                <h3 class="paper-title"><i class="fas ${icon} source-type-icon"></i><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a></h3>
-                <div class="paper-meta">
-                    <span class="paper-meta-item"><i class="fas fa-calendar"></i>${escapeHtml(publishedAt)}</span>
-                    <span class="paper-meta-item"><i class="fas fa-building"></i>${escapeHtml(organization)}</span>
-                </div>
-            </div></div>
-            ${renderRankingPanel(card)}
-            <p class="paper-abstract">${escapeHtml(summary)}</p>
-            ${renderRelatedDocuments(card)}
-            <div class="paper-categories">${badges.slice(0, 12).map(tag => `<span class="category-badge">${escapeHtml(tag)}</span>`).join('')}</div>
-            <div class="paper-actions"><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="btn-paper btn-primary"><i class="fas fa-arrow-up-right-from-square"></i>${t('originalSource')}</a></div>
-        </article>`;
-    }).join('');
+    const filters = state.directories[sourceType];
+    const filtered = filters.search || filters.topic || filters.priority || filters.dateFrom || filters.dateTo;
+    const labels = {policy: t('emptyPolicyTitle'), news: t('emptyNewsTitle'), industry_report: t('emptyReportTitle')};
+    container.innerHTML = documents.length
+        ? documents.map(document => renderDocumentRow(document, sourceType)).join('')
+        : emptyState(filtered ? (LANG === 'zh' ? '没有匹配资料，请调整或清除筛选。' : 'No matches. Adjust or clear filters.') : labels[sourceType]);
 }
 
 function renderRelatedDocuments(card) {
@@ -1188,12 +1305,12 @@ function renderRelatedDocuments(card) {
     const typeLabels = LANG === 'zh'
         ? {paper: '论文', policy: '政策', news: '新闻', industry_report: '行业报告'}
         : {paper: 'Paper', policy: 'Policy', news: 'News', industry_report: 'Industry report'};
-    const links = related.map(item => `<a class="related-document" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer">
+    const links = related.map(item => `<div class="related-document">
         <span class="related-type">${typeLabels[item.source_type] || escapeHtml(item.source_type)}</span>
-        <span class="related-title">${escapeHtml(item.title)}</span>
-        <strong>${Math.round(Number(item.score || 0) * 100)}</strong>
+        <span class="related-title">${sourceLink(item.url, item.title, '') || escapeHtml(item.title)}</span>
+        <span>${item.score != null ? `${LANG === 'zh' ? '关联分' : 'Relation score'} ${Math.round(Number(item.score) * 100)}` : ''}</span>
         <small>${escapeHtml(item.reason || '')}</small>
-    </a>`).join('');
+    </div>`).join('');
     const merged = duplicateSources.length > 1
         ? `<div class="merged-sources"><i class="fas fa-code-merge"></i>${t('duplicateSources')}：${duplicateSources.map(escapeHtml).join('、')}</div>`
         : '';
@@ -1227,9 +1344,10 @@ function renderWebSuggestionPanel(card) {
 
 function renderRankingPanel(card, compact = false) {
     const suggestion = card.reading_suggestion || {};
-    const priority = normalizePriority(card.read_priority || suggestion.read_priority);
+    const rawPriority = card.read_priority || suggestion.read_priority;
+    const priority = ['high', 'medium', 'low'].includes(rawPriority) ? rawPriority : '';
     const action = card.recommended_action || suggestion.recommended_action || '';
-    const score = Number(card.importance_score);
+    const score = card.importance_score == null || card.importance_score === '' ? NaN : Number(card.importance_score);
     const breakdown = card.ranking_score_breakdown || {};
     const reason = suggestion.why_relevant || '';
     const labels = {
@@ -1240,25 +1358,26 @@ function renderRankingPanel(card, compact = false) {
         source_credibility: LANG === 'zh' ? '来源可信度' : 'Source credibility'
     };
     const rows = Object.entries(labels)
-        .filter(([key]) => Object.prototype.hasOwnProperty.call(breakdown, key))
+        .filter(([key]) => Object.prototype.hasOwnProperty.call(breakdown, key) && (!card.ranking_applicable_dimensions || card.ranking_applicable_dimensions.includes(key)))
         .map(([key, label]) => {
             const value = Math.max(0, Math.min(100, Number(breakdown[key]) || 0));
             return `<div class="score-row">
                 <span>${label}</span>
-                <div class="score-track"><i style="width:${value}%"></i></div>
+                <progress max="100" value="${value}" aria-label="${label}"></progress>
                 <strong>${Math.round(value)}</strong>
             </div>`;
         }).join('');
 
     return `<div class="ranking-panel ranking-${priority}">
         <div class="ranking-summary">
-            <span class="priority-pill priority-${priority}">${priorityLabel(priority)}</span>
-            ${action ? `<span class="action-pill"><i class="fas fa-book-open"></i>${escapeHtml(action)}</span>` : ''}
+            ${priority ? `<span class="priority-pill priority-${priority}">${priorityLabel(priority)}</span>` : ''}
+            ${!compact && action ? `<span class="action-pill">${escapeHtml(action)}</span>` : ''}
             ${Number.isFinite(score) ? `<span class="score-pill">${t('scoreLabel')} <strong>${score.toFixed(1)}</strong></span>` : ''}
         </div>
-        ${!compact && rows ? `<details class="ranking-details">
+        ${!compact && (rows || reason) ? `<details class="ranking-details">
             <summary>${t('scoreBreakdown')}</summary>
             <div class="score-grid">${rows}</div>
+            <p>${LANG === 'zh' ? '综合评分与适用维度均为 0–100 分，用于安排阅读顺序，不代表准确率或商业价值。' : 'Overall and applicable dimension scores use a 0–100 scale for reading priority, not accuracy or commercial value.'}</p>
             ${reason ? `<p><strong>${t('relevanceReason')}：</strong>${escapeHtml(reason)}</p>` : ''}
         </details>` : ''}
     </div>`;
@@ -1303,31 +1422,12 @@ function renderOpenAlexPanel(card) {
 function renderCompactInfoBar(card, paper) {
     const meta = card.source_metadata || {};
     const parts = [];
-
-    if (card.source_name) {
-        parts.push(`<span><i class="fas fa-database"></i> ${escapeHtml(card.source_name)}</span>`);
-    }
-    if (meta.citation_count !== undefined && meta.citation_count !== null) {
-        const cites = meta.citation_count;
-        const bracket = meta.impact_bracket || '';
-        let badge = '';
-        if (bracket === 'hot') badge = ' <span class=\"impact-badge impact-hot\">\u{1f525} \u9ad8\u5f15</span>';
-        else if (bracket === 'high') badge = ' <span class=\"impact-badge impact-high\">\u{2b50} \u9ad8\u5f71\u54cd</span>';
-        else if (bracket === 'notable') badge = ` <span class=\"impact-badge impact-notable\">\u{1f4c8} \u5f15\u7528 ${cites}</span>`;
-        parts.push(`<span><i class="fas fa-quote-right"></i> ${escapeHtml(String(cites))}${badge}</span>`);
-    }
-    if (meta.journal_quartile) {
-        parts.push(`<span><i class="fas fa-circle-check"></i> ${escapeHtml(t('whitelistQuartileLabel'))} ${escapeHtml(meta.journal_quartile)}</span>`);
-    }
-    if (meta.openalex_primary_topic) {
-        parts.push(`<span><i class="fas fa-tag"></i> ${escapeHtml(meta.openalex_primary_topic)}</span>`);
-    }
-    if (meta.openalex_institutions && meta.openalex_institutions.length) {
-        parts.push(`<span><i class="fas fa-building"></i> ${escapeHtml(meta.openalex_institutions.slice(0, 2).join(', '))}</span>`);
-    }
-
-    if (!parts.length) return '';
-    return parts.join(' <span style=\"color:var(--text-tertiary)\">|</span> ');
+    if (meta.journal_name) parts.push(meta.journal_name);
+    if (meta.citation_count != null) parts.push(t('citationsLabel') + ' ' + meta.citation_count);
+    if (meta.journal_quartile) parts.push(t('whitelistQuartileLabel') + ' ' + meta.journal_quartile);
+    if (meta.openalex_primary_topic) parts.push(meta.openalex_primary_topic);
+    if (meta.openalex_institutions?.length) parts.push(meta.openalex_institutions.slice(0, 2).join(', '));
+    return parts.map(value => `<span>${escapeHtml(String(value))}</span>`).join('');
 }
 
 function renderKnowledgePanel(knowledge) {
@@ -1363,31 +1463,13 @@ function renderKnowledgePanel(knowledge) {
         .filter(Boolean)
         .join('');
 
-    const collapsedId = 'kp-body-' + Math.random().toString(36).slice(2, 8);
 
-    return `
-        <div class="knowledge-panel">
-            <div class="knowledge-panel-title" onclick="var e=document.getElementById('${collapsedId}');e.style.display=e.style.display==='none'?'block':'none'">
-                <i class="fas fa-sitemap"></i>
-                <span>${t('structuredInsight')}</span>
-                <span style="font-size:0.65rem;opacity:0.5;margin-left:auto;">▼</span>
-            </div>
-            ${facetBadges ? `
-                <div class="facet-strip">
-                    ${facetBadges}
-                </div>
-            ` : ''}
-            <div id="${collapsedId}" style="display:none">
-                <div class="knowledge-grid">${highlights}</div>
-                ${evidenceRows ? `
-                    <details class="knowledge-evidence">
-                        <summary>${t('evidence')}</summary>
-                        <div class="evidence-list">${evidenceRows}</div>
-                    </details>
-                ` : ''}
-            </div>
-        </div>
-    `;
+    return `<details class="knowledge-panel">
+        <summary>${t('structuredInsight')}</summary>
+        ${facetBadges ? `<div class="facet-strip">${facetBadges}</div>` : ''}
+        <div class="knowledge-grid">${highlights}</div>
+        ${evidenceRows ? `<details class="knowledge-evidence"><summary>${t('evidence')}</summary><div class="evidence-list">${evidenceRows}</div></details>` : ''}
+    </details>`;
 }
 
 function renderKnowledgeField(field, item, icon, isMajor = false) {
@@ -1425,63 +1507,15 @@ function formatFacetName(name) {
 
 function renderFeaturedPapers(papers) {
     const container = document.getElementById('featured-papers');
-    
-    if (!papers || papers.length === 0) {
-        container.innerHTML = `<p style="text-align: center; color: var(--text-secondary);">${t('noPapers')}</p>`;
-        return;
-    }
-    
-    container.innerHTML = papers.map(paper => {
+    if (!container) return;
+    container.innerHTML = papers.length ? papers.slice(0, 3).map(paper => {
         const card = paper.web_card || {};
-        const links = card.links || {};
-        const title = card.title || paper.title;
-        const summaryText = card.summary || card.description || paper.summary || paper.abstract || '';
-        const primaryUrl = links.primary_url || paper.entry_url || '#';
-        const sourceName = card.source_name || 'arXiv';
-        return `
-        <div class="paper-card fade-in">
-            <h4 class="paper-title">
-                <a href="${primaryUrl}" target="_blank">${escapeHtml(title)}</a>
-            </h4>
-            <p class="paper-abstract" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                ${escapeHtml(summaryText)}
-            </p>
-            ${renderRankingPanel(card, true)}
-            ${renderCompactInfoBar(card, paper)}
-            <div class="paper-actions" style="margin-top: 0.5rem;">
-                <a href="${primaryUrl}" target="_blank" class="btn-paper btn-primary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
-                    <i class="fas fa-arrow-right"></i>
-                    ${t('viewDetail')}
-                </a>
-            </div>
-        </div>
-    `;
-    }).join('');
-}
-
-function renderCategoryList(categories) {
-    const container = document.getElementById('category-list');
-    
-    if (!categories || categories.length === 0) {
-        container.innerHTML = `<p style="text-align: center; color: var(--text-secondary); font-size: 0.875rem;">${t('noCategories')}</p>`;
-        return;
-    }
-    
-    container.innerHTML = categories.slice(0, 10).map(cat => `
-        <div class="category-item ${state.selectedCategory === cat.name ? 'active' : ''}" 
-             data-category="${escapeHtml(cat.name)}">
-            <span class="category-name">${escapeHtml(cat.name)}</span>
-            <span class="category-count">${cat.count}</span>
-        </div>
-    `).join('');
-    
-    // 绑定点击事件
-    container.querySelectorAll('.category-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const category = item.dataset.category;
-            filterByCategory(category === state.selectedCategory ? '' : category);
-        });
-    });
+        return `<article class="featured-paper-item">
+            <h4>${sourceLink(card.links?.primary_url || paper.entry_url, card.title || paper.title, '') || escapeHtml(card.title || paper.title)}</h4>
+            <p class="document-summary clamp-two">${escapeHtml(card.summary || paper.summary || paper.abstract || '')}</p>
+            <div class="paper-meta">${renderCompactInfoBar(card, paper)}</div>
+        </article>`;
+    }).join('') : emptyState(t('noPapers'));
 }
 
 function renderCategoryFilter(categories) {
@@ -1495,59 +1529,7 @@ function renderCategoryFilter(categories) {
 }
 
 function renderPagination(totalPages, currentPage) {
-    const container = document.getElementById('pagination');
-    if (!container) return;
-    
-    const pages = [];
-    const maxVisible = 5;
-    
-    // 上一页
-    pages.push(`
-        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <a class="page-link" href="#" data-page="${currentPage - 1}">
-                <i class="fas fa-chevron-left"></i>
-            </a>
-        </li>
-    `);
-    
-    // 页码
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-    
-    if (endPage - startPage < maxVisible - 1) {
-        startPage = Math.max(1, endPage - maxVisible + 1);
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-        pages.push(`
-            <li class="page-item ${i === currentPage ? 'active' : ''}">
-                <a class="page-link" href="#" data-page="${i}">${i}</a>
-            </li>
-        `);
-    }
-    
-    // 下一页
-    pages.push(`
-        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-            <a class="page-link" href="#" data-page="${currentPage + 1}">
-                <i class="fas fa-chevron-right"></i>
-            </a>
-        </li>
-    `);
-    
-    container.innerHTML = pages.join('');
-    
-    // 绑定点击事件
-    container.querySelectorAll('.page-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = parseInt(link.dataset.page);
-            if (page > 0 && page <= totalPages) {
-                loadPapers(page);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        });
-    });
+    renderPager(document.getElementById('pagination'), currentPage, totalPages, page => loadPapers(page));
 }
 
 function renderAnalysisContent(elementId, content) {
@@ -1557,15 +1539,32 @@ function renderAnalysisContent(elementId, content) {
     if (content) {
         element.innerHTML = content;
     } else {
-        element.innerHTML = `<p style="color: var(--text-secondary);">${t('noData')}</p>`;
+        element.innerHTML = `<p>${t('noData')}</p>`;
     }
 }
 
 function renderResearchTrendModules() {
+    if (typeof Chart === 'undefined') {
+        for (const id of ['category-chart', 'trend-chart', 'source-comparison-chart', 'entity-trend-chart']) {
+            setChartAvailability(document.getElementById(id), false,
+                LANG === 'zh' ? '图表组件暂不可用，请刷新页面重试。' : 'Charts unavailable. Reload the page to retry.');
+        }
+        return;
+    }
     renderCategoryChart();
     renderTrendTimeline();
     renderSourceComparisonChart();
     renderEntityTrendChart();
+}
+
+function setChartAvailability(canvas, available, message = t('noData')) {
+    if (!canvas) return;
+    canvas.parentElement.hidden = !available;
+    const status = document.getElementById(canvas.id + '-status');
+    if (status) {
+        status.textContent = available ? '' : message;
+        status.hidden = available;
+    }
 }
 
 function renderForecastDashboard() {
@@ -1641,8 +1640,8 @@ function renderForecastChart() {
         data: {
             labels: allLabels,
             datasets: [
-                {label: LANG === 'zh' ? '历史主题占比' : 'Historical topic share', data: historyData, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.1)', fill: true, tension: .3, spanGaps: false},
-                {label: LANG === 'zh' ? '预测中位线' : 'Forecast', data: projection, borderColor: '#f59e0b', borderDash: [7, 5], tension: .25, spanGaps: true},
+                {label: LANG === 'zh' ? '历史主题占比' : 'Historical topic share', data: historyData, borderColor: '#426a96', backgroundColor: 'rgba(79,70,229,.1)', fill: true, tension: .3, spanGaps: false},
+                {label: LANG === 'zh' ? '预测中位线' : 'Forecast', data: projection, borderColor: '#b0976d', borderDash: [7, 5], tension: .25, spanGaps: true},
                 {label: LANG === 'zh' ? '80%区间下界' : '80% lower', data: lower, borderColor: 'rgba(245,158,11,.15)', pointRadius: 0, spanGaps: true},
                 {label: LANG === 'zh' ? '80%预测区间' : '80% interval', data: upper, borderColor: 'rgba(245,158,11,.15)', backgroundColor: 'rgba(245,158,11,.18)', pointRadius: 0, fill: '-1', spanGaps: true}
             ]
@@ -1770,31 +1769,36 @@ function modeLabel(value) {
     return value === 'quantitative' ? 'Quantitative' : 'Low-confidence scenario';
 }
 
+const CHART_PALETTES = {light: ['#426a96', '#588087', '#967b55', '#65826e', '#8c7286'], dark: ['#8caed0', '#88b3b8', '#c4aa7f', '#98b5a0', '#b8a0b3']};
+function chartPalette() { return CHART_PALETTES[state.theme] || CHART_PALETTES.light; }
+const SOURCE_ORDER = ['paper', 'policy', 'news', 'industry_report', 'unknown'];
+function chartColor(name) {
+    let hash = 0;
+    for (const char of String(name)) hash = ((hash * 31) + char.charCodeAt(0)) >>> 0;
+    return chartPalette()[hash % chartPalette().length];
+}
+function numericEntries(counts) {
+    return Object.entries(counts || {}).filter(([, value]) => value != null && value !== '' && Number.isFinite(Number(value)));
+}
+function dateRange(items) {
+    const dates = items.map(item => String(item.date || '')).filter(Boolean).sort();
+    return dates.length ? `${dates[0]} — ${dates[dates.length - 1]}` : (LANG === 'zh' ? '日期未提供' : 'Dates unavailable');
+}
 function renderCategoryChart() {
     const canvas = document.getElementById('category-chart');
     if (!canvas || typeof Chart === 'undefined') return;
-
-    const distribution = state.analysis?.statistics?.category_distribution || {};
-    const entries = Object.entries(distribution).slice(0, 8);
-    if (!entries.length) return;
-
+    const entries = numericEntries(state.analysis?.statistics?.category_distribution).sort((a, b) => b[1] - a[1]);
+    setChartAvailability(canvas, entries.length > 0);
     if (state.categoryChart) state.categoryChart.destroy();
+    if (!entries.length) return;
+    const dates = Object.keys(state.analysis?.statistics?.time_distribution || {}).map(date => ({date}));
+    updateElement('category-chart-scope', LANG === 'zh'
+        ? `本次分析 ${state.analysis.document_count ?? '—'} 条资料 · ${dateRange(dates)} · 单位：标签出现次数，可一文多标签，含类型和优先级标签。`
+        : `${state.analysis.document_count ?? '—'} analyzed documents · ${dateRange(dates)} · Tag occurrences; multiple tags per document, including type and priority labels.`);
     state.categoryChart = new Chart(canvas, {
-        type: 'doughnut',
-        data: {
-            labels: entries.map(([category]) => category),
-            datasets: [{
-                data: entries.map(([, count]) => count),
-                backgroundColor: ['#4f46e5', '#06b6d4', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6', '#14b8a6', '#ef4444'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
-        }
+        type: 'bar',
+        data: {labels: entries.map(([key]) => key), datasets: [{label: LANG === 'zh' ? '出现次数' : 'Occurrences', data: entries.map(([, value]) => value), backgroundColor: entries.map(([key]) => chartColor(key))}]},
+        options: {indexAxis: 'y', responsive: true, scales: {x: {beginAtZero: true, ticks: {precision: 0}, title: {display: true, text: LANG === 'zh' ? '次数' : 'Count'}}}, plugins: {legend: {display: false}}}
     });
 }
 
@@ -1817,7 +1821,9 @@ function renderTrendTimeline() {
                 document_count: state.analysis?.document_count || state.analysis?.paper_count || state.allPapers.length,
                 topic_counts: state.analysis?.statistics?.category_distribution || {}
             }];
-    const usableSnapshots = snapshots.filter(snapshot => snapshot.date);
+    const usableSnapshots = snapshots.filter(snapshot => snapshot.date && snapshot.document_count != null).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    updateElement('trend-chart-scope', LANG === 'zh' ? `${dateRange(usableSnapshots)} · 单位：条。仅展示有记录日期，日期间隔不等；缺失日期不补零，不表示连续增长。` : `${dateRange(usableSnapshots)} · Documents on recorded dates only; unequal intervals, missing dates are not zero.`);
+    setChartAvailability(canvas, usableSnapshots.length > 0);
     if (!usableSnapshots.length) return;
 
     const topicTotals = {};
@@ -1830,29 +1836,28 @@ function renderTrendTimeline() {
         .sort((left, right) => right[1] - left[1])
         .slice(0, 3)
         .map(([topic]) => topic);
-    const colors = ['#06b6d4', '#f59e0b', '#10b981'];
     const topicDatasets = topTopics.map((topic, index) => ({
         label: topic,
         data: usableSnapshots.map(snapshot => Number(snapshot.topic_counts?.[topic] || 0)),
-        borderColor: colors[index],
-        backgroundColor: `${colors[index]}20`,
+        borderColor: chartColor(topic),
+        backgroundColor: chartColor(topic),
         fill: false,
-        tension: 0.35
+        tension: 0
     }));
 
     if (state.trendChart) state.trendChart.destroy();
     state.trendChart = new Chart(canvas, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: usableSnapshots.map(snapshot => snapshot.date),
             datasets: [
                 {
                     label: LANG === 'zh' ? '文档数量' : 'Documents',
                     data: usableSnapshots.map(snapshot => snapshot.document_count || 0),
-                    borderColor: '#4f46e5',
-                    backgroundColor: 'rgba(79, 70, 229, 0.12)',
+                    borderColor: '#426a96',
+                    backgroundColor: chartPalette()[0],
                     fill: true,
-                    tension: 0.35
+                    tension: 0
                 },
                 ...topicDatasets
             ]
@@ -1879,7 +1884,7 @@ function renderTrendTimeline() {
         const latest = usableSnapshots[usableSnapshots.length - 1];
         const topics = Object.entries(latest.topic_counts || {}).sort((a, b) => b[1] - a[1]).slice(0, 12);
         keywordStrip.innerHTML = topics.length
-            ? topics.map(([topic]) => `<span class="trend-keyword">${escapeHtml(topic)}</span>`).join('')
+            ? `<span class="scope-note">${LANG === 'zh' ? '最后有记录日的标签：' : 'Tags on last recorded date: '}</span>` + topics.map(([topic, count]) => `<span class="trend-keyword">${escapeHtml(topic)} · ${Number(count)}</span>`).join('')
             : `<span class="trend-note">${t('timelineHint')}</span>`;
     }
 }
@@ -1892,9 +1897,10 @@ function renderSourceComparisonChart() {
     const latestCounts = timeline.length ? timeline[timeline.length - 1].source_counts || {} : {};
     const windowCounts = state.analysis?.temporal_trends?.windows?.['7']?.cross_source_comparison?.source_counts || {};
     const counts = Object.keys(latestCounts).length ? latestCounts : windowCounts;
-    const entries = Object.entries(counts);
+    const entries = numericEntries(counts).sort((a, b) => SOURCE_ORDER.indexOf(a[0]) - SOURCE_ORDER.indexOf(b[0]));
+    updateElement('source-comparison-chart-scope', LANG === 'zh' ? `${Object.keys(latestCounts).length ? '最后有记录日期 ' + timeline[timeline.length - 1].date : '分析产物近 7 日窗口'} · 单位：条；不是全库来源占比。` : `${Object.keys(latestCounts).length ? timeline[timeline.length - 1].date : '7-day analysis window'} · Documents; not whole-corpus shares.`);
+    setChartAvailability(canvas, entries.length > 0, t('signalInsufficient'));
     if (!entries.length) {
-        if (empty) empty.textContent = t('signalInsufficient');
         return;
     }
     if (empty) empty.textContent = '';
@@ -1906,7 +1912,7 @@ function renderSourceComparisonChart() {
         type: 'bar',
         data: {
             labels: entries.map(([name]) => labels[name] || name),
-            datasets: [{label: LANG === 'zh' ? '文档数' : 'Documents', data: entries.map(([, count]) => count), backgroundColor: ['#4f46e5', '#f59e0b', '#06b6d4', '#10b981']}]
+            datasets: [{label: LANG === 'zh' ? '文档数' : 'Documents', data: entries.map(([, count]) => count), backgroundColor: entries.map(([name]) => chartPalette()[SOURCE_ORDER.indexOf(name)] || chartPalette()[0])}]
         },
         options: {responsive: true, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}, plugins: {legend: {display: false}}}
     });
@@ -1917,25 +1923,25 @@ function renderEntityTrendChart() {
     const empty = document.getElementById('entity-trend-empty');
     if (!canvas || typeof Chart === 'undefined') return;
     const timeline = state.analysis?.temporal_trends?.timeline || [];
+    updateElement('entity-trend-chart-scope', LANG === 'zh' ? `${dateRange(timeline)} · 前 5 个实体，单位：资料中的提及次数；同一资料可含多个实体。` : `${dateRange(timeline)} · Top 5 entities, counted as document mentions; multiple entities per document.`);
     const totals = {};
     timeline.forEach(snapshot => Object.entries(snapshot.entity_counts || {}).forEach(([entity, count]) => {
         totals[entity] = (totals[entity] || 0) + Number(count || 0);
     }));
     const entities = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([entity]) => entity);
+    setChartAvailability(canvas, timeline.length > 0 && entities.length > 0, t('signalInsufficient'));
     if (!timeline.length || !entities.length) {
-        if (empty) empty.textContent = t('signalInsufficient');
         return;
     }
     if (empty) empty.textContent = '';
     if (state.entityTrendChart) state.entityTrendChart.destroy();
-    const colors = ['#4f46e5', '#06b6d4', '#f59e0b', '#10b981', '#f43f5e'];
     state.entityTrendChart = new Chart(canvas, {
-        type: 'line',
+        type: 'bar',
         data: {
-            labels: timeline.map(item => item.date),
-            datasets: entities.map((entity, index) => ({label: entity, data: timeline.map(item => Number(item.entity_counts?.[entity] || 0)), borderColor: colors[index], tension: 0.3}))
+            labels: entities,
+            datasets: [{label: LANG === 'zh' ? '提及次数' : 'Mentions', data: entities.map(entity => totals[entity]), backgroundColor: entities.map(chartColor)}]
         },
-        options: {responsive: true, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}, plugins: {legend: {position: 'bottom'}}}
+        options: {indexAxis: 'y', responsive: true, scales: {x: {beginAtZero: true, ticks: {precision: 0}}}, plugins: {legend: {display: false}}}
     });
 }
 
@@ -1951,34 +1957,18 @@ function renderResearchMatrix() {
         if (!method && !scenario && !mechanismValue) return null;
         return {
             title: paper.title,
-            method: shorten(method || t('unknown'), 76),
-            scenario: shorten(scenario || t('unknown'), 76),
-            mechanism: shorten(mechanismValue || t('unknown'), 76)
+            method: method || t('unknown'),
+            scenario: scenario || t('unknown'),
+            mechanism: mechanismValue || t('unknown')
         };
     }).filter(Boolean).slice(0, 12);
 
+    updateElement('matrix-scope', LANG === 'zh' ? `当前加载的 ${state.allPapers.length} 篇论文 · 展示 ${rows.length} 条结构化记录；逐篇列出方法、场景和机制。` : `${state.allPapers.length} loaded papers · ${rows.length} structured records; method, scenario and mechanism per paper.`);
     if (!rows.length) {
-        container.innerHTML = `<p class="trend-note">${t('noData')}</p>`;
+        container.innerHTML = emptyState(t('noData'));
         return;
     }
-
-    container.innerHTML = `
-        <div class="matrix-grid matrix-grid-header">
-            <div>${t('methodScenario')}</div>
-            <div>${t('mechanism')}</div>
-            <div>${t('relatedPapers')}</div>
-        </div>
-        ${rows.map(row => `
-            <div class="matrix-grid matrix-row">
-                <div class="matrix-cell">
-                    <strong>${escapeHtml(row.method)}</strong>
-                    <span>${escapeHtml(row.scenario)}</span>
-                </div>
-                <div class="matrix-cell">${escapeHtml(row.mechanism)}</div>
-                <div class="matrix-cell matrix-paper-title">${escapeHtml(shorten(row.title, 96))}</div>
-            </div>
-        `).join('')}
-    `;
+    container.innerHTML = `<table class="comparison-table"><thead><tr><th>${t('comparisonPaper')}</th><th>${t('comparisonMethod')}</th><th>${t('comparisonScenario')}</th><th>${t('mechanism')}</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.title)}</td><td>${escapeHtml(row.method)}</td><td>${escapeHtml(row.scenario)}</td><td>${escapeHtml(row.mechanism)}</td></tr>`).join('')}</tbody></table>`;
 }
 
 function renderComparisonTable() {
@@ -1998,10 +1988,12 @@ function renderComparisonTable() {
     }).filter(row => row.problem || row.method || row.contribution).slice(0, 10);
 
     if (!rows.length) {
-        container.innerHTML = `<p class="trend-note">${t('noData')}</p>`;
+        updateElement('comparison-scope', LANG === 'zh' ? `当前加载的 ${state.allPapers.length} 篇论文 · 展示 ${rows.length} 篇；字段来自结构化抽取，未提供字段显示破折号。` : `${state.allPapers.length} loaded papers · ${rows.length} shown; extracted fields, dashes indicate missing data.`);
+    container.innerHTML = `<p class="trend-note">${t('noData')}</p>`;
         return;
     }
 
+    updateElement('comparison-scope', LANG === 'zh' ? `当前加载的 ${state.allPapers.length} 篇论文 · 展示 ${rows.length} 篇；字段来自结构化抽取，未提供字段显示破折号。` : `${state.allPapers.length} loaded papers · ${rows.length} shown; extracted fields, dashes indicate missing data.`);
     container.innerHTML = `
         <table class="comparison-table">
             <thead>
@@ -2017,12 +2009,12 @@ function renderComparisonTable() {
             <tbody>
                 ${rows.map(row => `
                     <tr>
-                        <td><a href="${row.paper.entry_url}" target="_blank">${escapeHtml(shorten(row.paper.title, 72))}</a></td>
-                        <td>${escapeHtml(shorten(row.problem, 120))}</td>
-                        <td>${escapeHtml(shorten(row.method, 120))}</td>
-                        <td>${escapeHtml(shorten(row.scenario, 100))}</td>
-                        <td>${escapeHtml(shorten(row.metric, 100))}</td>
-                        <td>${escapeHtml(shorten(row.contribution, 140))}</td>
+                        <td>${sourceLink(row.paper.entry_url || row.paper.url, row.paper.title, '') || escapeHtml(row.paper.title)}</td>
+                        <td>${escapeHtml(row.problem || '—')}</td>
+                        <td>${escapeHtml(row.method || '—')}</td>
+                        <td>${escapeHtml(row.scenario || '—')}</td>
+                        <td>${escapeHtml(row.metric || '—')}</td>
+                        <td>${escapeHtml(row.contribution || '—')}</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -2081,7 +2073,6 @@ function filterPapers(papers) {
 
 function filterByCategory(category) {
     state.selectedCategory = category;
-    state.currentPage = 1;
     
     // 更新侧边栏类别高亮
     document.querySelectorAll('.category-item').forEach(item => {
@@ -2094,13 +2085,12 @@ function filterByCategory(category) {
         select.value = category;
     }
     
-    // 重新渲染论文
-    renderPapers(filterPapers(state.allPapers));
+    // Category filtering is supported by the server across all pages.
+    loadPapers(1);
 }
 
 function searchPapers(query) {
     state.searchQuery = query;
-    state.currentPage = 1;
     renderPapers(filterPapers(state.allPapers));
 }
 
@@ -2119,6 +2109,7 @@ function initEventListeners() {
                 const active = item === tab;
                 item.classList.toggle('active', active);
                 item.setAttribute('aria-selected', String(active));
+                item.tabIndex = active ? 0 : -1;
             });
             loadNarrative();
         });
@@ -2254,6 +2245,7 @@ function initEventListeners() {
 }
 
 function sortPapers(sortBy) {
+    state.paperSort = sortBy;
     const papers = [...state.allPapers];
     
     switch (sortBy) {
@@ -2294,7 +2286,7 @@ function initScrollBehavior() {
     });
     
     backToTop.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     });
 }
 
@@ -2308,32 +2300,75 @@ function updateElement(id, value) {
 
 function showLoading(elementId) {
     const element = document.getElementById(elementId);
-    if (element) {
-        element.innerHTML = `
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>${t('loading')}</p>
-            </div>
-        `;
-    }
+    if (element) element.innerHTML = `<div class="loading" role="status"><div class="spinner" aria-hidden="true"></div><p>${t('loading')}</p></div>`;
+}
+
+function emptyState(message) {
+    return `<div class="empty-state" role="status"><i class="far fa-folder-open" aria-hidden="true"></i><p>${escapeHtml(message)}</p></div>`;
 }
 
 function showError(elementId, message) {
     const element = document.getElementById(elementId);
-    if (element) {
-        element.innerHTML = `
-            <p style="text-align: center; color: var(--accent-color); padding: 2rem;">
-                <i class="fas fa-exclamation-circle"></i> ${message}
-            </p>
-        `;
-    }
+    if (!element) return;
+    element.innerHTML = `<div class="error-state" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i><p>${escapeHtml(message)}</p><button type="button" class="btn-paper btn-secondary">${LANG === 'zh' ? '重试' : 'Retry'}</button></div>`;
+    const retry = {
+        'papers-list': () => loadPapers(state.currentPage),
+        'featured-papers': () => loadPapers(state.currentPage),
+        'policy-list': () => loadDirectory('policy', state.directories.policy.page),
+        'news-list': () => loadDirectory('news', state.directories.news.page),
+        'industry-report-list': () => loadDirectory('industry_report', state.directories.industry_report.page),
+        'today-recommendations': loadIntelligenceHome,
+        'narrative-content': loadNarrative,
+        'intelligence-report': () => loadReport(),
+        'statistics-error': loadAnalysis,
+        'wordcloud-container': loadWordcloud,
+        'scheduler-job-status': loadSchedulerStatus,
+        'home-report-entry': () => loadReport(),
+        'paper-support-status': async () => {
+            await Promise.all([loadKnowledge(), loadCategories()]);
+            renderPaperSupportStatus();
+            if (state.papersLoaded) renderPapers(filterPapers(state.allPapers));
+        }
+    }[elementId];
+    const button = element.querySelector('button');
+    if (retry) button.addEventListener('click', () => retry());
+    else button.remove();
 }
 
 function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    if (text == null) return '';
+    return String(text).replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
+}
+
+function hasFilters(filters) {
+    return Boolean(filters.search || filters.topic || filters.priority || filters.dateFrom || filters.dateTo || (filters.sourceType && filters.sourceType !== 'all'));
+}
+
+function filterDescription(filters) {
+    const names = LANG === 'zh'
+        ? {paper: '论文', policy: '政策', news: '新闻', industry_report: '行业报告'}
+        : {paper: 'Papers', policy: 'Policies', news: 'News', industry_report: 'Reports'};
+    const values = [filters.sourceType !== 'all' ? names[filters.sourceType] : '', filters.search, filters.topic,
+        filters.priority ? priorityLabel(filters.priority) : '',
+        filters.dateFrom ? `${LANG === 'zh' ? '起始' : 'From'} ${filters.dateFrom}` : '',
+        filters.dateTo ? `${LANG === 'zh' ? '截止' : 'To'} ${filters.dateTo}` : ''].filter(Boolean);
+    return values.length ? `${LANG === 'zh' ? '已应用：' : 'Applied: '}${values.join(' · ')}` : '';
+}
+
+// Resolve forecast document IDs against the existing report evidence and loaded records.
+function documentEvidenceIndex(ids) {
+    const index = {};
+    const cited = Object.values(state.report?.evidence_indexes || {}).flatMap(items => Object.values(items));
+    const documents = [...state.allPapers, ...Object.values(state.directories).flatMap(item => item.documents)];
+    for (const id of ids) {
+        const evidence = cited.find(item => item.document_id === id);
+        const record = documents.find(item => item.id === id);
+        index[id] = evidence || (record ? {
+            title: record.title, source_name: record.source_name, event_date: record.published_at || record.published,
+            excerpt: record.summary || record.abstract, url: record.url || record.entry_url
+        } : {title: LANG === 'zh' ? '历史证据记录' : 'Historical evidence', excerpt: LANG === 'zh' ? '当前页面未加载该记录的详情，暂不提供原文跳转。' : 'Details are not loaded for this historical record; no source link is available.'});
+    }
+    return index;
 }
 
 // ==================== 导出 ==================== //

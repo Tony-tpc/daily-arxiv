@@ -23,7 +23,7 @@ class WebResearchInformationDashboardTests(unittest.TestCase):
             'narrative-content', 'narrative-opportunities', 'narrative-chains',
         ):
             self.assertIn(f'id="{element_id}"', html)
-        self.assertIn('今日建议阅读', html)
+        self.assertIn('重点信息', html)
         self.assertIn('多源信息速览', html)
 
     def test_unified_api_filters_source_topic_priority_and_date(self):
