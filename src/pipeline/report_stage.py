@@ -19,12 +19,19 @@ def run(context: PipelineContext) -> PipelineContext:
     )
     generator = ResearchReportGenerator(context.config)
     report_type = context.config.get("reporting", {}).get("default_type", "weekly")
+    other_type = 'stage' if report_type == 'weekly' else 'weekly'
+    other_report = generator.generate(documents, context.analysis_result, report_type=other_type)
+    other_paths = generator.save(other_report)
+    context.artifacts[f'{other_type}_report_json'] = other_paths['json']
+    context.artifacts[f'{other_type}_report_markdown'] = other_paths['markdown']
     context.report_result = generator.generate(
         documents,
         context.analysis_result,
         report_type=report_type,
     )
     paths = generator.save(context.report_result)
+    context.artifacts[f'{report_type}_report_json'] = paths['json']
+    context.artifacts[f'{report_type}_report_markdown'] = paths['markdown']
     context.artifacts["research_report_json"] = paths["json"]
     context.artifacts["research_report_markdown"] = paths["markdown"]
     # Preserve legacy artifact keys for existing automation consumers.

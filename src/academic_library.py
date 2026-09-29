@@ -175,7 +175,7 @@ class PaperLibrary:
                         try:
                             extra = client.lookup('doi:' + doi if client.source_name == 'openalex_search' else doi)
                             record = merge_metadata(record, extra)
-                        except (httpx.HTTPError, ValueError, KeyError) as exc:
+                        except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as exc:
                             code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else type(exc).__name__
                             if code != 404:
                                 success = False

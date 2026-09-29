@@ -104,15 +104,17 @@ class ResearchReportGenerator:
             "forecast_version": forecast.get("schema_version", "legacy"),
             "narrative_version": _narrative_version(narratives),
             "narrative_views": [
-                view for view in ("paper", "multi_source") if narratives.get(view)
+                view for view in ("paper", "policy", "multi_source") if narratives.get(view)
             ],
+            "narrative_generation": {view: item.get('generation_status', 'evidence_preview')
+                                     for view, item in narratives.items()},
             "data_quality": (
                 (narratives.get("multi_source") or {}).get("coverage")
                 or forecast.get("data_quality", {})
             ),
             "evidence_indexes": {
                 view: dict((narratives.get(view) or {}).get("evidence_index") or {})
-                for view in ("paper", "multi_source")
+                for view in ("paper", "policy", "multi_source")
                 if narratives.get(view)
             },
             "narrative_policy": {
@@ -197,8 +199,8 @@ class ResearchReportGenerator:
 def _narrative_report_sections(narratives: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Reuse the exact successful narratives instead of recreating report conclusions."""
     sections: List[Dict[str, Any]] = []
-    labels = {"paper": "论文趋势分析", "multi_source": "四类来源综合分析"}
-    for view in ("paper", "multi_source"):
+    labels = {"paper": "论文研究报告", "policy": "政策分析", "multi_source": "趋势分析"}
+    for view in ("paper", "policy", "multi_source"):
         narrative = narratives.get(view) or {}
         for source_section in narrative.get("sections", []):
             evidence_ids = []
@@ -219,13 +221,13 @@ def _narrative_report_sections(narratives: Dict[str, Any]) -> List[Dict[str, Any
         if view == "paper":
             sections.append(_text_section(
                 "narrative_paper_opportunities",
-                "论文趋势分析｜实验机会矩阵",
+                "论文研究报告｜实验机会矩阵",
                 _opportunity_items(narrative.get("opportunities", [])),
             ))
-        else:
+        elif view == 'multi_source':
             sections.append(_text_section(
                 "narrative_multi_source_chains",
-                "四类来源综合分析｜证据链与可执行实验",
+                "趋势分析｜证据链与可执行实验",
                 _evidence_chain_items(narrative.get("evidence_chains", [])),
             ))
     return sections

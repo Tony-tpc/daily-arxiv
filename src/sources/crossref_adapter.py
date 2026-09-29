@@ -1,5 +1,6 @@
 """Independent DOI and journal discovery through Crossref."""
 from __future__ import annotations
+from datetime import date
 from urllib.parse import quote
 from .academic import PagedPaperAdapter, PaperPage, PaperQuery, clean_doi
 from .paper_normalizer import clean_paper_title
@@ -10,11 +11,27 @@ def first(value):
 
 
 def publication_date(work: dict) -> str:
+    best = ''
     for field in ("published", "published-online", "published-print", "issued"):
-        parts = (work.get(field) or {}).get("date-parts", [[]])[0]
-        if parts:
-            return "-".join(f"{int(p):04d}" if i == 0 else f"{int(p):02d}" for i, p in enumerate(parts[:3]))
-    return ""
+        value = work.get(field)
+        rows = value.get('date-parts') if isinstance(value, dict) else None
+        parts = rows[0] if isinstance(rows, list) and rows else None
+        if not isinstance(parts, list):
+            continue
+        prefix = []
+        for part in parts[:3]:
+            try:
+                candidate = prefix + [int(part)]
+                date(*(candidate + [1] * (3 - len(candidate))))
+            except (TypeError, ValueError, OverflowError):
+                break
+            prefix = candidate
+        candidate = '-'.join(f'{p:04d}' if i == 0 else f'{p:02d}' for i, p in enumerate(prefix))
+        if len(candidate) > len(best):
+            best = candidate
+        if len(best) == 10:
+            break
+    return best
 
 
 class CrossrefAdapter(PagedPaperAdapter):

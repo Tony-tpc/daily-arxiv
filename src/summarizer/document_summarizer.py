@@ -70,6 +70,15 @@ class DocumentSummarizer:
                             summary_status='missing_abstract', abstract_status='missing', raw_text='')
             prepared['web_card'] = build_web_card_payload(prepared, raw_record=document)
             return prepared
+        if self._report_has_only_brief_source(document):
+            prepared.update(summary='仅取得简短发布信息，报告正文尚待获取，暂不生成内容总结。',
+                            core_viewpoints=[], research_relevance='',
+                            follow_up_suggestions=['获取报告附件或完整正文后再分析。'], worth_reading=False,
+                            summary_status='insufficient_source_text', summary_error=False,
+                            summary_content_hash=content_hash(document),
+                            summarized_at=datetime.now().isoformat())
+            prepared['web_card'] = build_web_card_payload(prepared, raw_record=document)
+            return prepared
         try:
             raw = self.llm_client.generate(
                 prompt=self._build_prompt(prepared),
@@ -126,6 +135,9 @@ class DocumentSummarizer:
     @staticmethod
     def _has_reusable_summary(document: Dict[str, Any]) -> bool:
         """Avoid repeated LLM calls for unchanged documents in incremental jobs."""
+        if DocumentSummarizer._report_has_only_brief_source(document):
+            return (document.get('summary_status') == 'insufficient_source_text'
+                    and document.get('summary_content_hash') == content_hash(document))
         return bool(
             (document.get('source_type') != 'paper' or document.get('summary_content_hash') == content_hash(document))
             and
@@ -134,6 +146,11 @@ class DocumentSummarizer:
             and isinstance(document.get("web_card"), dict)
             and not document.get("summary_error", False)
         )
+
+    @staticmethod
+    def _report_has_only_brief_source(document: Dict[str, Any]) -> bool:
+        text = str(document.get('raw_text') or document.get('abstract') or document.get('content') or '')
+        return document.get('source_type') == 'industry_report' and len(text.strip()) < 200
 
     def generate_report(self, documents: List[Dict[str, Any]]) -> str:
         """Render a concise mixed-source Markdown report."""
@@ -200,7 +217,7 @@ class DocumentSummarizer:
         prepared.setdefault("authors_or_orgs", list(prepared.get("authors", [])))
         prepared.setdefault(
             "raw_text",
-            prepared.get("abstract") or prepared.get("summary") or prepared.get("description") or "",
+            prepared.get("abstract") or prepared.get("content") or prepared.get("description") or "",
         )
         return prepared
 

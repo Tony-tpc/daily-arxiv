@@ -214,6 +214,16 @@ def _load_latest_report(report_type: str = "weekly") -> dict:
         analysis['research_profile_analysis'] = ResearchProfileAnalyzer(config).analyze(
             documents, analysis['cross_source_analysis']
         )
+    if not analysis.get('narrative_analysis'):
+        analyzer = NarrativeAnalyzer(config)
+        analysis['narrative_analysis'] = {
+            'paper': analyzer.generate_paper(documents),
+            'policy': analyzer.generate_policy(documents),
+            'multi_source': analyzer.generate_multi_source(documents),
+        }
+        if config.get('paper_discovery', {}).get('enabled', False):
+            from src.academic_library import PaperLibrary
+            analysis['paper_library_token'] = PaperLibrary(config).state_token()
     return ResearchReportGenerator(config).generate(
         documents,
         analysis,
@@ -559,8 +569,8 @@ def get_stats():
 def get_trend_narrative():
     """Return a cached or deterministic long-form narrative without invoking an LLM."""
     view = str(request.args.get('view', 'paper')).strip().lower()
-    if view not in {'paper', 'multi_source'}:
-        return jsonify({'error': 'view 必须是 paper 或 multi_source'}), 400
+    if view not in {'paper', 'policy', 'multi_source'}:
+        return jsonify({'error': 'view 必须是 paper、policy 或 multi_source'}), 400
     as_of = str(request.args.get('as_of', '')).strip()
     refresh = str(request.args.get('refresh', '')).strip().lower() in {'1', 'true', 'yes'}
     try:
@@ -584,11 +594,9 @@ def get_trend_narrative():
             if not _document_date(document) or _document_date(document) <= effective_as_of
         )
         analyzer = NarrativeAnalyzer(config)
-        narrative = (
-            analyzer.generate_paper(documents, as_of=effective_as_of)
-            if view == 'paper'
-            else analyzer.generate_multi_source(documents, as_of=effective_as_of)
-        )
+        generate = {'paper': analyzer.generate_paper, 'policy': analyzer.generate_policy,
+                    'multi_source': analyzer.generate_multi_source}[view]
+        narrative = generate(documents, as_of=effective_as_of)
         return jsonify(_render_narrative_payload(narrative))
     except ValueError as exc:
         return jsonify({'error': f'as_of 必须是有效的 YYYY-MM-DD 日期：{exc}'}), 400

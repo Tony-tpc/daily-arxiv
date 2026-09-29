@@ -307,11 +307,14 @@ class PipelineTests(unittest.TestCase):
             from src.pipeline import report_stage
             report_stage.run(context)
 
-        generator.generate.assert_called_once_with(
+        generator.generate.assert_called_with(
             context.summarized_documents,
             context.analysis_result,
             report_type='weekly',
         )
+        self.assertEqual(generator.generate.call_count, 2)
+        self.assertEqual(generator.generate.call_args_list[0].kwargs['report_type'], 'stage')
+        self.assertEqual(generator.save.call_count, 2)
         self.assertEqual(context.report_result['report_id'], 'weekly-test')
         self.assertEqual(
             context.artifacts['research_report_markdown'],

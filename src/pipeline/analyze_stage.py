@@ -55,9 +55,14 @@ def run(context: PipelineContext) -> PipelineContext:
             date_to=date_to.isoformat(),
         )
         from src.sources.paper_quality import is_high_impact_paper
+        from src.academic_library import in_research_scope
         def accepted(observation):
             doc = observation.get('document', observation)
-            return doc.get('source_type') != 'paper' or is_high_impact_paper(doc, context.config)
+            return doc.get('source_type') != 'paper' or (
+                is_high_impact_paper(doc, context.config)
+                and (not context.config.get('paper_discovery', {}).get('enabled', False)
+                     or in_research_scope(doc, context.config))
+            )
         history_observations = [o for o in history_observations if accepted(o)]
         historical_corpus_observations = [o for o in historical_corpus_observations if accepted(o)]
         current_observations = [

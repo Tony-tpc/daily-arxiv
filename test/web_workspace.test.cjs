@@ -155,6 +155,19 @@ test('papers expose original English abstract alongside system summary and citat
     assert.doesNotMatch(absent, /<h4>系统摘要<\/h4>/);
 });
 
+test('three research entrances keep their own view and share the article reader', () => {
+    const app = workspace();
+    app.run('loadNarrative = () => { window.loadedView = state.narrativeView; };');
+    for (const [route, view, title] of [['paper-report','paper','论文研究报告'], ['policy-analysis','policy','政策分析'], ['analysis','multi_source','趋势分析']]) {
+        app.run(`navigateToSection('${route}')`);
+        assert.equal(app.window.location.hash, '#' + route);
+        assert.equal(app.window.loadedView, view);
+        assert.equal(app.get('narrative-page-title').textContent, title);
+        assert.ok(app.get('analysis-section').classList.contains('active'));
+        assert.equal(app.content.filter(item => item.classList.contains('active')).length, 1);
+    }
+});
+
 test('paper result feedback distinguishes category total, loaded page, and local matches', () => {
     const app = workspace();
     app.run(`state.paperTotal=45;state.allPapers=Array.from({length:20},()=>({}));state.searchQuery='储能';renderPapers([])`);

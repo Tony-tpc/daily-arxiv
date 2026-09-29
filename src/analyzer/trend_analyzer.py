@@ -139,6 +139,10 @@ class TrendAnalyzer:
             narrative_inputs,
             as_of=narrative_as_of,
         )
+        policy_narrative = narrative_analyzer.generate_policy(
+            narrative_inputs,
+            as_of=narrative_as_of,
+        )
         multi_source_narrative = narrative_analyzer.generate_multi_source(
             narrative_inputs,
             as_of=narrative_as_of,
@@ -161,6 +165,7 @@ class TrendAnalyzer:
             'trend_forecast': trend_forecast or {},
             'narrative_analysis': {
                 'paper': paper_narrative,
+                'policy': policy_narrative,
                 'multi_source': multi_source_narrative,
             },
             'schema_version': '2.1',

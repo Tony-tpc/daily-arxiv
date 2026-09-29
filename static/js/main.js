@@ -257,7 +257,9 @@ function toggleTheme() {
 
 // ==================== 导航 ==================== //
 
-const SECTIONS = ['overview', 'papers', 'policies', 'news', 'industry-reports', 'reports', 'analysis', 'statistics'];
+const SECTIONS = ['overview', 'papers', 'policies', 'news', 'industry-reports', 'reports', 'paper-report', 'policy-analysis', 'analysis', 'statistics'];
+const NARRATIVE_ROUTES = {'paper-report': 'paper', 'policy-analysis': 'policy', analysis: 'multi_source'};
+const NARRATIVE_TITLES = {paper: ['论文研究报告', 'Paper research report'], policy: ['政策分析', 'Policy analysis'], multi_source: ['趋势分析', 'Trend analysis']};
 let evidenceReturnFocus = null;
 let menuReturnFocus = null;
 
@@ -302,8 +304,27 @@ function navigateToSection(sectionName, updateHistory = true) {
         else item.removeAttribute('aria-current');
     });
     document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.toggle('active', section.id === sectionName + '-section');
+        section.classList.toggle('active', section.id === (NARRATIVE_ROUTES[sectionName] ? 'analysis' : sectionName) + '-section');
     });
+    if (NARRATIVE_ROUTES[sectionName]) {
+        const view = NARRATIVE_ROUTES[sectionName];
+        const changed = state.narrativeView !== view;
+        state.narrativeView = view;
+        updateElement('narrative-page-title', NARRATIVE_TITLES[view][LANG === 'zh' ? 0 : 1]);
+        const descriptions = {
+            paper: ['比较研究问题、方法、实验结果与局限，形成连贯的论文研究报告。', 'Compare research questions, methods, experiments, and limitations.'],
+            policy: ['分析中国能源政策的目标、制度约束及其对研究设计和实验验证的影响。', 'Analyze policy objectives, constraints, and implications for research design.'],
+            multi_source: ['结合论文、政策、新闻和行业证据，论证技术演进、分歧与未来研究方向。', 'Explain technical evolution, disagreements, and future directions across four evidence sources.']
+        };
+        updateElement('narrative-page-description', descriptions[view][LANG === 'zh' ? 0 : 1]);
+        document.querySelectorAll('[data-narrative-view]').forEach(item => {
+            const active = item.dataset.narrativeView === view;
+            item.classList.toggle('active', active);
+            item.setAttribute('aria-selected', String(active));
+            item.tabIndex = active ? 0 : -1;
+        });
+        if (changed || !state.narrative) loadNarrative();
+    }
     if (sectionName === 'statistics') requestAnimationFrame(() => renderResearchTrendModules());
     window.scrollTo({top: 0, behavior: 'auto'});
 }
@@ -628,8 +649,8 @@ function renderNarrative() {
     if (generated) {
         const timestamp = formatReportTime(payload.generated_at);
         generated.textContent = LANG === 'zh'
-            ? `生成时间 ${timestamp || '未记录'} · 正文 ${Number(payload.char_count || 0).toLocaleString()} 字`
-            : `Generated ${timestamp || 'unknown'} · ${Number(payload.char_count || 0).toLocaleString()} characters`;
+            ? `${payload.generation_status === 'generated' ? '成文分析' : '临时证据整理稿'} · 生成时间 ${timestamp || '未记录'} · 正文 ${Number(payload.char_count || 0).toLocaleString()} 字`
+            : `${payload.generation_status === 'generated' ? 'Finished analysis' : 'Evidence preview'} · Generated ${timestamp || 'unknown'} · ${Number(payload.char_count || 0).toLocaleString()} characters`;
     }
 }
 
@@ -642,13 +663,15 @@ function renderNarrativeCoverage(payload) {
         : {paper: 'Papers', policy: 'China policies', news: 'China news', industry_report: 'Industry reports'};
     const selectedCounts = coverage.selected_source_counts || {};
     const corpusCounts = coverage.source_counts || {};
-    const chips = payload.view === 'paper'
-        ? `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels.paper)}</strong>${Number(coverage.selected_evidence_count || 0)} ${LANG === 'zh' ? '条引用证据' : 'cited items'} / ${Number(corpusCounts.paper || coverage.document_count || 0)} ${LANG === 'zh' ? '条语料' : 'corpus items'}</span>`
+    const chips = ['paper', 'policy'].includes(payload.view)
+        ? `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[payload.view])}</strong>${Number(coverage.selected_evidence_count || 0)} ${LANG === 'zh' ? '条引用证据' : 'cited items'} / ${Number(corpusCounts[payload.view] || coverage.document_count || 0)} ${LANG === 'zh' ? '条语料' : 'corpus items'}</span>`
         : Object.entries(selectedCounts).map(([source, count]) =>
             `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[source] || source)}</strong>${Number(count || 0)} ${LANG === 'zh' ? '条引用证据' : 'cited items'}</span>`
         ).join('');
     const partial = coverage.status === 'partial';
     const gaps = [...(coverage.gaps || []), ...(payload.limitations || []).filter(item => !(coverage.gaps || []).includes(item))];
+    if (payload.generation_status !== 'generated') gaps.unshift(LANG === 'zh' ? '当前为证据整理稿，尚未完成正式正文写作。请等待完整分析流程生成后刷新。' : 'Evidence preview; the complete analysis pipeline has not yet produced the finished narrative.');
+    if (payload.generation_error) gaps.unshift((LANG === 'zh' ? '正文生成问题：' : 'Generation issue: ') + payload.generation_error);
     container.innerHTML = `<div class="narrative-coverage-summary">
         <span class="narrative-status ${partial ? 'partial' : ''}">${partial ? (LANG === 'zh' ? '部分覆盖' : 'Partial coverage') : (LANG === 'zh' ? '来源覆盖' : 'Source coverage')}</span>
         <span>${escapeHtml(coverage.period_start || '')}${coverage.period_end ? ` — ${escapeHtml(coverage.period_end)}` : ''}</span>
@@ -1169,6 +1192,8 @@ function renderIntelligenceReport(report) {
     const quality = report.data_quality || {};
     const limitations = document.getElementById('report-limitations');
     if (limitations) limitations.innerHTML = `<p>${LANG === 'zh' ? '正文历史证据范围' : 'Historical evidence window'}：${escapeHtml(quality.period_start || '—')} — ${escapeHtml(quality.period_end || '—')} · ${quality.document_count ?? '—'} ${LANG === 'zh' ? '条语料' : 'corpus items'} · ${quality.selected_evidence_count ?? '—'} ${LANG === 'zh' ? '条引用证据' : 'cited items'}</p>${(quality.gaps || []).length ? `<details><summary>${LANG === 'zh' ? '数据缺口与结论边界' : 'Data gaps and limitations'} (${quality.gaps.length})</summary><ul>${quality.gaps.map(gap => `<li>${escapeHtml(gap)}</li>`).join('')}</ul></details>` : ''}`;
+    const pendingNarratives = Object.entries(report.narrative_generation || {}).filter(([, status]) => status !== 'generated');
+    if (limitations && pendingNarratives.length) limitations.innerHTML += `<p>${LANG === 'zh' ? '以下部分仍为临时证据整理稿：' : 'Evidence previews awaiting completed writing: '}${pendingNarratives.map(([view]) => escapeHtml((NARRATIVE_TITLES[view] || [view, view])[LANG === 'zh' ? 0 : 1])).join('、')}</p>`;
     updateElement('report-document-count', Number(report.document_count || 0));
     updateElement('report-paper-count', Number(sourceCounts.paper || 0));
     updateElement('report-policy-count', Number(sourceCounts.policy || 0));
@@ -2128,17 +2153,11 @@ function initEventListeners() {
 
     document.querySelectorAll('[data-narrative-view]').forEach(tab => {
         tab.addEventListener('click', () => {
-            state.narrativeView = tab.dataset.narrativeView || 'paper';
-            document.querySelectorAll('[data-narrative-view]').forEach(item => {
-                const active = item === tab;
-                item.classList.toggle('active', active);
-                item.setAttribute('aria-selected', String(active));
-                item.tabIndex = active ? 0 : -1;
-            });
-            loadNarrative();
+            const route = Object.keys(NARRATIVE_ROUTES).find(key => NARRATIVE_ROUTES[key] === tab.dataset.narrativeView);
+            navigateToSection(route || 'paper-report');
         });
     });
-    document.getElementById('narrative-refresh')?.addEventListener('click', () => loadNarrative({refresh: true}));
+    document.getElementById('narrative-refresh')?.addEventListener('click', () => loadNarrative());
     document.getElementById('narrative-drawer-close')?.addEventListener('click', closeNarrativeEvidence);
     document.getElementById('narrative-drawer-backdrop')?.addEventListener('click', closeNarrativeEvidence);
     document.addEventListener('keydown', event => {

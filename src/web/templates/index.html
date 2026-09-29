@@ -35,7 +35,7 @@
                 {% set groups = [
                     ('工作台', 'Workspace', [('overview', '概览', 'Overview', 'fa-table-columns', '')]),
                     ('信息资料', 'Information', [('papers', '论文列表', 'Papers', 'fa-file-lines', ''), ('policies', '中国政策', 'China policies', 'fa-landmark', 'policy'), ('news', '国内新闻', 'China news', 'fa-newspaper', 'news'), ('industry-reports', '行业报告', 'Industry reports', 'fa-industry', 'industry-report')]),
-                    ('分析与报告', 'Analysis & reports', [('reports', '研究报告', 'Research reports', 'fa-book-open', ''), ('analysis', '趋势分析', 'Trend analysis', 'fa-chart-line', ''), ('statistics', '统计数据', 'Statistics', 'fa-chart-column', '')])
+                    ('分析与报告', 'Analysis & reports', [('paper-report', '论文研究报告', 'Paper research report', 'fa-book-open', ''), ('policy-analysis', '政策分析', 'Policy analysis', 'fa-landmark', ''), ('analysis', '趋势分析', 'Trend analysis', 'fa-chart-line', ''), ('reports', '汇总报告', 'Collected reports', 'fa-file-lines', ''), ('statistics', '统计数据', 'Statistics', 'fa-chart-column', '')])
                 ] %}
                 {% for zh, en, items in groups %}
                 <div class="nav-group">
@@ -261,14 +261,15 @@
             <!-- 长篇趋势分析部分 -->
             <section id="analysis-section" class="content-section">
                 <div class="section-header">
-                    <h1>{{ '趋势分析' if language == 'zh' else 'Trend Analysis' }}</h1>
-                    <p class="section-desc">{{ '围绕能源物理系统中的感知、决策与控制，提供有据可查的连续研究综述' if language == 'zh' else 'Evidence-grounded research narratives for perception, decision, and control in physical energy systems' }}</p>
+                    <h1 id="narrative-page-title">{{ '论文研究报告' if language == 'zh' else 'Paper research report' }}</h1>
+                    <p class="section-desc" id="narrative-page-description">{{ '围绕研究问题、方法差异和实验依据，阅读连贯的论文分析。' if language == 'zh' else 'A continuous analysis of research questions, methods, and experimental evidence.' }}</p>
                 </div>
 
                 <div class="narrative-toolbar">
                     <div class="narrative-tabs" role="tablist" aria-label="{{ '分析视图' if language == 'zh' else 'Narrative views' }}">
-                        <button type="button" class="narrative-tab active" role="tab" aria-selected="true" data-narrative-view="paper">{{ '论文趋势分析' if language == 'zh' else 'Paper trend analysis' }}</button>
-                        <button type="button" class="narrative-tab" role="tab" tabindex="-1" aria-selected="false" data-narrative-view="multi_source">{{ '四类来源综合分析' if language == 'zh' else 'Four-source synthesis' }}</button>
+                        <button type="button" class="narrative-tab active" role="tab" aria-selected="true" data-narrative-view="paper">{{ '论文研究报告' if language == 'zh' else 'Paper research report' }}</button>
+                        <button type="button" class="narrative-tab" role="tab" tabindex="-1" aria-selected="false" data-narrative-view="policy">{{ '政策分析' if language == 'zh' else 'Policy analysis' }}</button>
+                        <button type="button" class="narrative-tab" role="tab" tabindex="-1" aria-selected="false" data-narrative-view="multi_source">{{ '趋势分析' if language == 'zh' else 'Trend analysis' }}</button>
                     </div>
                     <div class="narrative-run-meta">
                         <span id="narrative-generated">{{ '正在读取分析…' if language == 'zh' else 'Loading analysis…' }}</span>

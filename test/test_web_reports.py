@@ -57,14 +57,17 @@ class WebReportTests(unittest.TestCase):
             'journal_issn_l': '1949-3053',
         }]
         with patch.object(web_app, '_load_intelligence_documents', return_value=documents), \
-             patch.object(web_app, 'load_json', return_value={}):
+             patch.object(web_app, 'load_json', return_value={}), \
+             patch.dict(web_app.config, {'paper_discovery': {'enabled': True, 'require_topic_match': False}}), \
+             patch('src.academic_library.PaperLibrary.state_token', return_value='current-library'):
             report = web_app._load_latest_report('weekly')
 
         self.assertEqual(report['report_type'], 'weekly')
         self.assertEqual(report['document_count'], 1)
-        self.assertEqual(
-            report['sections'][0]['items'][0]['heading'], '证据覆盖与结论边界'
-        )
+        self.assertEqual(report['narrative_views'], ['paper', 'policy', 'multi_source'])
+        self.assertEqual(report['paper_library_token'], 'current-library')
+        self.assertEqual(report['sections'][0]['kind'], 'narrative')
+        self.assertTrue(report['sections'][0]['markdown'])
         appendix = next(
             section for section in report['sections']
             if section['key'] == 'appendix_papers'

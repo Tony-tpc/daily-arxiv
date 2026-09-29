@@ -30,6 +30,15 @@ def paper(**changes):
 
 
 class AcademicLibraryTests(unittest.TestCase):
+    def test_crossref_null_date_components_preserve_valid_precision(self):
+        from src.sources.crossref_adapter import publication_date
+        self.assertEqual(publication_date({'published': {'date-parts': [[2025, None, None]]}}), '2025')
+        self.assertEqual(publication_date({'published': {'date-parts': [[None]]},
+            'issued': {'date-parts': [[2024, 2, 29]]}}), '2024-02-29')
+        self.assertEqual(publication_date({'published': {'date-parts': []},
+            'issued': {'date-parts': [[2025, 2, 30]]}}), '2025-02')
+        self.assertEqual(publication_date({'published': {'date-parts': [None]}}), '')
+
     def test_secondary_export_types_cannot_hide_reviews_or_conferences(self):
         self.assertEqual(publication_type('Article; Early Access'), 'journal-article')
         self.assertEqual(publication_type('Article; Proceedings Paper'), 'proceedings-article')

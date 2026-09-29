@@ -60,7 +60,7 @@ class DocumentSummarizerTests(unittest.TestCase):
                         "source_type": source_type,
                         "source_name": "国内来源",
                         "title": f"{source_type} title",
-                        "raw_text": "document body",
+                        "raw_text": "document body " * 30,
                     }
                 )
                 prompt = self.client.generate.call_args.kwargs["prompt"]
@@ -89,6 +89,17 @@ class DocumentSummarizerTests(unittest.TestCase):
             result["web_card"]["follow_up_suggestions"],
             result["follow_up_suggestions"],
         )
+
+    def test_attachment_only_report_does_not_reuse_unsubstantiated_summary(self):
+        document = {'source_type': 'industry_report', 'title': '年度报告',
+                    'raw_text': '年度报告.pdf', 'summary': '未经原文支持的统计数字',
+                    'summarized_at': '2026-09-28', 'web_card': {'summary': '旧总结'}}
+        self.assertFalse(self.summarizer._has_reusable_summary(document))
+        result = self.summarizer.summarize_document(document)
+        self.client.generate.assert_not_called()
+        self.assertEqual(result['summary_status'], 'insufficient_source_text')
+        self.assertNotIn('统计数字', result['summary'])
+        self.assertEqual(result['core_viewpoints'], [])
 
     def test_legacy_paper_api_uses_abstract_and_authors(self):
         summarizer = PaperSummarizer(self.config, llm_client=self.client)

@@ -125,6 +125,16 @@ class WebNarrativeTests(unittest.TestCase):
             400,
         )
 
+    def test_policy_view_is_an_independent_cached_article(self):
+        payload = {**_cached_payload(), 'view': 'policy', 'title': '政策分析'}
+        with patch.object(web_app, '_load_current_analysis', return_value={'narrative_analysis': {'policy': payload}}):
+            response = self.client.get('/api/trends/narrative?view=policy')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['view'], 'policy')
+        html = self.client.get('/').get_data(as_text=True)
+        for route in ('paper-report', 'policy-analysis', 'analysis'):
+            self.assertIn(f'data-section="{route}"', html)
+
     def test_page_uses_portable_chinese_web_font_stack(self):
         css = (
             Path(__file__).resolve().parents[1] / "static" / "css" / "style.css"
