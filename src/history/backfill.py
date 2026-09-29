@@ -27,6 +27,7 @@ from src.sources.paper_quality import is_high_impact_paper
 
 
 SOURCE_TYPES = {
+    "paper_library": "paper",
     "openalex_search": "paper",
     "policy": "policy",
     "rss": "news",
@@ -61,14 +62,11 @@ class HistoricalCorpus:
         path = self.root / source_type / f"{period}.json"
         existing = self._load(path)
         documents = _merge_documents(
-            existing.get("documents", []), result.documents
+            [] if source_name == 'paper_library' else existing.get("documents", []), result.documents
         )
         status = result.status
         errors = list(result.errors or [])
-        if existing.get("status") == "complete" and status != "complete":
-            status = "complete"
-            errors = list(existing.get("errors", []))
-        elif documents and status == "unavailable":
+        if documents and status == "unavailable":
             status = "partial"
         payload = {
             "schema_version": "2.0",
@@ -192,12 +190,19 @@ class BackfillService:
         as_of: str | date | None = None,
         sources: Iterable[str] | None = None,
         force: bool = False,
+        date_from: str = "",
     ) -> Dict[str, Any]:
         end = _as_date(as_of) if as_of else date.today()
         if end is None:
             raise ValueError(f"Invalid as_of date: {as_of}")
         periods = _month_periods(end, max(1, int(months)))
-        selected = list(sources or SOURCE_TYPES)
+        if date_from:
+            first = date.fromisoformat(date_from)
+            if first > end:
+                raise ValueError('date_from must not exceed date_to')
+            periods = _month_periods(end, (end.year - first.year) * 12 + end.month - first.month + 1)
+            periods = [(period, max(begin, first), finish) for period, begin, finish in periods if finish >= first]
+        selected = list(sources or [s for s in SOURCE_TYPES if s != 'paper_library'])
         unknown = [name for name in selected if name not in SOURCE_TYPES]
         if unknown:
             raise ValueError(f"Unsupported backfill sources: {', '.join(unknown)}")

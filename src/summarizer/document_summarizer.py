@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from tqdm import tqdm
+from src.academic_library import content_hash
 
 from src.exporters.output_templates import build_web_card_payload
 from src.sources.structured_metadata import parse_json_object, string_list, unique
@@ -63,6 +64,12 @@ class DocumentSummarizer:
     def summarize_document(self, document: Dict[str, Any]) -> Dict[str, Any]:
         """Summarize one canonical or legacy document without mutating the input."""
         prepared = self._prepare_document(document)
+        if prepared['source_type'] == 'paper' and not (document.get('abstract') or document.get('raw_text')):
+            prepared.update(summary='摘要缺失，尚未进行内容总结。', core_viewpoints=[],
+                            research_relevance='', follow_up_suggestions=[], worth_reading=False,
+                            summary_status='missing_abstract', abstract_status='missing', raw_text='')
+            prepared['web_card'] = build_web_card_payload(prepared, raw_record=document)
+            return prepared
         try:
             raw = self.llm_client.generate(
                 prompt=self._build_prompt(prepared),
@@ -81,6 +88,8 @@ class DocumentSummarizer:
             prepared["summary_error_message"] = str(exc)
 
         prepared["summarized_at"] = datetime.now().isoformat()
+        prepared['summary_content_hash'] = content_hash(document)
+        prepared['summary_status'] = 'failed' if prepared['summary_error'] else 'complete'
         prepared["summary_prompt_type"] = prepared["source_type"]
         prepared["web_card"] = build_web_card_payload(prepared, raw_record=document)
         return prepared
@@ -98,12 +107,19 @@ class DocumentSummarizer:
         reuse_existing = bool(
             self.config.get("summarization", {}).get("reuse_existing", True)
         )
-        summarized = [
-            dict(document)
-            if reuse_existing and self._has_reusable_summary(document)
-            else self.summarize_document(document)
-            for document in iterator
-        ]
+        summarized = []
+        budget = max(0, int(self.config.get('summarization', {}).get('max_new_paper_summaries', 50)))
+        for document in iterator:
+            if reuse_existing and self._has_reusable_summary(document):
+                summarized.append(dict(document))
+            elif document.get('source_type') == 'paper' and (document.get('abstract') or document.get('raw_text')):
+                if budget:
+                    summarized.append(self.summarize_document(document))
+                    budget -= 1
+                else:
+                    summarized.append({**document, 'summary_status': 'pending'})
+            else:
+                summarized.append(self.summarize_document(document))
         self._save_summaries(summarized)
         return summarized
 
@@ -111,6 +127,8 @@ class DocumentSummarizer:
     def _has_reusable_summary(document: Dict[str, Any]) -> bool:
         """Avoid repeated LLM calls for unchanged documents in incremental jobs."""
         return bool(
+            (document.get('source_type') != 'paper' or document.get('summary_content_hash') == content_hash(document))
+            and
             document.get("summarized_at")
             and document.get("summary")
             and isinstance(document.get("web_card"), dict)

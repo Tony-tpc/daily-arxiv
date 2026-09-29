@@ -54,6 +54,12 @@ def run(context: PipelineContext) -> PipelineContext:
             date_from=event_date_from.isoformat(),
             date_to=date_to.isoformat(),
         )
+        from src.sources.paper_quality import is_high_impact_paper
+        def accepted(observation):
+            doc = observation.get('document', observation)
+            return doc.get('source_type') != 'paper' or is_high_impact_paper(doc, context.config)
+        history_observations = [o for o in history_observations if accepted(o)]
+        historical_corpus_observations = [o for o in historical_corpus_observations if accepted(o)]
         current_observations = [
             {
                 'snapshot_id': 'current',

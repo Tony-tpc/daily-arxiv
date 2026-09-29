@@ -130,9 +130,9 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     scheduler_retry.setdefault('base_delay_seconds', 30)
     scheduler_retry.setdefault('max_delay_seconds', 300)
     scheduler.setdefault('jobs', copy.deepcopy({
-        'academic_daily': {
-            'enabled': True, 'sources': ['arxiv', 'openalex_search'],
-            'trigger': 'cron', 'hour': 9, 'minute': 0,
+        'academic_weekly': {
+            'enabled': True, 'sources': ['arxiv', 'openalex_search', 'crossref', 'openaire', 'semantic_scholar'],
+            'trigger': 'cron', 'day_of_week': 'sun', 'hour': 9, 'minute': 0,
         },
         'news_8h': {
             'enabled': True, 'sources': ['rss'], 'trigger': 'interval', 'hours': 8,

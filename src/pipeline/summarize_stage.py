@@ -30,4 +30,7 @@ def run(context: PipelineContext) -> PipelineContext:
         context.summarized_papers = context.summarized_documents
         context.summary_report = ""
 
+    if context.config.get('paper_discovery', {}).get('enabled', False):
+        from src.academic_library import PaperLibrary
+        PaperLibrary(context.config).save_summaries(context.summarized_documents)
     return context

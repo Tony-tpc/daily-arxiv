@@ -42,7 +42,8 @@ class ArxivSourceAdapter(BaseSourceAdapter):
 
     def normalize(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         enriched = self.openalex_adapter.enrich_records(records)
-        return normalize_paper_records(enriched, self.source_name, self.config)
+        return normalize_paper_records(enriched, self.source_name, self.config,
+            enforce_quality=not self.config.get("paper_discovery", {}).get("enabled", False))
 
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         self.fetcher._save_papers(records)

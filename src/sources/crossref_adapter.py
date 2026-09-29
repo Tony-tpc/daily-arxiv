@@ -50,6 +50,7 @@ class CrossrefAdapter(PagedPaperAdapter):
             "journal_issn": work.get("ISSN", []), "journal_publisher": work.get("publisher", ""),
             "citation_count": work.get("is-referenced-by-count", 0),
             "references": [f"doi:{clean_doi(r['DOI'])}" for r in work.get("reference", []) if r.get("DOI")],
+            "version_relations": work.get("relation", {}),
             "is_retracted": any("retract" in str(u.get("type", "")).lower() for u in work.get("update-to", [])),
             "source_name": "Crossref", "source_record_provider": "crossref",
             "field_sources": {"journal": "crossref", "publication_type": "crossref", "abstract": "crossref"},

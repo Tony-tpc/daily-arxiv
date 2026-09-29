@@ -44,6 +44,9 @@ def run(context: PipelineContext) -> PipelineContext:
 
             source_records = [dict(record) for record in (records or [])]
             context.source_records[source_name] = source_records
+            coverage = getattr(adapter, 'last_fetch_result', None)
+            if coverage is not None and getattr(coverage, 'status', '') in {'partial', 'unavailable'}:
+                context.source_errors[source_name] = '; '.join(coverage.errors) or 'pagination_incomplete'
             context.papers.extend(source_records)
             if source_records and hasattr(adapter, 'print_summary'):
                 adapter.print_summary(source_records)
@@ -70,6 +73,6 @@ def run(context: PipelineContext) -> PipelineContext:
             "⚠️  所有启用来源均未返回新记录",
             "⚠️  No enabled source returned new records",
         ))
-        context.stop_requested = True
+        context.stop_requested = not context.config.get("paper_discovery", {}).get("enabled", False)
 
     return context

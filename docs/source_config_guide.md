@@ -2,46 +2,31 @@
 
 ## 配置原则
 
-所有来源位于 `config/config.yaml` 的 `sources` 下。学术层使用 arXiv/OpenAlex；政策、新闻和行业报告只配置中国官方机构、国内媒体或中国能源行业机构。`regional_focus: ["CN"]` 是排序与分析边界，不替代来源审核。标题过滤应排除“机械臂”“人形机器人”等非能源方向内容。
+所有来源位于 `config/config.yaml` 的 `sources` 下。学术层使用 OpenAlex、Crossref、OpenAIRE、Semantic Scholar 和机构导出文件；arXiv 提供正式版本与摘要线索；政策、新闻和行业报告只配置中国官方机构、国内媒体或中国能源行业机构。`regional_focus: ["CN"]` 是排序与分析边界，不替代来源审核。标题过滤应排除“机械臂”“人形机器人”等非能源方向内容。
 
 ## 来源类型
 
 | Key | 用途 | 关键配置 |
 |---|---|---|
 | `arxiv` | 能源系统与多智能体论文 | `categories`、`keyword_groups`、`days_back` |
-| `openalex_search` | 主题检索与引用信息 | `topic_query`、`recent_days`、`max_results` |
+| `openalex_search` | 主题、ISSN 和引文检索 | `per_page`、`max_pages_per_run`、`recent_days` |
+| `crossref` | 独立主题与 ISSN 检索 | `mailto`、`per_page`、`max_pages_per_run` |
+| `openaire` | 聚合机构知识库与版本链接 | `per_page`、`max_pages_per_run` |
+| `semantic_scholar` | 批量检索与双向引文 | `.env` 中 `SEMANTIC_SCHOLAR_API_KEY` |
 | `rss` | 国内能源新闻 | `feeds`、关键词过滤、企业动态排除规则 |
 | `policy` | 中国政策文件 | HTML selectors、`issuing_body`、`policy_level` |
 | `industry_report` | 中国能源行业报告 | selectors、`institution`、标题白/黑名单 |
 
-## 高影响力论文白名单
+## 论文分区与采集
 
-`paper_quality` 是论文的准入门槛，不是排序加分项。启用后，只有
-`accepted_publication_types` 中的正式期刊论文，且期刊名或 ISSN 精确匹配
-`approved_venues`，并且其登记分区不低于 `maximum_allowed_quartile`，才会进入
-列表、报告和趋势分析。未知期刊、会议论文与预印本会被直接排除。
+论文必须有可核验的中科院大类一区、二区证据，旧的 `quartile: Q1/Q2` 不构成准入依据。
+分区记录包含版本年份、学科、ISSN、分区、核验时间，以及 HTTPS 出处或本地文件校验值与页码。
+`paper_quality.venue_evidence_path` 指向本地证据 JSON；完整分区表不提交 Git。
+仅使用已导入证据中的最新年份。ISSN 优先匹配，没有 ISSN 时才使用规范化期刊名精确匹配。
 
-```yaml
-paper_quality:
-  enabled: true
-  require_formal_journal_article: true
-  accepted_publication_types: ["article", "journal-article"]
-  maximum_allowed_quartile: "Q2"
-  approved_venues:
-    - id: ieee_tsg
-      name: "IEEE Transactions on Smart Grid"
-      issn_l: "1949-3053"
-      quartile: "Q1"
-```
-
-不要用 `publisher: IEEE` 作为准入条件：它会误收录会议论文。系统优先使用
-OpenAlex 的 ISSN；当来源没有 ISSN 时才回退到规范化后的精确期刊名匹配。OpenAlex
-不提供可授权复用的 JCR 影响因子或分区，`quartile` 必须由本单位依据当前 JCR 或
-中科院分区手工复核并至少每年更新；未登记、分区缺失、Q3/Q4 期刊均不会被放行。
-
-若 OpenAlex 暂时返回 429 限流，`openalex_search.crossref_fallback` 可从 Crossref
-补充 DOI、期刊名、ISSN 与发表日期；它不改变研究关键词或白名单规则。建议填写
-可公开的联系邮箱到 `mailto` 以便礼貌访问；不填写也不会发送任何本地凭据。
+原始记录先写入缓存，补证和去重后执行主题与文献类型门槛。综述、会议、预印本、社论、
+勘误、撤稿与证据不足的记录继续保存在采集缓存，不进入合格论文列表。
+详细命令、分区 JSON 示例、分页与恢复语义见 [论文获取与质量管理](paper_acquisition.md)。
 
 HTML 列表来源的最小定义如下：
 
@@ -77,7 +62,7 @@ test.test_incremental_pipeline`，确保历史快照中的旧企业动态也会�
 
 ## 调度与安全
 
-`scheduler.jobs` 将论文、新闻、政策、报告隔离成独立任务。新闻间隔必须在 6–12 小时；默认 8 小时。政策每日、行业报告每周。每个任务有有界指数退避，状态写入 `data/state/scheduler_status.json`，事件写入 `logs/scheduler_jobs.jsonl`。
+`scheduler.jobs` 将论文、新闻、政策、报告隔离成独立任务。新闻间隔必须在 6–12 小时；默认 8 小时。学术论文每周日 09:00 增量更新并续跑历史与引文任务，政策每日、行业报告每周。每个任务有有界指数退避，状态写入 `data/state/scheduler_status.json`，事件写入 `logs/scheduler_jobs.jsonl`。
 
 API Key 只放 `.env`。新增站点前确认公开访问条款、请求频率与 robots 规则；设置合理 timeout 和 `max_entries`，不得绕过登录、验证码或访问控制。
 

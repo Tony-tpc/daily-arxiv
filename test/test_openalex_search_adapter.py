@@ -8,6 +8,38 @@ from src.sources.crossref_adapter import CrossrefAdapter
 
 
 class OpenAlexSearchAdapterTests(unittest.TestCase):
+    def test_transient_429_and_503_retry_then_finish(self):
+        responses = [429, 503, 200]
+        with tempfile.TemporaryDirectory() as root:
+            adapter = OpenAlexSearchAdapter(self.config(root, max_attempts=3, search_terms=['energy']))
+            adapter.client.close()
+            def handler(request):
+                code = responses.pop(0)
+                return httpx.Response(code, headers={'Retry-After': '0'},
+                    json={'results': [], 'meta': {'next_cursor': None}})
+            adapter.client = httpx.Client(transport=httpx.MockTransport(handler))
+            result = adapter.fetch_range('2020-01-01', '2020-01-31')
+            adapter.close()
+            self.assertEqual(result.status, 'complete')
+            self.assertEqual(responses, [])
+
+    def test_unchanged_cursor_with_new_results_is_valid(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as root:
+            adapter = OpenAlexSearchAdapter(self.config(root, max_pages_per_run=3, search_terms=['energy']))
+            adapter.client.close()
+            def handler(request):
+                calls.append(request.url.params['cursor'])
+                return httpx.Response(200, json={'results': [{'id': f'W{len(calls)}', 'title': 'Energy control',
+                    'publication_date': '2020-01-03'}] if len(calls) < 3 else [],
+                    'meta': {'next_cursor': 'same'}})
+            adapter.client = httpx.Client(transport=httpx.MockTransport(handler))
+            result = adapter.fetch_range('2020-01-01', '2020-01-31')
+            adapter.close()
+            self.assertEqual(calls, ['*', 'same', 'same'])
+            self.assertEqual(result.status, 'complete')
+            self.assertEqual(len(result.records), 2)
+
     def config(self, root, **settings):
         return {'paper_discovery': {'checkpoint_directory': root}, 'sources': {
             'openalex': {'api_key': 'test-key'}, 'openalex_search': {

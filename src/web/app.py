@@ -91,6 +91,11 @@ app.config['DESCRIPTION'] = web_config.get('description', t('description_default
 
 def _load_papers_data() -> dict:
     """Load canonical papers, retaining normalized legacy files as a fallback."""
+    if config.get('paper_discovery', {}).get('enabled', False):
+        from src.academic_library import PaperLibrary
+        library = PaperLibrary(config)
+        if library.admitted_path.exists():
+            return {'papers': library.load(), 'data_source': 'cumulative_library'}
     canonical_papers = [
         document for document in _load_intelligence_documents()
         if str(document.get('source_type') or '').lower() == 'paper'
@@ -163,6 +168,11 @@ def _load_intelligence_documents() -> list[dict]:
             documents = [item for item in candidate_documents if isinstance(item, dict)]
             break
 
+    if config.get('paper_discovery', {}).get('enabled', False):
+        from src.academic_library import PaperLibrary
+        library = PaperLibrary(config)
+        if library.admitted_path.exists():
+            documents = [d for d in documents if d.get('source_type') not in ('paper', None)] + library.load()
     unique_documents = {}
     for document in documents:
         if not document.get('source_type'):
@@ -190,10 +200,14 @@ def _load_latest_report(report_type: str = "weekly") -> dict:
     for path in candidates:
         payload = load_json(str(path)) or {}
         if payload and payload.get('report_type') == report_type:
+            if config.get('paper_discovery', {}).get('enabled', False):
+                from src.academic_library import PaperLibrary
+                if payload.get('paper_library_token') != PaperLibrary(config).state_token():
+                    continue
             return payload
 
     documents = _load_intelligence_documents()
-    analysis = load_json('data/analysis/latest.json') or {}
+    analysis = _load_current_analysis() or {}
     if not analysis.get('cross_source_analysis'):
         analysis['cross_source_analysis'] = CrossSourceAnalyzer(config).analyze(documents)
     if not analysis.get('research_profile_analysis'):
@@ -335,12 +349,21 @@ def index():
                          html_lang=t('html_lang'))
 
 
+def _load_current_analysis():
+    payload = load_json('data/analysis/latest.json') or {}
+    if config.get('paper_discovery', {}).get('enabled', False):
+        from src.academic_library import PaperLibrary
+        if payload.get('paper_library_token') != PaperLibrary(config).state_token():
+            return {}
+    return payload
+
+
 @app.route('/api/analysis')
 def get_analysis():
     """获取趋势分析数据"""
     try:
         # 加载最新的分析数据
-        analysis_data = load_json('data/analysis/latest.json')
+        analysis_data = _load_current_analysis()
         
         if not analysis_data:
             return jsonify({'error': t('error_no_analysis')}), 404
@@ -368,12 +391,14 @@ def get_papers():
         # 获取查询参数
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
+        page = max(1, page)
+        per_page = min(100, max(1, per_page))
         category = request.args.get('category', '')
         
         # 加载论文数据
         papers_data = _load_papers_data()
         
-        if not papers_data.get('papers'):
+        if not papers_data.get('papers') and papers_data.get('data_source') != 'cumulative_library':
             return jsonify({'error': t('error_no_papers')}), 404
         
         papers = papers_data.get('papers', [])
@@ -404,11 +429,31 @@ def get_papers():
             'page': page,
             'per_page': per_page,
             'total_pages': (total + per_page - 1) // per_page,
-            'date': papers_data.get('date')
+            'date': papers_data.get('date'),
+            'collection_quality': _paper_collection_summary()
         })
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+def _paper_collection_summary():
+    if not config.get('paper_discovery', {}).get('enabled', False):
+        return {}
+    from src.academic_library import PaperLibrary
+    from src.sources.academic import read_json
+    report = read_json(PaperLibrary(config).root / 'quality_report.json', {})
+    fields = ('raw_count', 'unique_count', 'admitted_count', 'abstract_completeness',
+              'cas_editions', 'unavailable_sources')
+    return {**{k: report[k] for k in fields if k in report},
+            'incomplete_count': len(report.get('incomplete_partitions', []))}
+
+
+@app.route('/api/papers/quality')
+def paper_collection_quality():
+    from src.academic_library import PaperLibrary
+    from src.sources.academic import read_json
+    return jsonify(read_json(PaperLibrary(config).root / 'quality_report.json', {}))
 
 
 @app.route('/api/papers/<paper_id>')
@@ -460,7 +505,7 @@ def get_categories():
     try:
         papers_data = _load_papers_data()
         
-        if not papers_data.get('papers'):
+        if not papers_data.get('papers') and papers_data.get('data_source') != 'cumulative_library':
             return jsonify({'error': t('error_no_papers')}), 404
         
         papers = papers_data.get('papers', [])
@@ -491,7 +536,7 @@ def get_stats():
         # 加载数据
         papers_data = _load_papers_data()
         summaries_data = load_json('data/summaries/latest.json')
-        analysis_data = load_json('data/analysis/latest.json')
+        analysis_data = _load_current_analysis()
         knowledge_data = load_json('data/knowledge/latest.json')
         summaries = summaries_data.get('summaries') or summaries_data.get('papers', []) if summaries_data else []
         
@@ -521,7 +566,7 @@ def get_trend_narrative():
     try:
         if as_of:
             date.fromisoformat(as_of)
-        analysis_data = load_json('data/analysis/latest.json') or {}
+        analysis_data = _load_current_analysis() or {}
         cached = (analysis_data.get('narrative_analysis') or {}).get(view)
         if cached and not refresh and (not as_of or cached.get('as_of') == as_of):
             return jsonify(_render_narrative_payload(cached))
@@ -622,7 +667,7 @@ def get_trend_forecast():
         return jsonify({'error': 'confidence 必须是 low、medium 或 high'}), 400
     as_of = str(request.args.get('as_of', '')).strip()
     try:
-        analysis_data = load_json('data/analysis/latest.json') or {}
+        analysis_data = _load_current_analysis() or {}
         forecast = analysis_data.get('trend_forecast') or {}
         if not forecast or (as_of and forecast.get('as_of') != as_of):
             documents = _load_intelligence_documents()
@@ -942,7 +987,7 @@ def serve_image(filename):
 def get_wordcloud():
     """获取词云图片路径"""
     try:
-        analysis_data = load_json('data/analysis/latest.json')
+        analysis_data = _load_current_analysis()
         
         if not analysis_data:
             return jsonify({'error': t('error_no_analysis')}), 404

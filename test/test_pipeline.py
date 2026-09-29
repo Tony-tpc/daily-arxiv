@@ -53,6 +53,7 @@ class PipelineTests(unittest.TestCase):
             import_module.side_effect = [
                 Mock(run=lambda ctx: _record(calls, 'fetch', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'normalize', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'admission', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'ranking', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'linking', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'summarize', ctx)),
@@ -67,7 +68,7 @@ class PipelineTests(unittest.TestCase):
             run_pipeline(context)
 
         self.assertEqual(calls, [
-            'fetch', 'normalize', 'ranking', 'linking', 'summarize', 'export',
+            'fetch', 'normalize', 'admission', 'ranking', 'linking', 'summarize', 'export',
             'extract', 'cross_source', 'profile', 'analyze', 'link_audit', 'report',
         ])
 

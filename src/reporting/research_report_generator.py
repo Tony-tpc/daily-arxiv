@@ -51,6 +51,12 @@ class ResearchReportGenerator:
             raise ValueError("period_start cannot be after period_end")
 
         analysis = analysis or {}
+        library_token = ''
+        if self.config.get('paper_discovery', {}).get('enabled', False):
+            from src.academic_library import PaperLibrary
+            library_token = PaperLibrary(self.config).state_token()
+            if analysis.get('paper_library_token') != library_token:
+                analysis = {}
         filtered = [
             item for item in documents
             if (
@@ -86,6 +92,7 @@ class ResearchReportGenerator:
         report_id = f"{resolved_type}_{start.isoformat()}_{end.isoformat()}"
         payload = {
             "schema_version": "2.1",
+            "paper_library_token": library_token,
             "report_id": report_id,
             "report_type": resolved_type,
             "title": REPORT_TITLES[resolved_type],

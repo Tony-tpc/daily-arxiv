@@ -7,6 +7,7 @@ import os
 import re
 import time
 import uuid
+from itertools import zip_longest
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -131,11 +132,14 @@ class PagedPaperAdapter(BaseSourceAdapter):
 
     def queries(self) -> list[PaperQuery]:
         terms = self.settings.get("search_terms") or self.discovery.get("search_terms", [])
-        queries = [PaperQuery(f"topic:{term}", term=str(term)) for term in dict.fromkeys(terms)]
+        topics = [PaperQuery(f"topic:{term}", term=str(term)) for term in dict.fromkeys(terms)]
+        journals = []
         if self.settings.get("journal_search", True):
             from .paper_quality import approved_venue_issns
-            queries += [PaperQuery(f"journal:{issn}", issn=issn) for issn in approved_venue_issns(self.config)]
-        return queries
+            selected = self.discovery.get('journal_issns')
+            journals = [PaperQuery(f"journal:{issn}", issn=issn) for issn in approved_venue_issns(self.config)
+                        if not selected or issn in selected]
+        return [query for pair in zip_longest(topics, journals) for query in pair if query is not None]
 
     def fetch(self, **kwargs: Any) -> list[dict]:
         end = date.today()
@@ -153,6 +157,8 @@ class PagedPaperAdapter(BaseSourceAdapter):
         queries = self.queries() if queries is None else queries
         if not queries:
             return PaperFetchResult(status="unavailable", errors=["no_queries_or_verified_journals"])
+        offset = (date.fromisoformat(date_from).month - 1) % len(queries)
+        queries = queries[offset:] + queries[:offset]
         root = Path(self.discovery.get("checkpoint_directory", "data/state/paper_discovery")) / self.source_name
         states = []
         for query in queries:
@@ -169,15 +175,18 @@ class PagedPaperAdapter(BaseSourceAdapter):
         failed: set[str] = set()
         while calls < budget:
             pending = sorted((s for s in states if not s[2]["complete"] and s[0].key not in failed),
-                             key=lambda s: (s[2]["pages"], s[0].key))
+                             key=lambda s: s[2]["pages"])
             if not pending:
                 break
             query, path, state = pending[0]
             calls += 1
             try:
                 page = self.fetch_page(query, date_from, date_to, state["cursor"])
-                if page.next_cursor == state["cursor"] and page.records:
-                    raise ValueError("provider repeated a nonempty cursor")
+                page_keys = [record_key(r) for r in page.records]
+                if page.next_cursor is not None and page_keys and page_keys == state.get('last_page_keys'):
+                    raise ValueError('provider repeated a nonempty page')
+                state['last_page_keys'] = page_keys
+                state["raw_records"] = unique_records(state.get("raw_records", []) + page.records)
                 records = [r for r in page.records if publication_in_range(r, date_from, date_to)]
                 state["records"] = unique_records(state["records"] + records)
                 state.update(cursor=page.next_cursor, complete=page.next_cursor is None,

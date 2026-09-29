@@ -814,6 +814,9 @@ class TrendAnalyzer:
         Args:
             analysis: 分析结果
         """
+        if self.config.get('paper_discovery', {}).get('enabled', False):
+            from src.academic_library import PaperLibrary
+            analysis['paper_library_token'] = PaperLibrary(self.config).state_token()
         output_dir = Path('data/analysis')
         output_dir.mkdir(parents=True, exist_ok=True)
         

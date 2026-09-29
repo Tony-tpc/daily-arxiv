@@ -46,7 +46,7 @@ class SchedulerOrchestrationTests(unittest.TestCase):
         specs = build_job_specs({"scheduler": {}})
         indexed = {item["id"]: item for item in specs}
 
-        self.assertEqual(indexed["academic_daily"]["sources"], ["arxiv", "openalex_search"])
+        self.assertEqual(indexed["academic_weekly"]["sources"], ["arxiv", "openalex_search", "crossref", "openaire", "semantic_scholar"])
         self.assertEqual(indexed["news_8h"]["hours"], 8)
         self.assertEqual(indexed["policy_daily"]["trigger"], "cron")
         self.assertEqual(indexed["industry_weekly"]["day_of_week"], "mon")
@@ -130,7 +130,7 @@ class SchedulerOrchestrationTests(unittest.TestCase):
         self.assertEqual(len(specs), 4)
         self.assertEqual(len(calls), 4)
         triggers = {call.kwargs["id"]: call.kwargs["trigger"] for call in calls}
-        self.assertIsInstance(triggers["academic_daily"], CronTrigger)
+        self.assertIsInstance(triggers["academic_weekly"], CronTrigger)
         self.assertIsInstance(triggers["news_8h"], IntervalTrigger)
         self.assertEqual(calls[0].kwargs["max_instances"], 1)
 

@@ -47,6 +47,9 @@ data/summaries/*.json
 logs/*.log
 logs/*.jsonl
 data/state/*.json
+data/state/paper_discovery/
+data/*collection.log
+data/test-*.log
 data/documents/
 data/raw/
 data/history/
@@ -57,6 +60,7 @@ data/zotero/
 data/cache/
 data/library/
 data/imports/
+data/private/
 
 # OS
 .DS_Store

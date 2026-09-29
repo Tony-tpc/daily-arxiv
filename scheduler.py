@@ -29,11 +29,12 @@ from src.pipeline.runner import run_pipeline
 from src.utils import load_config, load_env, pick_text, setup_logging
 
 
-PIPELINE_SOURCES = ("arxiv", "openalex_search", "rss", "policy", "industry_report")
+PIPELINE_SOURCES = ("arxiv", "openalex_search", "crossref", "openaire", "semantic_scholar", "rss", "policy", "industry_report")
 DEFAULT_JOBS: Dict[str, Dict[str, Any]] = {
-    "academic_daily": {
+    "academic_weekly": {
         "enabled": True,
-        "sources": ["arxiv", "openalex_search"],
+        "sources": ["arxiv", "openalex_search", "crossref", "openaire", "semantic_scholar"],
+        "day_of_week": "sun",
         "trigger": "cron",
         "hour": 9,
         "minute": 0,
@@ -150,6 +151,16 @@ def run_source_job(
         })
         try:
             with _PIPELINE_LOCK:
+                if job_config.get('paper_discovery', {}).get('enabled', False) and 'openalex_search' in sources:
+                    from src.history.paper_backfill import PaperBackfillService
+                    from src.history.citations import trace_citations
+                    from src.sources.academic import INDEX_SOURCES
+                    today = datetime.now().date()
+                    start = today.replace(year=today.year - int(job_config['paper_discovery'].get('history_years', 10)), day=1)
+                    PaperBackfillService(job_config).run(start.isoformat(), today.isoformat(),
+                        sources=[s for s in sources if s in INDEX_SOURCES],
+                        max_requests=int(job_config['paper_discovery'].get('history_requests_per_run', 120)))
+                    trace_citations(job_config)
                 context = create_pipeline_context(job_config, logger, text)
                 context = pipeline_runner(context) or context
 

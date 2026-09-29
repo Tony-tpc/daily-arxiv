@@ -12,6 +12,7 @@ def run_pipeline(context: PipelineContext) -> PipelineContext:
     stage_modules = [
         'src.pipeline.fetch_stage',
         'src.pipeline.normalize_stage',
+        'src.pipeline.admission_stage',
         'src.pipeline.ranking_stage',
         'src.pipeline.linking_stage',
         'src.pipeline.summarize_stage',

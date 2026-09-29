@@ -839,6 +839,7 @@ async function loadPapers(page = 1) {
         if (!response.ok && response.status !== 404) throw new Error('Failed to load papers');
         const data = response.status === 404 ? {papers: [], total: 0, total_pages: 0} : await response.json();
         if (state.requestVersions.papers !== version) return;
+        renderCollectionQuality(data.collection_quality || {});
         state.papersLoaded = true;
         state.allPapers = data.papers || [];
         state.currentPage = page;
@@ -863,6 +864,19 @@ async function loadPapers(page = 1) {
         showError('featured-papers', LANG === 'en' ? 'Failed to load papers' : '加载论文失败');
         updateElement('papers-result-count', '—');
     }
+}
+
+function renderCollectionQuality(report) {
+    const node = document.getElementById('paper-collection-quality');
+    if (!node) return;
+    const unavailable = report.unavailable_sources || [];
+    const percent = report.abstract_completeness == null ? '—' : (report.abstract_completeness * 100).toFixed(1) + '%';
+    const parts = report.raw_count == null ? [] : [
+        `累计原始记录 ${report.raw_count} · 去重后 ${report.unique_count} · 合格 ${report.admitted_count} · 摘要完整率 ${percent}`,
+        `中科院分区版本 ${(report.cas_editions || []).join(' / ') || '待核验'} · 未完成分片 ${report.incomplete_count || 0}`
+    ];
+    if (unavailable.length) parts.push('未接通来源：' + unavailable.join(' / '));
+    node.textContent = parts.join('。');
 }
 
 async function loadCategories() {
@@ -1399,9 +1413,9 @@ function renderOpenAlexPanel(card) {
     if (meta.journal_name) {
         items.push(`<span><strong>${t('journalLabel')}:</strong> ${escapeHtml(meta.journal_name)}</span>`);
     }
-    if (meta.journal_quartile) {
-        items.push(`<span><strong>${t('whitelistQuartileLabel')}:</strong> ${escapeHtml(meta.journal_quartile)}</span>`);
-    }
+    if (meta.cas_partition) items.push(`<span>中科院 ${escapeHtml(String(meta.cas_edition_year))} · ${escapeHtml(meta.cas_major_category || '')} ${escapeHtml(String(meta.cas_partition))} 区</span>`);
+    if (meta.abstract_status === 'missing') items.push('<span>摘要待补齐</span>');
+    if (meta.discovered_via?.length) items.push(`<span>${escapeHtml(meta.discovered_via.join(' / '))}</span>`);
     if (meta.citation_count !== undefined && meta.citation_count !== null) {
         items.push(`<span><strong>${t('citationsLabel')}:</strong> ${escapeHtml(String(meta.citation_count))}</span>`);
     }
@@ -1424,7 +1438,8 @@ function renderCompactInfoBar(card, paper) {
     const parts = [];
     if (meta.journal_name) parts.push(meta.journal_name);
     if (meta.citation_count != null) parts.push(t('citationsLabel') + ' ' + meta.citation_count);
-    if (meta.journal_quartile) parts.push(t('whitelistQuartileLabel') + ' ' + meta.journal_quartile);
+    if (meta.cas_partition) parts.push(`中科院 ${meta.cas_edition_year} · ${meta.cas_partition} 区`);
+    if (meta.abstract_status === 'missing') parts.push('摘要待补齐');
     if (meta.openalex_primary_topic) parts.push(meta.openalex_primary_topic);
     if (meta.openalex_institutions?.length) parts.push(meta.openalex_institutions.slice(0, 2).join(', '));
     return parts.map(value => `<span>${escapeHtml(String(value))}</span>`).join('');

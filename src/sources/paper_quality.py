@@ -1,7 +1,7 @@
 """Auditable journal-quality admission rules for paper records.
 
 OpenAlex exposes publication venue metadata, but it does not provide a
-licensed JCR impact-factor or quartile feed.  This module deliberately keeps
+verified CAS partition feed.  This module deliberately keeps
 the institution-reviewed venue list in ``paper_quality`` configuration instead
 of guessing a journal's rank from citation counts or publisher names.
 """
@@ -9,7 +9,10 @@ of guessing a journal's rank from citation counts or publisher names.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Iterable, Mapping
+import json
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Dict, Mapping
 
 
 QUALITY_CONFIG_KEY = "paper_quality"
@@ -59,87 +62,100 @@ def enrich_openalex_venue_metadata(
     return enriched
 
 
-def evaluate_paper_quality(
-    record: Mapping[str, Any], config: Mapping[str, Any]
-) -> Dict[str, Any]:
-    """Return an explainable whitelist decision for one formal paper record."""
+@lru_cache(maxsize=8)
+def _load_evidence(path: str, modified: int, inline: str) -> tuple[list[dict], dict, dict]:
+    venues = json.loads(inline)
+    if path:
+        venues += json.loads(Path(path).read_text(encoding="utf-8")).get("venues", [])
+    editions = [v.get("edition_year") for v in venues if valid_venue_evidence(v)]
+    latest = max(editions, default=0)
+    verified = [v for v in venues if valid_venue_evidence(v) and v["edition_year"] == latest]
+    names, issns = {}, {}
+    for venue in verified:
+        for name in [venue.get("name"), *_text_list(venue.get("aliases"))]:
+            names[_normalize(name)] = venue
+        for issn in [venue.get("issn_l"), *_text_list(venue.get("issn"))]:
+            if issn:
+                issns[_normalize_issn(issn)] = venue
+    return verified, names, issns
+
+
+def _evidence(config):
+    settings = _settings(config)
+    path = Path(settings.get("venue_evidence_path") or "__missing_cas_evidence__")
+    return _load_evidence(str(path) if path.is_file() else "", path.stat().st_mtime_ns if path.is_file() else 0,
+                          json.dumps(settings.get("approved_venues", []), sort_keys=True))
+
+
+def venue_evidence(config: Mapping[str, Any]) -> list[dict]:
+    return _evidence(config)[0]
+
+
+def valid_venue_evidence(venue: Mapping[str, Any]) -> bool:
+    from datetime import date, datetime
+    try:
+        checked = datetime.fromisoformat(str(venue.get("verified_at", "")).replace("Z", "+00:00"))
+        return bool(venue.get("classification_system") == "cas"
+                    and venue.get("category_level") == "major"
+                    and isinstance(venue.get("edition_year"), int)
+                    and 2004 <= venue["edition_year"] <= date.today().year
+                    and venue.get("partition") in (1, 2, 3, 4)
+                    and venue.get("major_category") and (venue.get("issn_l") or venue.get("issn"))
+                    and (str(venue.get("evidence_url", "")).startswith("https://") or
+                         (re.fullmatch(r"[0-9a-f]{64}", str(venue.get("evidence_sha256", "")))
+                          and venue.get("evidence_file") and venue.get("evidence_page")))
+                    and checked.date() <= date.today())
+    except (ValueError, TypeError):
+        return False
+
+
+def evaluate_paper_quality(record: Mapping[str, Any], config: Mapping[str, Any]) -> Dict[str, Any]:
+    """Admit original journal articles with verified current CAS major partitions."""
     settings = _settings(config)
     if not settings.get("enabled", False):
         return {"allowed": True, "reason": "quality_gate_disabled"}
-
-    journal_name = _text(record.get("journal_name") or record.get("venue"))
+    title = _text(record.get("title")).casefold()
+    abstract = _text(record.get('abstract') or record.get('raw_text')).casefold()
+    types = [_text(record.get("publication_type")).casefold(),
+             *[t.casefold() for t in _text_list(record.get("publication_types"))]]
+    if record.get("is_retracted"):
+        return _decision(False, "retracted")
+    excluded = {"review", "editorial", "erratum", "correction", "retraction", "survey", "tutorial"}
+    if excluded.intersection(types) or re.search(r"\b(review|survey|editorial|erratum|corrigendum|retraction|bibliometric|meta-analysis)\b|综述|述评|撤稿|勘误", title):
+        return _decision(False, "not_original_research")
+    if re.search(r'\bthis (?:survey|review|tutorial)\b|\bthis (?:paper|article) (?:presents|provides|offers) (?:a|an) (?:comprehensive |systematic |critical )?(?:survey|review|tutorial)\b', abstract):
+        return _decision(False, 'not_original_research')
+    if types[0] not in _DEFAULT_ACCEPTED_TYPES:
+        return _decision(False, "not_a_formal_journal_article")
+    journal = _text(record.get("journal_name") or record.get("venue"))
     issns = _record_issns(record)
-    publication_type = _text(record.get("publication_type")).casefold()
-    accepted_types = {
-        _text(value).casefold()
-        for value in settings.get("accepted_publication_types", _DEFAULT_ACCEPTED_TYPES)
-        if _text(value)
-    }
-    if settings.get("require_formal_journal_article", True):
-        if publication_type not in accepted_types:
-            return _decision(
-                False,
-                "not_a_formal_journal_article",
-                journal_name=journal_name,
-                publication_type=publication_type,
-            )
-        if not journal_name and not issns:
-            return _decision(
-                False,
-                "missing_journal_venue",
-                publication_type=publication_type,
-            )
-
-    matched = _match_venue(journal_name, issns, settings.get("approved_venues", []))
+    for venue in settings.get('excluded_venues', []):
+        if (_normalize_issn(venue.get('issn_l')) in {_normalize_issn(i) for i in issns}
+                or _normalize(journal) == _normalize(venue.get('name'))):
+            return _decision(False, 'not_original_research', evidence_url=venue.get('evidence_url'))
+    if not journal and not issns:
+        return _decision(False, "missing_journal_venue")
+    _, by_name, by_issn = _evidence(config)
+    matches = [by_issn[_normalize_issn(i)] for i in issns if _normalize_issn(i) in by_issn]
+    matched = matches[0] if matches else by_name.get(_normalize(journal)) if not issns else None
     if matched is None:
-        return _decision(
-            False,
-            "venue_not_whitelisted",
-            journal_name=journal_name,
-            issns=issns,
-            publication_type=publication_type,
-        )
-
-    quartile = _text(matched.get("quartile")).upper()
-    maximum_quartile = _quartile_number(settings.get("maximum_allowed_quartile", "Q2"))
-    venue_quartile = _quartile_number(quartile)
-    if venue_quartile is None:
-        return _decision(
-            False,
-            "venue_quartile_unverified",
-            journal_name=journal_name,
-            venue_id=_text(matched.get("id") or matched.get("name")),
-        )
-    if maximum_quartile is not None and venue_quartile > maximum_quartile:
-        return _decision(
-            False,
-            "venue_below_quartile_threshold",
-            journal_name=journal_name,
-            quartile=quartile,
-            maximum_allowed_quartile=f"Q{maximum_quartile}",
-            venue_id=_text(matched.get("id") or matched.get("name")),
-        )
-
-    return _decision(
-        True,
-        "whitelisted_q1_q2_journal",
-        journal_name=journal_name,
-        journal_issn_l=_text(record.get("journal_issn_l")),
-        journal_publisher=_text(record.get("journal_publisher")),
-        quartile=quartile,
-        venue_id=_text(matched.get("id") or matched.get("name")),
-        publication_type=publication_type,
-    )
+        return _decision(False, "cas_partition_unverified", journal_name=journal, issns=issns)
+    evidence = {key: matched[key] for key in ("classification_system", "category_level", "edition_year",
+                "major_category", "partition", "evidence_url", "verified_at", "evidence_file",
+                "evidence_sha256", "evidence_page") if key in matched}
+    if matched["partition"] > 2:
+        return _decision(False, "venue_below_partition_threshold", **evidence)
+    return _decision(True, "verified_cas_major_1_2", journal_name=journal,
+                     venue_id=matched.get("id") or matched.get("name"), **evidence)
 
 
 def is_high_impact_paper(record: Mapping[str, Any], config: Mapping[str, Any]) -> bool:
-    """Return whether a paper passes the configured high-impact whitelist."""
     return bool(evaluate_paper_quality(record, config).get("allowed"))
 
 
 def approved_venue_issns(config: Mapping[str, Any]) -> list[str]:
-    return sorted({_text(v.get('issn_l')) for v in _settings(config).get('approved_venues', [])
-                   if v.get('issn_l')})
+    return sorted({_text(v.get("issn_l") or _text_list(v.get("issn"))[0])
+                   for v in venue_evidence(config) if v["partition"] <= 2})
 
 
 def _settings(config: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -147,45 +163,11 @@ def _settings(config: Mapping[str, Any]) -> Mapping[str, Any]:
     return settings if isinstance(settings, Mapping) else {}
 
 
-def _match_venue(
-    journal_name: str,
-    issns: Iterable[str],
-    approved_venues: Any,
-) -> Mapping[str, Any] | None:
-    normalized_name = _normalize(journal_name)
-    normalized_issns = {_normalize_issn(value) for value in issns if _normalize_issn(value)}
-    for candidate in approved_venues if isinstance(approved_venues, list) else []:
-        if not isinstance(candidate, Mapping):
-            continue
-        candidate_issns = {
-            _normalize_issn(value)
-            for value in _text_list(candidate.get("issn_l"))
-            + _text_list(candidate.get("issn"))
-            if _normalize_issn(value)
-        }
-        # When the provider supplied an ISSN, it is the strongest available
-        # identity signal.  Do not let a matching display name mask a
-        # conflicting ISSN from an incorrectly mapped source record.
-        if normalized_issns:
-            if normalized_issns.intersection(candidate_issns):
-                return candidate
-            continue
-        candidate_names = [candidate.get("name"), *(_text_list(candidate.get("aliases")))]
-        if normalized_name and any(_normalize(name) == normalized_name for name in candidate_names):
-            return candidate
-    return None
-
-
 def _record_issns(record: Mapping[str, Any]) -> list[str]:
     return [
         *_text_list(record.get("journal_issn_l")),
         *_text_list(record.get("journal_issn")),
     ]
-
-
-def _quartile_number(value: Any) -> int | None:
-    match = re.fullmatch(r"Q([1-4])", _text(value).upper())
-    return int(match.group(1)) if match else None
 
 
 def _decision(allowed: bool, reason: str, **metadata: Any) -> Dict[str, Any]:

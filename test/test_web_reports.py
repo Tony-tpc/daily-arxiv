@@ -6,12 +6,16 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.web import app as web_app
+from test.test_paper_quality import QUALITY_CONFIG
 
 
 class WebReportTests(unittest.TestCase):
     def setUp(self):
         web_app.app.config.update(TESTING=True)
         self.client = web_app.app.test_client()
+        patcher = patch.dict(web_app.config, {**QUALITY_CONFIG, 'paper_discovery': {'enabled': False}})
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_report_reader_is_a_peer_navigation_view(self):
         response = self.client.get('/')

@@ -80,6 +80,7 @@ class DocumentSchema:
     doi: Optional[str] = None
     arxiv_id: Optional[str] = None
     categories: List[str] = field(default_factory=list)
+    journal_name: str = ""
 
     # Policy-specific fields
     issuing_body: Optional[str] = None
@@ -124,8 +125,8 @@ class DocumentSchema:
         except ValueError as exc:
             raise ValueError(f"Unsupported source_type: {self.source_type}") from exc
 
-        if source_type == SourceType.PAPER and not (self.arxiv_id or self.doi or self.categories):
-            raise ValueError("Paper documents require arxiv_id, doi, or categories")
+        if source_type == SourceType.PAPER and not (self.arxiv_id or self.doi or self.categories or self.journal_name):
+            raise ValueError("Paper documents require an identifier, categories, or a journal venue")
         if source_type == SourceType.POLICY and not self.issuing_body:
             raise ValueError("Policy documents require issuing_body")
         if source_type == SourceType.NEWS and not self.media_name:

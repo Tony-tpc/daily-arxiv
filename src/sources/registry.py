@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Type
 
 from .arxiv_adapter import ArxivSourceAdapter
 from .crossref_adapter import CrossrefAdapter
+from .openaire_adapter import OpenAIREAdapter
+from .semantic_scholar_adapter import SemanticScholarAdapter
 from .base import BaseSourceAdapter
 from .industry_report_adapter import IndustryReportSourceAdapter
 from .openalex_search_adapter import OpenAlexSearchAdapter
@@ -52,6 +54,8 @@ def build_source_registry(config: Dict[str, Any]) -> SourceRegistry:
     registry.register("arxiv", ArxivSourceAdapter)
     registry.register("openalex_search", OpenAlexSearchAdapter)
     registry.register("crossref", CrossrefAdapter)
+    registry.register("openaire", OpenAIREAdapter)
+    registry.register("semantic_scholar", SemanticScholarAdapter)
     registry.register("rss", RSSSourceAdapter)
     registry.register("policy", PolicySourceAdapter)
     registry.register("industry_report", IndustryReportSourceAdapter)

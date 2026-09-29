@@ -9,6 +9,7 @@ from src.sources.paper_normalizer import (
     is_excluded_paper,
     normalize_paper_record,
 )
+from src.sources.academic import PAPER_SOURCES
 from src.sources.policy_adapter import is_policy_in_scope
 from src.sources.rss_adapter import is_news_in_scope
 from src.storage.base import build_storage
@@ -100,7 +101,7 @@ def run(context: PipelineContext) -> PipelineContext:
                 f"Could not load the incremental baseline; processing only the new batch: {exc}",
             ))
 
-    if not context.normalized_records:
+    if not context.normalized_records and not context.config.get('paper_discovery', {}).get('enabled', False):
         context.stop_requested = True
     return context
 
@@ -111,8 +112,9 @@ def _canonicalize_record(
     config: Dict[str, Any],
 ) -> Dict[str, Any] | None:
     """Backfill canonical fields for legacy paper adapters."""
-    if source_name in {'arxiv', 'openalex_search'}:
-        return normalize_paper_record(record, source_name, config)
+    if source_name in PAPER_SOURCES:
+        return normalize_paper_record(record, source_name, config,
+            enforce_quality=not config.get('paper_discovery', {}).get('enabled', False))
     if str(record.get('source_type') or '').lower() == 'news':
         return dict(record) if is_news_in_scope(record, config) else None
     if str(record.get('source_type') or '').lower() == 'policy':

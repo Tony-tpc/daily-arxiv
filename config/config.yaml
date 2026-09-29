@@ -13,80 +13,102 @@ tracking_topics:
   - "embodied intelligence for energy systems"
   - "energy systems"
 
-# 论文准入白名单：只让已登记的 Q1/Q2 正式期刊论文进入后续排序、报告和趋势分析。
-# 不以出版社名称或引用量替代分区；名单应每年依据本单位可访问的 JCR/中科院分区复核。
+# 仅凭带版本、学科、ISSN 和出处的中科院大类分区证据准入。
 paper_quality:
   enabled: true
-  require_formal_journal_article: true
-  accepted_publication_types: ["article", "journal-article"]
-  maximum_allowed_quartile: "Q2"
-  approved_venues:
-    - id: ieee_tsg
-      name: "IEEE Transactions on Smart Grid"
-      issn_l: "1949-3053"
-      publisher: "IEEE"
-      quartile: "Q1"
-    - id: ieee_tps
-      name: "IEEE Transactions on Power Systems"
-      issn_l: "0885-8950"
-      publisher: "IEEE"
-      quartile: "Q1"
-    - id: ieee_tse
-      name: "IEEE Transactions on Sustainable Energy"
-      issn_l: "1949-3029"
-      publisher: "IEEE"
-      quartile: "Q1"
-    - id: ieee_tii
-      name: "IEEE Transactions on Industrial Informatics"
-      issn_l: "1551-3203"
-      publisher: "IEEE"
-      quartile: "Q1"
-    - id: ieee_iotj
-      name: "IEEE Internet of Things Journal"
-      issn_l: "2327-4662"
-      publisher: "IEEE"
-      quartile: "Q1"
-    - id: applied_energy
-      name: "Applied Energy"
-      issn_l: "0306-2619"
-      publisher: "Elsevier"
-      quartile: "Q1"
-    - id: energy
-      name: "Energy"
-      issn_l: "0360-5442"
-      publisher: "Elsevier"
-      quartile: "Q1"
-    - id: energy_conversion_management
-      name: "Energy Conversion and Management"
-      issn_l: "0196-8904"
-      publisher: "Elsevier"
-      quartile: "Q1"
-    - id: renewable_sustainable_reviews
-      name: "Renewable and Sustainable Energy Reviews"
-      issn_l: "1364-0321"
-      publisher: "Elsevier"
-      quartile: "Q1"
-    - id: renewable_energy
-      name: "Renewable Energy"
-      issn_l: "0960-1481"
-      publisher: "Elsevier"
-      quartile: "Q1"
-    - id: international_jepes
-      name: "International Journal of Electrical Power and Energy Systems"
-      aliases: ["International Journal of Electrical Power & Energy Systems"]
-      issn_l: "0142-0615"
-      publisher: "Elsevier"
-      quartile: "Q1"
-    - id: nature_energy
-      name: "Nature Energy"
-      issn_l: "2058-7546"
-      publisher: "Nature Portfolio"
-      quartile: "Q1"
-    - id: joule
-      name: "Joule"
-      issn_l: "2542-4351"
-      publisher: "Cell Press"
-      quartile: "Q1"
+  classification_system: cas
+  category_level: major
+  venue_evidence_path: data/private/cas_venues.json
+  approved_venues: []
+  excluded_venues:
+    - name: IEEE Communications Surveys and Tutorials
+      issn_l: 1553-877X
+      evidence_url: https://www.comsoc.org/publications/journals/ieee-communications-surveys-tutorials
+  pending_venues:
+  - id: ieee_tsg
+    name: IEEE Transactions on Smart Grid
+    issn_l: 1949-3053
+    publisher: IEEE
+  - id: ieee_tps
+    name: IEEE Transactions on Power Systems
+    issn_l: 0885-8950
+    publisher: IEEE
+  - id: ieee_tse
+    name: IEEE Transactions on Sustainable Energy
+    issn_l: 1949-3029
+    publisher: IEEE
+  - id: ieee_tii
+    name: IEEE Transactions on Industrial Informatics
+    issn_l: 1551-3203
+    publisher: IEEE
+  - id: ieee_iotj
+    name: IEEE Internet of Things Journal
+    issn_l: 2327-4662
+    publisher: IEEE
+  - id: applied_energy
+    name: Applied Energy
+    issn_l: 0306-2619
+    publisher: Elsevier
+  - id: energy
+    name: Energy
+    issn_l: 0360-5442
+    publisher: Elsevier
+  - id: energy_conversion_management
+    name: Energy Conversion and Management
+    issn_l: 0196-8904
+    publisher: Elsevier
+  - id: renewable_sustainable_reviews
+    name: Renewable and Sustainable Energy Reviews
+    issn_l: 1364-0321
+    publisher: Elsevier
+  - id: renewable_energy
+    name: Renewable Energy
+    issn_l: 0960-1481
+    publisher: Elsevier
+  - id: international_jepes
+    name: International Journal of Electrical Power and Energy Systems
+    aliases:
+    - International Journal of Electrical Power & Energy Systems
+    issn_l: 0142-0615
+    publisher: Elsevier
+  - id: nature_energy
+    name: Nature Energy
+    issn_l: 2058-7546
+    publisher: Nature Portfolio
+  - id: joule
+    name: Joule
+    issn_l: 2542-4351
+    publisher: Cell Press
+paper_discovery:
+  enabled: true
+  library_directory: data/library
+  checkpoint_directory: data/state/paper_discovery
+  raw_directory: data/raw/academic
+  journal_issns: ["1551-3203", "2327-4662", "0018-9286", "2162-237X", "2168-2267", "2168-2216", "0957-4174", "0952-1976", "0019-0578", "1568-4946", "0893-6080", "0950-7051", "2329-9266"]
+  history_requests_per_run: 120
+  history_years: 10
+  max_pages_per_run: 40
+  require_topic_match: true
+  search_terms:
+  - energy reinforcement learning
+  - microgrid multi-agent
+  - power system autonomous control
+  - electricity market game theory
+  - virtual power plant optimization
+  - demand response mechanism design
+  - energy digital twin control
+  - battery reinforcement learning
+  - energy system multi-agent coordination
+  - power grid distributed control
+  - electricity market bidding
+  - renewable energy autonomous control
+  enrichment:
+    enabled: true
+    max_records_per_run: 100
+  citations:
+    reference_depth: 2
+    citing_depth: 1
+    max_requests_per_run: 100
 
 # 研究边界：聚焦能源系统中的具身智能，不跟踪通用机器人与机械臂方向。
 research_profile:
@@ -115,6 +137,7 @@ regional_focus:
 
 # 统一文档摘要配置（论文、政策、新闻和行业报告）
 summarization:
+  max_new_paper_summaries: 50
   max_input_chars: 12000
   max_tokens: 1400
 
@@ -224,7 +247,7 @@ sources:
           - "demand response"
           - "microgrid"
           - "power system"
-      - name: "reinforcement_learning"
+      - name: "learning_control_and_market"
         terms:
           - "reinforcement learning"
           - "deep reinforcement learning"
@@ -232,8 +255,8 @@ sources:
           - "MARL"
           - "Markov decision process"
           - "MDP"
-      - name: "game_and_market_mechanism"
-        terms:
+          - "autonomous control"
+          - "digital twin"
           - "game theory"
           - "game-theoretic"
           - "Stackelberg"
@@ -280,30 +303,31 @@ sources:
 
   openalex_search:
     enabled: true
-    request_timeout_seconds: 20
     per_page: 100
     max_pages_per_run: 40
-    recent_days: 180
-    sort: "publication_date:desc"
-    # 每一条为独立检索式，优先覆盖能源设备自主决策、源网荷储与电力市场。
-    search_terms:
-      - "virtual power plant reinforcement learning"
-      - "multi-agent reinforcement learning power system"
-      - "energy system digital twin autonomous control"
-      - "electricity market multi-agent"
-    topic_query: '"energy agent" OR "autonomous energy system" OR "multi-agent reinforcement learning power system" OR "virtual power plant autonomous control" OR "source grid load storage" OR "digital twin energy system" OR "electricity market multi-agent"'
-
+    recent_days: 90
+    request_timeout_seconds: 30
   crossref:
     enabled: true
     per_page: 100
     max_pages_per_run: 40
-    recent_days: 180
-    mailto: ""
-    search_terms:
-      - "virtual power plant reinforcement learning"
-      - "multi-agent reinforcement learning power system"
-      - "energy system digital twin autonomous control"
-      - "electricity market multi-agent"
+    recent_days: 90
+    request_timeout_seconds: 30
+    mailto: ''
+  openaire:
+    enabled: true
+    per_page: 100
+    max_pages_per_run: 40
+    recent_days: 90
+    request_timeout_seconds: 30
+  semantic_scholar:
+    enabled: true
+    per_page: 100
+    max_pages_per_run: 40
+    recent_days: 90
+    request_timeout_seconds: 30
+    api_key: ''
+    request_interval_seconds: 1.1
 
   rss:
     enabled: true
@@ -664,12 +688,16 @@ scheduler:
 
   # 学术、国内新闻、中国政策、国内行业报告独立调度。
   jobs:
-    academic_daily:
+    academic_weekly:
       enabled: true
-      name: "学术论文每日采集"
+      name: "学术论文每周采集"
       sources:
         - "arxiv"
         - "openalex_search"
+        - "crossref"
+        - "openaire"
+        - "semantic_scholar"
+      day_of_week: "sun"
       trigger: "cron"
       hour: 9
       minute: 0

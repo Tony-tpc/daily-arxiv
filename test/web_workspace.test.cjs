@@ -228,3 +228,14 @@ test('category visualization counts labels instead of presenting overlapping lab
     assert.equal(JSON.stringify(app.window.chart.data.datasets[0].data),'[2,2]');
     assert.match(app.get('category-chart-scope').textContent,/一文多标签/);
 });
+
+
+test('paper collection status shows CAS edition and unavailable sources', () => {
+    const app = workspace();
+    app.run("renderCollectionQuality({raw_count: 900, unique_count: 800, admitted_count: 10, abstract_completeness: .9, cas_editions: [2025], incomplete_count: 20, unavailable_sources: ['semantic_scholar']})");
+    const text = app.get('paper-collection-quality').textContent;
+    assert.match(text, /2025/);
+    assert.match(text, /90.0%/);
+    assert.match(text, /semantic_scholar/);
+    assert.match(text, /未完成分片 20/);
+});

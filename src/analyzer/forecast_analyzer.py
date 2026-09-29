@@ -78,6 +78,7 @@ class ForecastAnalyzer:
     """Produce normalized trends, robust forecasts, and falsifiable scenarios."""
 
     def __init__(self, config: Dict[str, Any] | None = None):
+        self.config = config or {}
         settings = (config or {}).get("analysis", {}).get("forecast", {})
         self.history_months = max(1, int(settings.get("history_months", 24)))
         self.min_quant_months = max(2, int(settings.get("min_quant_months", 12)))
@@ -102,6 +103,9 @@ class ForecastAnalyzer:
         if resolved_as_of is None:
             raise ValueError(f"Invalid as_of date: {as_of}")
         months = _month_keys(resolved_as_of, self.history_months)
+        from src.sources.paper_quality import is_high_impact_paper
+        observations = [o for o in observations if (o.get('document', o).get('source_type') != 'paper'
+            or is_high_impact_paper(o.get('document', o), self.config))]
         normalized = _normalize_documents(observations, months)
         coverage_index = _coverage_index(coverage or {})
         available_months = _available_months(months, normalized, coverage_index)

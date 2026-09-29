@@ -110,8 +110,8 @@ class OutputTemplateTests(unittest.TestCase):
                 "journal_issn_l": "1949-3053",
                 "quality_gate": {
                     "allowed": True,
-                    "reason": "whitelisted_q1_q2_journal",
-                    "quartile": "Q1",
+                    "reason": "verified_cas_major_1_2",
+                    "partition": 1,
                 },
             },
         )
@@ -127,7 +127,7 @@ class OutputTemplateTests(unittest.TestCase):
         self.assertEqual(payload["source_metadata"]["citation_count"], 42)
         self.assertEqual(payload["source_metadata"]["openalex_primary_topic"], "Energy systems")
         self.assertEqual(payload["source_metadata"]["journal_name"], "IEEE Transactions on Smart Grid")
-        self.assertEqual(payload["source_metadata"]["journal_quartile"], "Q1")
+        self.assertEqual(payload["source_metadata"]["cas_partition"], 1)
 
 
 if __name__ == "__main__":

@@ -23,6 +23,7 @@ apscheduler==3.10.4
 
 # 数据处理
 pandas==2.2.1
+bibtexparser==2.0.1             # Institutional BibTeX exports
 requests==2.31.0
 
 # 工具库

@@ -150,7 +150,9 @@ class RelevanceRanker:
             or document.get("published")
             or document.get("effective_date")
         )
-        if published is None:
+        if document.get("source_type") == "paper":
+            score = 50.0
+        elif published is None:
             score = 35.0
         else:
             age_days = max(0, (self.now - published).days)

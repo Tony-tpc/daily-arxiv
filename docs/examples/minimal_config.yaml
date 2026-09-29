@@ -1,3 +1,17 @@
+# Install local CAS evidence before admitting papers; see docs/paper_acquisition.md.
+paper_quality:
+  enabled: true
+  venue_evidence_path: data/private/cas_venues.json
+  approved_venues: []
+paper_discovery:
+  enabled: true
+  library_directory: data/library
+  require_topic_match: true
+  search_terms: ["energy reinforcement learning", "microgrid multi-agent", "electricity market game theory"]
+  enrichment:
+    enabled: true
+    max_records_per_run: 50
+
 app:
   language: "zh"
 

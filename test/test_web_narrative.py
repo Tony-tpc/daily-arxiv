@@ -13,6 +13,9 @@ class WebNarrativeTests(unittest.TestCase):
     def setUp(self):
         web_app.app.config.update(TESTING=True)
         self.client = web_app.app.test_client()
+        patcher = patch.dict(web_app.config, {'paper_discovery': {'enabled': False}})
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_cached_narrative_is_safely_rendered_without_running_analyzer(self):
         payload = _cached_payload()

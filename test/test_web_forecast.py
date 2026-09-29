@@ -11,6 +11,9 @@ class WebForecastTests(unittest.TestCase):
     def setUp(self):
         web_app.app.config.update(TESTING=True)
         self.client = web_app.app.test_client()
+        patcher = patch.dict(web_app.config, {'paper_discovery': {'enabled': False}})
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_forecast_api_filters_horizon_topic_and_confidence(self):
         payload = {

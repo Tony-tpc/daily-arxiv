@@ -129,6 +129,7 @@ def normalize_paper_record(
         doi=doi,
         arxiv_id=arxiv_id,
         categories=categories,
+        journal_name=str(result.get('journal_name') or ''),
     ).to_dict()
 
     for key, value in canonical.items():

@@ -69,6 +69,7 @@ class Deduplicator:
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Union records matching DOI, canonical URL, or same-type title similarity."""
         parent = list(range(len(documents)))
+        group_dois = [{normalize_doi(d.get("doi") or d.get("url"))} - {""} for d in documents]
 
         def find(index: int) -> int:
             while parent[index] != index:
@@ -79,7 +80,10 @@ class Deduplicator:
         def union(left: int, right: int) -> None:
             left_root, right_root = find(left), find(right)
             if left_root != right_root:
+                if group_dois[left_root] and group_dois[right_root] and group_dois[left_root] != group_dois[right_root]:
+                    return
                 parent[right_root] = left_root
+                group_dois[left_root].update(group_dois[right_root])
 
         doi_index: Dict[str, int] = {}
         url_index: Dict[str, int] = {}
@@ -91,18 +95,28 @@ class Deduplicator:
             if canonical_url:
                 union(index, url_index.setdefault(canonical_url, index))
 
-        for left in range(len(documents)):
-            for right in range(left + 1, len(documents)):
-                if find(left) == find(right):
-                    continue
-                if str(documents[left].get("source_type")) != str(documents[right].get("source_type")):
-                    continue
-                left_title = normalize_title(documents[left].get("title"))
-                right_title = normalize_title(documents[right].get("title"))
-                if min(len(left_title), len(right_title)) < 12:
-                    continue
-                if SequenceMatcher(None, left_title, right_title).ratio() >= self.title_similarity_threshold:
-                    union(left, right)
+        buckets: Dict[tuple, set[int]] = {}
+        for index, document in enumerate(documents):
+            kind = str(document.get("source_type"))
+            if kind == "paper":
+                year = str(document.get("published_at") or document.get("published") or "")[:4]
+                authors = document.get("authors_or_orgs") or document.get("authors") or []
+                keys = [(kind, year, normalize_title(str(a))) for a in authors if year and a]
+            else:
+                keys = [(kind,)]
+            for key in keys:
+                buckets.setdefault(key, set()).add(index)
+        checked = set()
+        for indices in buckets.values():
+            for left in sorted(indices):
+                for right in sorted(i for i in indices if i > left):
+                    if (left, right) in checked or find(left) == find(right):
+                        continue
+                    checked.add((left, right))
+                    left_title = normalize_title(documents[left].get("title"))
+                    right_title = normalize_title(documents[right].get("title"))
+                    if min(len(left_title), len(right_title)) >= 12 and SequenceMatcher(None, left_title, right_title).ratio() >= self.title_similarity_threshold:
+                        union(left, right)
 
         grouped: Dict[int, List[Dict[str, Any]]] = {}
         for index, document in enumerate(documents):
@@ -158,7 +172,12 @@ class Deduplicator:
         return relation_count
 
     def _merge_group(self, group: List[Dict[str, Any]]) -> Dict[str, Any]:
-        ordered = sorted(group, key=self._quality, reverse=True)
+        # Formal publisher metadata wins over repository/preprint descriptions.
+        def authority(item):
+            provider = item.get("source_record_provider", "")
+            return (item.get("publication_type") in {"article", "journal-article"},
+                    provider == "crossref", self._quality(item))
+        ordered = sorted(group, key=authority, reverse=True)
         merged = copy.deepcopy(ordered[0])
         for candidate in ordered[1:]:
             for key, value in candidate.items():
@@ -174,6 +193,19 @@ class Deduplicator:
         ]
         merged["duplicate_sources"] = sources if len(group) > 1 else []
         merged["duplicate_count"] = max(0, len(group) - 1)
+        if merged.get('source_type') == 'paper':
+            merged['is_retracted'] = any(item.get('is_retracted') for item in group)
+            for field in ('references', 'version_links', 'publication_types', 'journal_issn'):
+                merged[field] = _unique(v for item in group for v in _as_list(item.get(field)))
+            merged['publication_types'] = _unique(merged['publication_types'] + [item.get('publication_type') for item in group])
+            merged['discovered_via'] = _unique(p for item in group for p in
+                (item.get('discovered_via') or [item.get('source_record_provider') or item.get('source_name')]))
+            merged['field_sources'] = {
+                field: _unique(source for item in group for source in _as_list(
+                    (item.get('field_sources') or {}).get(field) or item.get('source_name'))
+                    if item.get('abstract' if field == 'abstract' else 'journal_name' if field == 'journal' else field))
+                for field in ('abstract', 'journal', 'publication_type')}
+            merged['abstract_status'] = 'available' if merged.get('abstract') or merged.get('raw_text') else 'missing'
         merged["canonical_url"] = canonicalize_url(merged.get("url"))
         merged["related_documents"] = []
 

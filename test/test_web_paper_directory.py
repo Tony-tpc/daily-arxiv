@@ -5,12 +5,16 @@ import unittest
 from unittest.mock import patch
 
 from src.web import app as web_app
+from test.test_paper_quality import QUALITY_CONFIG
 
 
 class WebPaperDirectoryTests(unittest.TestCase):
     def setUp(self):
         web_app.app.config.update(TESTING=True)
         self.client = web_app.app.test_client()
+        patcher = patch.dict(web_app.config, {**QUALITY_CONFIG, 'paper_discovery': {'enabled': False}})
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_paper_directory_prefers_canonical_snapshot(self):
         canonical = [{

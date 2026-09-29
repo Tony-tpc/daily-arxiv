@@ -20,23 +20,29 @@ QUALITY_CONFIG = {
                 "id": "smart_grid",
                 "name": "IEEE Transactions on Smart Grid",
                 "issn_l": "1949-3053",
-                "quartile": "Q1",
+                "partition": 1,
             },
             {
                 "id": "power_systems",
                 "name": "IEEE Transactions on Power Systems",
                 "issn_l": "0885-8950",
-                "quartile": "Q2",
+                "partition": 2,
             },
             {
                 "id": "low_rank_example",
                 "name": "Low Rank Energy Journal",
                 "issn_l": "1234-5678",
-                "quartile": "Q3",
+                "partition": 3,
             },
         ],
     }
 }
+
+
+for venue in QUALITY_CONFIG['paper_quality']['approved_venues']:
+    venue.update(classification_system='cas', category_level='major', edition_year=2025,
+                 major_category='工程技术', evidence_url='https://example.edu/cas-2025',
+                 verified_at='2026-09-29T00:00:00+00:00')
 
 
 class PaperQualityTests(unittest.TestCase):
@@ -61,7 +67,7 @@ class PaperQualityTests(unittest.TestCase):
         self.assertEqual(enriched["journal_issn_l"], "1949-3053")
         self.assertEqual(enriched["journal_publisher"], "IEEE")
 
-    def test_allows_configured_q1_and_q2_journals(self):
+    def test_allows_verified_cas_major_1_and_2_journals(self):
         q1 = evaluate_paper_quality({
             "publication_type": "article",
             "journal_name": "IEEE Transactions on Smart Grid",
@@ -74,11 +80,11 @@ class PaperQualityTests(unittest.TestCase):
         }, QUALITY_CONFIG)
 
         self.assertTrue(q1["allowed"])
-        self.assertEqual(q1["quartile"], "Q1")
+        self.assertEqual(q1["partition"], 1)
         self.assertTrue(q2["allowed"])
-        self.assertEqual(q2["quartile"], "Q2")
+        self.assertEqual(q2["partition"], 2)
 
-    def test_rejects_preprint_unknown_or_low_quartile_papers(self):
+    def test_rejects_preprint_unknown_or_low_partition_papers(self):
         preprint = evaluate_paper_quality({
             "publication_type": "preprint",
             "journal_name": "IEEE Transactions on Smart Grid",
@@ -96,8 +102,8 @@ class PaperQualityTests(unittest.TestCase):
         }, QUALITY_CONFIG)
 
         self.assertEqual(preprint["reason"], "not_a_formal_journal_article")
-        self.assertEqual(unknown["reason"], "venue_not_whitelisted")
-        self.assertEqual(low_rank["reason"], "venue_below_quartile_threshold")
+        self.assertEqual(unknown["reason"], "cas_partition_unverified")
+        self.assertEqual(low_rank["reason"], "venue_below_partition_threshold")
 
     def test_rejects_conflicting_issn_even_when_name_matches(self):
         decision = evaluate_paper_quality({
@@ -107,7 +113,7 @@ class PaperQualityTests(unittest.TestCase):
         }, QUALITY_CONFIG)
 
         self.assertFalse(decision["allowed"])
-        self.assertEqual(decision["reason"], "venue_not_whitelisted")
+        self.assertEqual(decision["reason"], "cas_partition_unverified")
 
     def test_normalizer_keeps_only_admitted_papers(self):
         records = [

@@ -154,7 +154,11 @@ def build_web_card_payload(
             "journal_issn_l": raw_record.get("journal_issn_l") or payload.get("journal_issn_l"),
             "journal_publisher": raw_record.get("journal_publisher") or payload.get("journal_publisher"),
             "publication_type": raw_record.get("publication_type") or payload.get("publication_type"),
-            "journal_quartile": quality_gate.get("quartile"),
+            "cas_partition": quality_gate.get("partition"),
+            "cas_edition_year": quality_gate.get("edition_year"),
+            "cas_major_category": quality_gate.get("major_category"),
+            "abstract_status": raw_record.get("abstract_status"),
+            "discovered_via": raw_record.get("discovered_via", []),
             "quality_gate_reason": quality_gate.get("reason"),
         }.items()
         if value not in (None, "", [], {})

@@ -10,6 +10,9 @@ class WebVisualAssetTests(unittest.TestCase):
     def setUp(self):
         web_app.app.config.update(TESTING=True)
         self.client = web_app.app.test_client()
+        patcher = patch.dict(web_app.config, {'paper_discovery': {'enabled': False}})
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_wordcloud_url_uses_file_version_to_avoid_stale_fonts(self):
         analysis = {
