@@ -6,36 +6,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../static/js/main.js'), 'utf8');
 
-test('topic photographs favor the title, remain stable, and never use untrusted image paths', () => {
-    const app = workspace();
-    assert.equal(app.run(`documentImageKey({title:'电网安全', tags:['储能']}, 'policy')`), 'grid');
-    assert.equal(app.run(`documentImageKey({title:'Battery storage control'}, 'paper')`), 'storage');
-    assert.equal(app.run(`documentImageKey({title:'Window-based estimation'}, 'paper')`), 'grid');
-    const html = app.run(`renderTopicImage('../private?x="onerror=bad')`);
-    assert.match(html, /\/static\/images\/energy\/placeholder.svg/);
-    assert.doesNotMatch(html, /onerror|private/);
-    const photo = app.run(`renderTopicImage(documentImageKey({title:'光伏预测'},'paper'))`);
-    assert.match(photo, /solar-thumb.webp/);
-    assert.match(photo, /loading="lazy"/);
-    assert.match(photo, /主题示意/);
-});
-
-test('failed topic photographs fall back once and unrelated images are not replaced', () => {
-    const app = workspace();
-    const img = {dataset: {}, src: 'missing.webp', parentElement: element(),
-        matches: () => true, removeAttribute() {}};
-    app.context.failedImage = img;
-    app.run('handleEnergyImageError({target: failedImage})');
-    assert.equal(img.src, '/static/images/energy/placeholder.svg');
-    assert.match(img.alt, /图片暂不可用/);
-    app.run('handleEnergyImageError({target: failedImage})');
-    assert.equal(img.hidden, true);
-    const original = {src:'wordcloud.png', matches:() => false};
-    app.context.otherImage = original;
-    app.run('handleEnergyImageError({target: otherImage})');
-    assert.equal(original.src, 'wordcloud.png');
-});
-
 function element(id = '') {
     const classes = new Set();
     return {

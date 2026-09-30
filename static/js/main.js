@@ -180,67 +180,6 @@ function t(key) {
     return I18N[LANG][key] || key;
 }
 
-// Editorial topic photography only; these are never presented as source figures.
-const ENERGY_IMAGES = {
-    solar: ['光伏电站', 'Solar farm'],
-    wind: ['风力发电', 'Wind farm'],
-    grid: ['输电网络', 'Power grid'],
-    storage: ['太阳能与电池储能设备', 'Solar and battery storage equipment'],
-    city: ['城市能源', 'Urban energy'],
-    industry: ['工业设施', 'Industrial facilities']
-};
-const ENERGY_IMAGE_FALLBACK = '/static/images/energy/placeholder.svg';
-
-function documentImageKey(document, sourceType) {
-    const card = document.web_card || document;
-    const title = card.title || document.title || '';
-    const topics = [...(card.badges || document.categories || []),
-        ...(card.reading_suggestion?.related_topics || []), ...(document.themes || []), ...(document.tags || [])]
-        .filter(Boolean).join(' ');
-    const rules = [
-        ['storage', /储能|电池|battery|batteries|energy storage/i],
-        ['solar', /光伏|太阳能|solar|photovoltaic/i],
-        ['wind', /风电|风能|\bwind\b/i],
-        ['grid', /电网|电力|配电|输电|微网|grid|transmission|electricity/i],
-        ['city', /城市|建筑|建筑物|urban|building|city|cities/i],
-        ['industry', /工业|产业|工厂|industry|industrial|factory/i]
-    ];
-    return rules.find(([, pattern]) => pattern.test(title))?.[0]
-        || rules.find(([, pattern]) => pattern.test(topics))?.[0]
-        || ({paper: 'grid', policy: 'grid', news: 'city', industry_report: 'industry'}[sourceType]) || '';
-}
-
-function renderTopicImage(key, inline = false) {
-    const known = Object.hasOwn(ENERGY_IMAGES, key);
-    const label = known ? ENERGY_IMAGES[key][LANG === 'zh' ? 0 : 1] : (LANG === 'zh' ? '能源资料占位图' : 'Energy placeholder');
-    const caption = LANG === 'zh' ? '主题示意' : 'Illustrative';
-    const src = known ? `/static/images/energy/${key}-thumb.webp` : ENERGY_IMAGE_FALLBACK;
-    const tag = inline ? 'span' : 'figure';
-    const captionTag = inline ? 'span' : 'figcaption';
-    return `<${tag} class="topic-image" data-photo="${known ? key : 'placeholder'}"><img src="${src}" alt="${label} · ${caption}" width="480" height="320" loading="lazy" decoding="async" data-energy-image><${captionTag} class="image-caption">${caption}</${captionTag}></${tag}>`;
-}
-
-function handleEnergyImageError(event) {
-    const img = event.target;
-    if (!img?.matches?.('img[data-energy-image]')) return;
-    img.parentElement.classList.add('image-unavailable');
-    if (img.dataset.imageFallback) {
-        img.hidden = true;
-        return;
-    }
-    img.dataset.imageFallback = 'true';
-    img.removeAttribute('srcset');
-    img.alt = LANG === 'zh' ? '图片暂不可用，能源主题占位图' : 'Image unavailable, energy placeholder';
-    img.src = ENERGY_IMAGE_FALLBACK;
-}
-
-function initEnergyImages() {
-    document.addEventListener('error', handleEnergyImageError, true);
-    document.querySelectorAll('img[data-energy-image]').forEach(img => {
-        if (img.complete && !img.naturalWidth) handleEnergyImageError({target: img});
-    });
-}
-
 // ===================  全局状态 ==================== //
 const state = {
     currentSection: 'overview',
@@ -283,7 +222,6 @@ const state = {
 
 // ==================== 初始化 ==================== //
 document.addEventListener('DOMContentLoaded', async function() {
-    initEnergyImages();
     initTheme();
     initNavigation();
     initMobileMenu();
@@ -1041,14 +979,12 @@ function renderDocumentRow(document, sourceType) {
         [LANG === 'zh' ? '主题' : 'Topics', (document.themes || []).join('、')]
     ] : [];
     return `<article class="document-row">
-        ${renderTopicImage(documentImageKey(document, sourceType))}
-        <div class="document-body">
         <div class="document-heading">
             <div><h3>${sourceLink(url, title, '') || escapeHtml(title)}</h3>
                 <div class="paper-meta">${sourceName ? `<span>${escapeHtml(sourceName)}</span>` : ''}${organization && organization !== sourceName ? `<span>${escapeHtml(organization)}</span>` : ''}<time>${escapeHtml(String(date).slice(0, 10) || (LANG === 'zh' ? '发布日期未提供' : 'Publication date unavailable'))}</time>${sourceType === 'paper' && citationCount != null ? `<span>${LANG === 'zh' ? '引用' : 'Citations'} ${Number(citationCount)}</span>` : ''}${facts.filter(([, value]) => value).map(([label, value]) => `<span>${label}：${escapeHtml(value)}</span>`).join('')}</div>
             </div>${renderRankingPanel(card, true)}
         </div>
-        <p class="document-summary clamp-three">${escapeHtml(summary)}</p>
+        <p class="document-summary clamp-two">${escapeHtml(summary)}</p>
         <div class="document-actions">
             <details class="document-details"><summary>${LANG === 'zh' ? '展开资料与分析依据' : 'Expand document and analysis'}</summary>
                 <div class="document-details-body">
@@ -1063,7 +999,6 @@ function renderDocumentRow(document, sourceType) {
                 </div>
             </details>
             <div class="paper-actions">${pdf && pdf !== url ? sourceLink(pdf, /\.pdf(?:[?#]|$)|\/pdf\//i.test(pdf) ? 'PDF' : (LANG === 'zh' ? '全文入口' : 'Full text')) : ''}${sourceLink(url, t('originalSource'))}</div>
-        </div>
         </div>
     </article>`;
 }
@@ -1120,13 +1055,10 @@ function renderTodayRecommendations(documents) {
         const sourceType = card.source_type || document.source_type || 'paper';
         const summary = card.summary || card.description || document.summary || document.abstract || '';
         return `<article class="recommendation-card">
-            ${renderTopicImage(documentImageKey(document, sourceType))}
-            <div class="recommendation-body">
             <h3>${sourceLink(url, card.title || document.title || '', '') || escapeHtml(card.title || document.title || '')}</h3>
             <div class="recommendation-meta"><span>${labels[sourceType] || escapeHtml(sourceType)}</span><span>${escapeHtml(card.source_name || document.source_name || '')}</span><time>${escapeHtml(String(card.published_at || document.published_at || document.published || '').slice(0, 10) || (LANG === 'zh' ? '发布日期未提供' : 'Publication date unavailable'))}</time></div>
             <p class="clamp-two">${escapeHtml(summary)}</p>
             <footer>${renderRankingPanel(card, true)}<details class="recommendation-details"><summary>${LANG === 'zh' ? '摘要与推荐依据' : 'Summary and rationale'}</summary><div><p><small>${LANG === 'zh' ? '系统摘要' : 'System summary'}</small><br>${escapeHtml(summary)}</p>${suggestion.why_relevant ? `<p><small>${t('relevanceReason')}</small><br>${escapeHtml(suggestion.why_relevant)}</p>` : ''}${sourceLink(url, t('originalSource'))}</div></details></footer>
-            </div>
         </article>`;
     }).join('');
 }
@@ -1135,12 +1067,12 @@ function renderSourceSnapshot(counts) {
     const container = document.getElementById('source-snapshot');
     if (!container) return;
     const items = [
-        ['paper', 'papers', 'solar', LANG === 'zh' ? '论文' : 'Papers'],
-        ['policy', 'policies', 'grid', LANG === 'zh' ? '中国政策' : 'China policies'],
-        ['news', 'news', 'city', LANG === 'zh' ? '国内新闻' : 'China news'],
-        ['industry_report', 'industry-reports', 'industry', LANG === 'zh' ? '行业报告' : 'Industry reports']
+        ['paper', 'papers', 'fa-file-lines', LANG === 'zh' ? '论文' : 'Papers'],
+        ['policy', 'policies', 'fa-landmark', LANG === 'zh' ? '中国政策' : 'China policies'],
+        ['news', 'news', 'fa-newspaper', LANG === 'zh' ? '国内新闻' : 'China news'],
+        ['industry_report', 'industry-reports', 'fa-industry', LANG === 'zh' ? '行业报告' : 'Industry reports']
     ];
-    container.innerHTML = items.map(([type, section, photo, label]) => `<button type="button" class="source-snapshot-item" data-home-section="${section}" title="${LANG === 'zh' ? '打开资料目录（保留该页条件）' : 'Open directory with its own filters'}">${renderTopicImage(photo, true)}<span class="snapshot-copy"><span>${label}</span><strong>${Number(counts[type] || 0)}</strong></span></button>`).join('');
+    container.innerHTML = items.map(([type, section, icon, label]) => `<button type="button" class="source-snapshot-item" data-home-section="${section}" title="${LANG === 'zh' ? '打开资料目录（保留该页条件）' : 'Open directory with its own filters'}"><span>${label}</span><strong>${Number(counts[type] || 0)}</strong></button>`).join('');
     container.querySelectorAll('[data-home-section]').forEach(button => {
         button.addEventListener('click', () => navigateToSection(button.dataset.homeSection));
     });
@@ -1628,12 +1560,9 @@ function renderFeaturedPapers(papers) {
     container.innerHTML = papers.length ? papers.slice(0, 3).map(paper => {
         const card = paper.web_card || {};
         return `<article class="featured-paper-item">
-            ${renderTopicImage(documentImageKey(paper, 'paper'))}
-            <div class="featured-paper-body">
             <h4>${sourceLink(card.links?.primary_url || paper.entry_url, card.title || paper.title, '') || escapeHtml(card.title || paper.title)}</h4>
             <p class="document-summary clamp-two">${escapeHtml(card.summary || paper.summary || paper.abstract || '')}</p>
             <div class="paper-meta">${renderCompactInfoBar(card, paper)}</div>
-            </div>
         </article>`;
     }).join('') : emptyState(t('noPapers'));
 }
@@ -1889,7 +1818,7 @@ function modeLabel(value) {
     return value === 'quantitative' ? 'Quantitative' : 'Low-confidence scenario';
 }
 
-const CHART_PALETTES = {light: ['#8b3dff', '#00858b', '#c2792b', '#477ac2', '#b14e80'], dark: ['#b890ff', '#68cdd0', '#e4b578', '#8cb6f1', '#e294bb']};
+const CHART_PALETTES = {light: ['#426a96', '#588087', '#967b55', '#65826e', '#8c7286'], dark: ['#8caed0', '#88b3b8', '#c4aa7f', '#98b5a0', '#b8a0b3']};
 function chartPalette() { return CHART_PALETTES[state.theme] || CHART_PALETTES.light; }
 const SOURCE_ORDER = ['paper', 'policy', 'news', 'industry_report', 'unknown'];
 function chartColor(name) {
