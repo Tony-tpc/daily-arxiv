@@ -18,6 +18,7 @@ function element(id = '') {
         setAttribute(name, value) { this.attributes[name] = value; },
         removeAttribute(name) { delete this.attributes[name]; },
         querySelectorAll() { return []; },
+        querySelector(selector) { return selector === 'span' ? {textContent: this.textContent} : null; },
         addEventListener() {}, focus() {}
     };
 }
@@ -26,7 +27,7 @@ function workspace() {
     const ids = new Map();
     const get = id => { if (!ids.has(id)) ids.set(id, element(id)); return ids.get(id); };
     const sections = ['overview', 'papers', 'policies', 'news', 'industry-reports', 'reports', 'analysis', 'statistics'];
-    const nav = sections.map(name => Object.assign(element(), {dataset: {section: name}}));
+    const nav = sections.map(name => Object.assign(element(), {textContent: name, dataset: {section: name}}));
     const content = sections.map(name => get(name + '-section'));
     const events = {};
     const window = {
@@ -55,9 +56,11 @@ test('hash navigation restores the view without clearing filters or duplicating 
     assert.equal(app.window.location.hash, '#policies');
     assert.equal(app.content.filter(item => item.classList.contains('active')).length, 1);
     assert.equal(app.nav[2].attributes['aria-current'], 'page');
+    assert.equal(app.get('current-page-label').textContent, 'policies');
     app.window.location.hash = '#papers';
     app.events.popstate();
     assert.equal(app.run('state.currentSection'), 'papers');
+    assert.equal(app.get('current-page-label').textContent, 'papers');
     assert.equal(app.run('state.searchQuery'), '储能');
     app.run("navigateToSection('missing')");
     assert.equal(app.run('state.currentSection'), 'papers');

@@ -6,7 +6,7 @@
 
 使用项目可用的 Python 环境安装依赖后，运行 `python src/web/app.py`，访问 `http://localhost:5000/`。Windows 终端建议设置 `PYTHONUTF8=1` 和 `PYTHONIOENCODING=utf-8`。服务地址和端口由 `config/config.yaml` 的 `web` 配置决定。
 
-后端为 Flask/Jinja；前端为原生 JavaScript、Bootstrap 5、Chart.js 和 Font Awesome。模板位于 `src/web/templates/index.html`，浏览器资源位于仓库根目录 `static/`。
+后端为 Flask/Jinja；前端为原生 JavaScript、Bootstrap 5 和 Chart.js。线性图标使用本地 `static/css/icons.css` 内的 SVG，不依赖图标字体 CDN。模板位于 `src/web/templates/index.html`，浏览器资源位于仓库根目录 `static/`。
 
 ## 页面与操作
 
@@ -29,7 +29,9 @@
 
 ## 主题、键盘与响应式
 
-默认浅色，顶栏主题按钮可切换深色并保存在浏览器中。桌面侧栏宽 232px；视口小于 1024px 时使用导航抽屉，小于 768px 时筛选与资料纵向排列。
+默认使用 Notion 风格浅色主题：米色（`#f7f6f3`）侧栏与资料块、白色阅读区、深灰（`#37352f`）正文及细边框。桌面侧栏宽 240px；视口小于 1024px 时使用导航抽屉，小于 768px 时筛选与资料纵向排列。顶栏面包屑跟随当前页面；主题按钮可切换中性深色并保存在浏览器中。
+
+按钮使用透明底色，悬停背景为 `#efedea`，按下背景为 `#e3e1db`，过渡为 150ms；没有位移、缩放、渐变或悬停阴影。资料块悬停或内部控件获得焦点时显示 `⋮⋮`，仅作为装饰提示，不支持拖动排序。正文最大行宽为 72ch；键盘焦点保留清晰轮廓，减少动态效果偏好下关闭过渡。
 
 所有主要操作可通过键盘完成。证据抽屉和移动导航支持 Escape 关闭、Tab 焦点约束及关闭后返回触发控件；趋势选项卡支持左右方向键。移动端目录默认折叠。请求失败可重试，尚无数据、无匹配结果和加载失败分别展示；论文类别或结构化知识不可用时保留已加载资料并单独提供重试。
 

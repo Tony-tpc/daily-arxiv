@@ -243,7 +243,7 @@ function initTheme() {
     
     const themeToggle = document.getElementById('theme-toggle');
     const icon = themeToggle.querySelector('i');
-    icon.className = state.theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    icon.className = state.theme === 'dark' ? 'ui-icon icon-sun' : 'ui-icon icon-moon';
     themeToggle.setAttribute('aria-pressed', String(state.theme === 'dark'));
     configureChartTheme();
 }
@@ -300,7 +300,10 @@ function navigateToSection(sectionName, updateHistory = true) {
     document.querySelectorAll('.nav-item').forEach(item => {
         const active = item.dataset.section === sectionName;
         item.classList.toggle('active', active);
-        if (active) item.setAttribute('aria-current', 'page');
+        if (active) {
+            item.setAttribute('aria-current', 'page');
+            updateElement('current-page-label', item.querySelector('span')?.textContent || '');
+        }
         else item.removeAttribute('aria-current');
     });
     document.querySelectorAll('.content-section').forEach(section => {
@@ -729,10 +732,10 @@ function renderNarrativeChains(payload) {
     const chains = payload.evidence_chains || [];
     container.innerHTML = chains.length ? chains.map(chain => `<article class="narrative-chain-card">
         <div class="narrative-chain-heading"><div><small>${LANG === 'zh' ? '研究问题' : 'Research question'}</small><h3>${escapeHtml(chain.topic || '')}</h3></div><p>${escapeHtml(chain.question || '')}</p></div>
-        <div class="narrative-chain-track">${(chain.nodes || []).map((node, index) => `${index ? '<i class="fas fa-arrow-right narrative-chain-arrow"></i>' : ''}<button type="button" class="narrative-chain-node ${node.status === 'missing' ? 'missing' : ''}" data-evidence-ids="${escapeHtml((node.evidence_ids || []).join(','))}" ${node.status === 'missing' ? 'disabled' : ''}>
+        <div class="narrative-chain-track">${(chain.nodes || []).map((node, index) => `${index ? '<i class="ui-icon icon-arrow-right narrative-chain-arrow" aria-hidden="true"></i>' : ''}<button type="button" class="narrative-chain-node ${node.status === 'missing' ? 'missing' : ''}" data-evidence-ids="${escapeHtml((node.evidence_ids || []).join(','))}" ${node.status === 'missing' ? 'disabled' : ''}>
             <span>${escapeHtml(node.label || '')}</span><strong>${node.status === 'missing' ? (LANG === 'zh' ? '证据缺口' : 'Evidence gap') : `${(node.evidence_ids || []).length} ${LANG === 'zh' ? '条' : 'items'}`}</strong><small>${escapeHtml(node.summary || '')}</small>
-        </button>`).join('')}<i class="fas fa-arrow-right narrative-chain-arrow"></i><div class="narrative-chain-experiment"><span>${LANG === 'zh' ? '可执行实验' : 'Executable experiment'}</span><strong>${escapeHtml(chain.experiment?.title || '')}</strong><small>${escapeHtml(chain.experiment?.validation || '')}</small></div></div>
-        <p class="narrative-causality-note"><i class="fas fa-shield-halved"></i>${escapeHtml(chain.causality_note || '')}</p>
+        </button>`).join('')}<i class="ui-icon icon-arrow-right narrative-chain-arrow" aria-hidden="true"></i><div class="narrative-chain-experiment"><span>${LANG === 'zh' ? '可执行实验' : 'Executable experiment'}</span><strong>${escapeHtml(chain.experiment?.title || '')}</strong><small>${escapeHtml(chain.experiment?.validation || '')}</small></div></div>
+        <p class="narrative-causality-note"><i class="ui-icon icon-shield-halved" aria-hidden="true"></i>${escapeHtml(chain.causality_note || '')}</p>
     </article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前没有可展示的证据链。' : 'No evidence chains.'}</p>`;
     bindNarrativeEvidenceButtons(container);
 }
@@ -759,7 +762,7 @@ function openNarrativeEvidence(evidenceIds, evidenceIndex = null) {
             : '';
         return `<article class="narrative-evidence-item"><div class="narrative-evidence-meta"><code>${escapeHtml(id)}</code><span>${escapeHtml(item.source_name || item.source_type || '')}</span><time>${escapeHtml(item.event_date || '')}</time></div>
             <h3>${escapeHtml(item.title || '')}</h3><p>${escapeHtml(item.excerpt || '')}</p>
-            ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${LANG === 'zh' ? '打开原始材料' : 'Open source'} <i class="fas fa-arrow-up-right-from-square"></i></a>${auditNote}` : `${auditNote || `<span class="narrative-no-link">${LANG === 'zh' ? '当前记录未提供原文链接' : 'No source URL'}</span>`}`}</article>`;
+            ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${LANG === 'zh' ? '打开原始材料' : 'Open source'} <i class="ui-icon icon-arrow-up-right-from-square" aria-hidden="true"></i></a>${auditNote}` : `${auditNote || `<span class="narrative-no-link">${LANG === 'zh' ? '当前记录未提供原文链接' : 'No source URL'}</span>`}`}</article>`;
     }).join('') : `<p class="trend-note">${LANG === 'zh' ? '未找到对应证据。' : 'Evidence not found.'}</p>`;
     evidenceReturnFocus = document.activeElement;
     backdrop.hidden = false;
@@ -946,7 +949,7 @@ function renderPapers(papers) {
 
 function sourceLink(url, label, className = 'btn-paper btn-secondary') {
     return /^https?:\/\//i.test(url || '')
-        ? `<a href="${escapeHtml(url)}" class="${className}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)} <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>`
+        ? `<a href="${escapeHtml(url)}" class="${className}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)} <i class="ui-icon icon-arrow-up-right-from-square" aria-hidden="true"></i></a>`
         : '';
 }
 
@@ -978,7 +981,7 @@ function renderDocumentRow(document, sourceType) {
     ] : sourceType === 'industry_report' ? [
         [LANG === 'zh' ? '主题' : 'Topics', (document.themes || []).join('、')]
     ] : [];
-    return `<article class="document-row">
+    return `<article class="document-row group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
         <div class="document-heading">
             <div><h3>${sourceLink(url, title, '') || escapeHtml(title)}</h3>
                 <div class="paper-meta">${sourceName ? `<span>${escapeHtml(sourceName)}</span>` : ''}${organization && organization !== sourceName ? `<span>${escapeHtml(organization)}</span>` : ''}<time>${escapeHtml(String(date).slice(0, 10) || (LANG === 'zh' ? '发布日期未提供' : 'Publication date unavailable'))}</time>${sourceType === 'paper' && citationCount != null ? `<span>${LANG === 'zh' ? '引用' : 'Citations'} ${Number(citationCount)}</span>` : ''}${facts.filter(([, value]) => value).map(([label, value]) => `<span>${label}：${escapeHtml(value)}</span>`).join('')}</div>
@@ -1054,7 +1057,7 @@ function renderTodayRecommendations(documents) {
         const url = card.links?.source_url || card.links?.primary_url || document.url || document.entry_url || '';
         const sourceType = card.source_type || document.source_type || 'paper';
         const summary = card.summary || card.description || document.summary || document.abstract || '';
-        return `<article class="recommendation-card">
+        return `<article class="recommendation-card group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
             <h3>${sourceLink(url, card.title || document.title || '', '') || escapeHtml(card.title || document.title || '')}</h3>
             <div class="recommendation-meta"><span>${labels[sourceType] || escapeHtml(sourceType)}</span><span>${escapeHtml(card.source_name || document.source_name || '')}</span><time>${escapeHtml(String(card.published_at || document.published_at || document.published || '').slice(0, 10) || (LANG === 'zh' ? '发布日期未提供' : 'Publication date unavailable'))}</time></div>
             <p class="clamp-two">${escapeHtml(summary)}</p>
@@ -1067,12 +1070,12 @@ function renderSourceSnapshot(counts) {
     const container = document.getElementById('source-snapshot');
     if (!container) return;
     const items = [
-        ['paper', 'papers', 'fa-file-lines', LANG === 'zh' ? '论文' : 'Papers'],
-        ['policy', 'policies', 'fa-landmark', LANG === 'zh' ? '中国政策' : 'China policies'],
-        ['news', 'news', 'fa-newspaper', LANG === 'zh' ? '国内新闻' : 'China news'],
-        ['industry_report', 'industry-reports', 'fa-industry', LANG === 'zh' ? '行业报告' : 'Industry reports']
+        ['paper', 'papers', 'icon-file-lines', LANG === 'zh' ? '论文' : 'Papers'],
+        ['policy', 'policies', 'icon-landmark', LANG === 'zh' ? '中国政策' : 'China policies'],
+        ['news', 'news', 'icon-newspaper', LANG === 'zh' ? '国内新闻' : 'China news'],
+        ['industry_report', 'industry-reports', 'icon-industry', LANG === 'zh' ? '行业报告' : 'Industry reports']
     ];
-    container.innerHTML = items.map(([type, section, icon, label]) => `<button type="button" class="source-snapshot-item" data-home-section="${section}" title="${LANG === 'zh' ? '打开资料目录（保留该页条件）' : 'Open directory with its own filters'}"><span>${label}</span><strong>${Number(counts[type] || 0)}</strong></button>`).join('');
+    container.innerHTML = items.map(([type, section, icon, label]) => `<button type="button" class="source-snapshot-item" data-home-section="${section}" title="${LANG === 'zh' ? '打开资料目录（保留该页条件）' : 'Open directory with its own filters'}"><span><i class="ui-icon ${icon}" aria-hidden="true"></i>${label}</span><strong>${Number(counts[type] || 0)}</strong></button>`).join('');
     container.querySelectorAll('[data-home-section]').forEach(button => {
         button.addEventListener('click', () => navigateToSection(button.dataset.homeSection));
     });
@@ -1094,7 +1097,7 @@ function renderHomeTrendSignals() {
         };
     });
     if (forecastSignals.length) {
-        container.innerHTML = `<p class="signal-scope">${LANG === 'zh' ? '系统预测 · 截至' : 'System forecast · As of'} ${escapeHtml(state.forecast.as_of || '—')}</p>` + forecastSignals.map((item, index) => `<div class="home-trend-signal"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span>${item.gaps ? `<span>${escapeHtml(item.gaps)}</span>` : ''}${item.evidenceIds.length ? `<button class="narrative-evidence-link" type="button" data-signal-index="${index}">${LANG === 'zh' ? '查看依据' : 'View evidence'} · ${item.evidenceIds.length}</button>` : ''}</div>`).join('');
+        container.innerHTML = `<p class="signal-scope">${LANG === 'zh' ? '系统预测 · 截至' : 'System forecast · As of'} ${escapeHtml(state.forecast.as_of || '—')}</p>` + forecastSignals.map((item, index) => `<div class="home-trend-signal group"><span class="block-handle" aria-hidden="true">⋮⋮</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span>${item.gaps ? `<span>${escapeHtml(item.gaps)}</span>` : ''}${item.evidenceIds.length ? `<button class="narrative-evidence-link" type="button" data-signal-index="${index}">${LANG === 'zh' ? '查看依据' : 'View evidence'} · ${item.evidenceIds.length}</button>` : ''}</div>`).join('');
         container.querySelectorAll('[data-signal-index]').forEach(button => button.addEventListener('click', () => {
             const ids = forecastSignals[Number(button.dataset.signalIndex)].evidenceIds;
             openNarrativeEvidence(ids, documentEvidenceIndex(ids));
@@ -1110,7 +1113,7 @@ function renderHomeTrendSignals() {
         body: `${LANG === 'zh' ? '近 7 天变化' : '7-day change'} ${Number(item.delta || 0) >= 0 ? '+' : ''}${Number(item.delta || 0)}`
     })).concat(directions.map(item => ({title: item.direction, body: item.judgment || item.rationale || ''})));
     container.innerHTML = signals.length
-        ? signals.map(item => `<div class="home-trend-signal"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div>`).join('')
+        ? signals.map(item => `<div class="home-trend-signal group"><span class="block-handle" aria-hidden="true">⋮⋮</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div>`).join('')
         : `<p class="trend-note">${t('signalInsufficient')}</p>`;
 }
 
@@ -1245,7 +1248,7 @@ function renderReportItem(item, sectionKey = '') {
         news: LANG === 'zh' ? '新闻' : 'News',
         industry_report: LANG === 'zh' ? '行业报告' : 'Industry report'
     }[item.source_type] || '';
-    return `<div class="report-item">
+    return `<div class="report-item group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
         <div class="report-item-heading">
             <h3>${escapeHtml(item.heading || '')}</h3>
             ${sourceTypeLabel ? `<span class="report-source-chip">${sourceTypeLabel}</span>` : ''}
@@ -1255,7 +1258,7 @@ function renderReportItem(item, sectionKey = '') {
         ${renderReportEvidence(item)}
         <div class="report-item-footer">
             ${item.meta ? `<span>${escapeHtml(item.meta)}</span>` : '<span></span>'}
-            ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${t('reportOriginal')}<i class="fas fa-arrow-up-right-from-square"></i></a>` : ''}
+            ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${t('reportOriginal')}<i class="ui-icon icon-arrow-up-right-from-square" aria-hidden="true"></i></a>` : ''}
         </div>
     </div>`;
 }
@@ -1357,10 +1360,10 @@ function renderRelatedDocuments(card) {
         <small>${escapeHtml(item.reason || '')}</small>
     </div>`).join('');
     const merged = duplicateSources.length > 1
-        ? `<div class="merged-sources"><i class="fas fa-code-merge"></i>${t('duplicateSources')}：${duplicateSources.map(escapeHtml).join('、')}</div>`
+        ? `<div class="merged-sources"><i class="ui-icon icon-code-merge" aria-hidden="true"></i>${t('duplicateSources')}：${duplicateSources.map(escapeHtml).join('、')}</div>`
         : '';
     return `<details class="related-panel">
-        <summary><i class="fas fa-link"></i>${t('relatedIntelligence')} <span>${related.length}</span></summary>
+        <summary><i class="ui-icon icon-link" aria-hidden="true"></i>${t('relatedIntelligence')} <span>${related.length}</span></summary>
         ${merged}<div class="related-list">${links}</div>
     </details>`;
 }
@@ -1483,12 +1486,12 @@ function renderKnowledgePanel(knowledge) {
     if (!knowledge || !knowledge.generic) return '';
 
     const fields = [
-        ['problem', 'fa-circle-question', true],
-        ['method', 'fa-diagram-project', true],
-        ['scenario', 'fa-location-dot', false],
-        ['constraint', 'fa-shield-halved', false],
-        ['metric', 'fa-gauge-high', false],
-        ['contribution', 'fa-lightbulb', true]
+        ['problem', 'icon-circle-question', true],
+        ['method', 'icon-diagram-project', true],
+        ['scenario', 'icon-location-dot', false],
+        ['constraint', 'icon-shield-halved', false],
+        ['metric', 'icon-gauge-high', false],
+        ['contribution', 'icon-lightbulb', true]
     ];
 
     const highlights = fields
@@ -1527,7 +1530,7 @@ function renderKnowledgeField(field, item, icon, isMajor = false) {
     return `
         <div class="knowledge-field ${isMajor ? 'knowledge-field-major' : ''}">
             <div class="knowledge-field-label">
-                <i class="fas ${icon}"></i>
+                <i class="ui-icon ${icon}" aria-hidden="true"></i>
                 <span>${t(field)}</span>
                 ${confidence !== null ? `<span class="confidence-pill">${confidence}%</span>` : ''}
             </div>
@@ -1559,7 +1562,7 @@ function renderFeaturedPapers(papers) {
     if (!container) return;
     container.innerHTML = papers.length ? papers.slice(0, 3).map(paper => {
         const card = paper.web_card || {};
-        return `<article class="featured-paper-item">
+        return `<article class="featured-paper-item group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
             <h4>${sourceLink(card.links?.primary_url || paper.entry_url, card.title || paper.title, '') || escapeHtml(card.title || paper.title)}</h4>
             <p class="document-summary clamp-two">${escapeHtml(card.summary || paper.summary || paper.abstract || '')}</p>
             <div class="paper-meta">${renderCompactInfoBar(card, paper)}</div>
@@ -1634,7 +1637,7 @@ function renderForecastQuality() {
         ? {paper: '论文', policy: '中国政策', news: '国内新闻', industry_report: '行业报告'}
         : {paper: 'Papers', policy: 'China policies', news: 'China news', industry_report: 'Industry reports'};
     const sources = Object.entries(quality.source_counts || {}).map(([source, count]) =>
-        `<span class="quality-chip"><i class="fas fa-database"></i>${escapeHtml(sourceLabels[source] || source)} ${Number(count || 0)}</span>`
+        `<span class="quality-chip"><i class="ui-icon icon-database" aria-hidden="true"></i>${escapeHtml(sourceLabels[source] || source)} ${Number(count || 0)}</span>`
     ).join('');
     const coverage = quality.coverage_status_counts || {};
     const coverageText = LANG === 'zh'
@@ -1647,7 +1650,7 @@ function renderForecastQuality() {
         <div><span>${LANG === 'zh' ? '来源覆盖' : 'Coverage'}</span><strong>${escapeHtml(coverageText)}</strong><small>${LANG === 'zh' ? '缺口不按零值计算' : 'Missing coverage is not treated as zero'}</small></div>
     </div>
     <div class="quality-source-row">${sources || `<span class="quality-chip warning">${LANG === 'zh' ? '暂无来源统计' : 'No source totals'}</span>`}</div>
-    ${gaps.length ? `<div class="quality-warning"><i class="fas fa-triangle-exclamation"></i><div><strong>${LANG === 'zh' ? '结论边界' : 'Limitations'}</strong>${gaps.map(gap => `<p>${escapeHtml(gap)}</p>`).join('')}</div></div>` : ''}`;
+    ${gaps.length ? `<div class="quality-warning"><i class="ui-icon icon-triangle-exclamation" aria-hidden="true"></i><div><strong>${LANG === 'zh' ? '结论边界' : 'Limitations'}</strong>${gaps.map(gap => `<p>${escapeHtml(gap)}</p>`).join('')}</div></div>` : ''}`;
 }
 
 function renderForecastChart() {
@@ -1689,10 +1692,10 @@ function renderForecastChart() {
         data: {
             labels: allLabels,
             datasets: [
-                {label: LANG === 'zh' ? '历史主题占比' : 'Historical topic share', data: historyData, borderColor: '#426a96', backgroundColor: 'rgba(79,70,229,.1)', fill: true, tension: .3, spanGaps: false},
+                {label: LANG === 'zh' ? '历史主题占比' : 'Historical topic share', data: historyData, borderColor: '#426a96', backgroundColor: 'rgba(103,133,147,.1)', fill: true, tension: .3, spanGaps: false},
                 {label: LANG === 'zh' ? '预测中位线' : 'Forecast', data: projection, borderColor: '#b0976d', borderDash: [7, 5], tension: .25, spanGaps: true},
-                {label: LANG === 'zh' ? '80%区间下界' : '80% lower', data: lower, borderColor: 'rgba(245,158,11,.15)', pointRadius: 0, spanGaps: true},
-                {label: LANG === 'zh' ? '80%预测区间' : '80% interval', data: upper, borderColor: 'rgba(245,158,11,.15)', backgroundColor: 'rgba(245,158,11,.18)', pointRadius: 0, fill: '-1', spanGaps: true}
+                {label: LANG === 'zh' ? '80%区间下界' : '80% lower', data: lower, borderColor: 'rgba(176,151,109,.15)', pointRadius: 0, spanGaps: true},
+                {label: LANG === 'zh' ? '80%预测区间' : '80% interval', data: upper, borderColor: 'rgba(176,151,109,.15)', backgroundColor: 'rgba(176,151,109,.18)', pointRadius: 0, fill: '-1', spanGaps: true}
             ]
         },
         options: {
@@ -1721,12 +1724,12 @@ function renderForecastTopicCards() {
         const ids = encodeURIComponent(JSON.stringify(item.evidence_ids || []));
         return `<article class="forecast-topic-card confidence-${escapeHtml(item.confidence || 'low')}">
             <div class="forecast-card-heading"><div><small>${escapeHtml(modeLabel(item.mode))}</small><h3>${escapeHtml(item.topic)}</h3></div><span class="confidence-badge">${escapeHtml(confidenceLabel(item.confidence))}</span></div>
-            <div class="trajectory-row"><span class="trajectory trajectory-${escapeHtml(item.trajectory || 'stable')}"><i class="fas fa-arrow-trend-up"></i>${escapeHtml(trajectoryLabel(item.trajectory))}</span><strong>${LANG === 'zh' ? '持续性' : 'Persistence'} ${Math.round(Number(metrics.persistence || 0) * 100)}%</strong></div>
+            <div class="trajectory-row"><span class="trajectory trajectory-${escapeHtml(item.trajectory || 'stable')}"><i class="ui-icon icon-arrow-trend-up" aria-hidden="true"></i>${escapeHtml(trajectoryLabel(item.trajectory))}</span><strong>${LANG === 'zh' ? '持续性' : 'Persistence'} ${Math.round(Number(metrics.persistence || 0) * 100)}%</strong></div>
             <div class="forecast-metric-grid"><div><span>${LANG === 'zh' ? '速度' : 'Velocity'}</span><strong>${signed(metrics.velocity)}</strong></div><div><span>${LANG === 'zh' ? '加速度' : 'Acceleration'}</span><strong>${signed(metrics.acceleration)}</strong></div><div><span>${LANG === 'zh' ? '来源类型' : 'Sources'}</span><strong>${Number(metrics.source_diversity || 0)}</strong></div></div>
-            <p class="research-action"><i class="fas fa-flask"></i>${escapeHtml(item.research_action || '')}</p>
+            <p class="research-action"><i class="ui-icon icon-flask" aria-hidden="true"></i>${escapeHtml(item.research_action || '')}</p>
             <div class="driver-list">${(item.drivers || []).map(driver => `<span>${escapeHtml(driver)}</span>`).join('')}</div>
             <details><summary>${LANG === 'zh' ? '反证条件与数据缺口' : 'Counter-signals and gaps'}</summary><ul>${(item.counter_signals || []).map(signal => `<li>${escapeHtml(signal)}</li>`).join('')}</ul></details>
-            <button type="button" class="forecast-evidence-btn" data-evidence-ids="${ids}"><i class="fas fa-folder-open"></i>${LANG === 'zh' ? '查看支撑材料' : 'View evidence'} · ${(item.evidence_ids || []).length}</button>
+            <button type="button" class="forecast-evidence-btn" data-evidence-ids="${ids}"><i class="ui-icon icon-folder-open" aria-hidden="true"></i>${LANG === 'zh' ? '查看支撑材料' : 'View evidence'} · ${(item.evidence_ids || []).length}</button>
         </article>`;
     }).join('');
     container.querySelectorAll('.forecast-evidence-btn').forEach(button => {
@@ -1744,7 +1747,7 @@ function renderForecastTransmission() {
         : {paper: 'Paper', policy: 'Policy', news: 'News', industry_report: 'Report'};
     const items = state.forecast?.lead_lag || [];
     container.innerHTML = items.length ? items.map(item => {
-        const steps = (item.sequence || []).map((step, index) => `<div class="transmission-step"><span>${escapeHtml(sourceLabels[step.source_type] || step.source_type)}</span><strong>${escapeHtml(step.onset || '')}</strong><small>${Number(step.count || 0)} ${LANG === 'zh' ? '条' : 'items'}</small></div>${index < item.sequence.length - 1 ? '<i class="fas fa-arrow-right"></i>' : ''}`).join('');
+        const steps = (item.sequence || []).map((step, index) => `<div class="transmission-step"><span>${escapeHtml(sourceLabels[step.source_type] || step.source_type)}</span><strong>${escapeHtml(step.onset || '')}</strong><small>${Number(step.count || 0)} ${LANG === 'zh' ? '条' : 'items'}</small></div>${index < item.sequence.length - 1 ? '<i class="ui-icon icon-arrow-right" aria-hidden="true"></i>' : ''}`).join('');
         return `<article class="transmission-item"><div><h3>${escapeHtml(item.topic)}</h3><span class="signal-status status-${escapeHtml(item.status)}">${item.status === 'supported' ? (LANG === 'zh' ? '有重复证据' : 'Supported') : (LANG === 'zh' ? '证据不足' : 'Insufficient')}</span></div><div class="transmission-track">${steps || `<p>${escapeHtml(item.limitation || '')}</p>`}</div><small>${escapeHtml(item.limitation || '')}</small></article>`;
     }).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前筛选下没有传导证据。' : 'No transmission evidence.'}</p>`;
 }
@@ -1818,7 +1821,7 @@ function modeLabel(value) {
     return value === 'quantitative' ? 'Quantitative' : 'Low-confidence scenario';
 }
 
-const CHART_PALETTES = {light: ['#426a96', '#588087', '#967b55', '#65826e', '#8c7286'], dark: ['#8caed0', '#88b3b8', '#c4aa7f', '#98b5a0', '#b8a0b3']};
+const CHART_PALETTES = {light: ['#678593', '#7e9586', '#b0976d', '#9d7c70', '#8d8898'], dark: ['#9cb7c2', '#a7bfae', '#ceba95', '#c7a79b', '#b9b2c6']};
 function chartPalette() { return CHART_PALETTES[state.theme] || CHART_PALETTES.light; }
 const SOURCE_ORDER = ['paper', 'policy', 'news', 'industry_report', 'unknown'];
 function chartColor(name) {
@@ -2347,13 +2350,13 @@ function showLoading(elementId) {
 }
 
 function emptyState(message) {
-    return `<div class="empty-state" role="status"><i class="far fa-folder-open" aria-hidden="true"></i><p>${escapeHtml(message)}</p></div>`;
+    return `<div class="empty-state" role="status"><i class="ui-icon icon-folder-open" aria-hidden="true"></i><p>${escapeHtml(message)}</p></div>`;
 }
 
 function showError(elementId, message) {
     const element = document.getElementById(elementId);
     if (!element) return;
-    element.innerHTML = `<div class="error-state" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i><p>${escapeHtml(message)}</p><button type="button" class="btn-paper btn-secondary">${LANG === 'zh' ? '重试' : 'Retry'}</button></div>`;
+    element.innerHTML = `<div class="error-state" role="alert"><i class="ui-icon icon-circle-exclamation" aria-hidden="true"></i><p>${escapeHtml(message)}</p><button type="button" class="btn-paper btn-secondary">${LANG === 'zh' ? '重试' : 'Retry'}</button></div>`;
     const retry = {
         'papers-list': () => loadPapers(state.currentPage),
         'featured-papers': () => loadPapers(state.currentPage),
