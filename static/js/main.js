@@ -7,20 +7,20 @@ const I18N = {
     zh: {
         monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
         weekDays: ['日', '一', '二', '三', '四', '五', '六'],
-        loading: '加载中...',
-        loadingPapers: '加载论文中...',
+        loading: '正在加载…',
+        loadingPapers: '正在加载论文…',
         loadAnalysisFailed: '加载分析失败',
         noWordcloud: '暂无词云数据',
         wordcloudLoadFailed: '词云加载失败',
-        noPaperData: '暂无论文数据',
+        noPaperData: '尚未收录论文',
         unknown: '未提供',
         authorLabel: '作者',
         sourceLabel: '来源',
         priorityLabel: '优先级',
-        recommendationLabel: '建议动作',
-        scoreLabel: '综合分',
-        scoreBreakdown: '查看五维评分',
-        relevanceReason: '推荐依据',
+        recommendationLabel: '阅读建议',
+        scoreLabel: '综合评分',
+        scoreBreakdown: '评分明细',
+        relevanceReason: '评分依据',
         relatedTopicsLabel: '相关主题',
         citationsLabel: '引用次数',
         journalLabel: '期刊',
@@ -30,22 +30,22 @@ const I18N = {
         referencesLabel: '参考文献数',
         noAbstract: '暂无摘要',
         problem: '研究问题',
-        method: '核心方法',
+        method: '研究方法',
         scenario: '应用场景',
-        constraint: '关键约束',
+        constraint: '约束条件',
         metric: '评价指标',
-        contribution: '主要贡献',
-        structuredInsight: '结构化论文洞察',
-        evidence: '展开证据句',
-        adaptiveFacets: '主题自适应标签',
+        contribution: '研究贡献',
+        structuredInsight: '论文要素',
+        evidence: '原文摘录',
+        adaptiveFacets: '主题分类',
         confidence: '置信度',
         viewPdf: '查看PDF',
         viewDetail: '查看详情',
-        noPapers: '暂无论文',
+        noPapers: '尚未收录论文',
         noCategories: '暂无类别',
         allCategories: '全部类别',
         noData: '暂无数据',
-        timelineHint: '按日期展示论文数量，并突出每期高频研究关键词',
+        timelineHint: '按资料记录日期统计数量及关键词。',
         paperCount: '论文数量',
         categoryCount: '类别数量',
         methodScenario: '方法/场景',
@@ -58,21 +58,21 @@ const I18N = {
         comparisonMetric: '指标',
         comparisonContribution: '贡献',
         originalSource: '查看原文',
-        emptyPolicyTitle: '暂无中国政策数据',
+        emptyPolicyTitle: '尚未收录中国政策',
         emptyPolicyHint: '采集任务运行后，国家能源局和国家发展改革委政策将在此展示。',
-        emptyNewsTitle: '暂无国内新闻数据',
+        emptyNewsTitle: '尚未收录国内新闻',
         emptyNewsHint: '采集任务运行后，国内能源新闻将在此展示。',
-        emptyReportTitle: '暂无行业报告数据',
+        emptyReportTitle: '尚未收录行业报告',
         emptyReportHint: '配置国内行业报告来源并运行采集任务后，报告将在此展示。',
         relatedIntelligence: '关联信息',
         duplicateSources: '已合并来源',
         reportLoadFailed: '报告加载失败',
-        reportEmpty: '本周期暂无可展示条目',
+        reportEmpty: '本周期未收录资料',
         reportOriginal: '查看原始来源',
         reportPeriod: '报告周期',
         reportGenerated: '生成于',
-        noIntelligence: '尚无可展示的科研资料',
-        signalInsufficient: '历史信号不足，运行多源采集后将在此展示',
+        noIntelligence: '尚未收录资料',
+        signalInsufficient: '历史资料不足，暂无法计算。',
         schedulerPending: '待运行',
         schedulerEmpty: '本轮无新增',
         schedulerFailed: '失败',
@@ -90,11 +90,11 @@ const I18N = {
         noWordcloud: 'No word cloud data',
         wordcloudLoadFailed: 'Failed to load word cloud',
         noPaperData: 'No paper data',
-        unknown: 'Unknown',
+        unknown: 'Not provided',
         authorLabel: 'Authors',
         sourceLabel: 'Source',
         priorityLabel: 'Priority',
-        recommendationLabel: 'Recommended action',
+        recommendationLabel: 'Reading suggestion',
         scoreLabel: 'Score',
         scoreBreakdown: 'View score breakdown',
         relevanceReason: 'Rationale',
@@ -112,9 +112,9 @@ const I18N = {
         constraint: 'Constraint',
         metric: 'Metric',
         contribution: 'Contribution',
-        structuredInsight: 'Structured insight',
+        structuredInsight: 'Research details',
         evidence: 'Evidence',
-        adaptiveFacets: 'Adaptive facets',
+        adaptiveFacets: 'Topic categories',
         confidence: 'Confidence',
         viewPdf: 'View PDF',
         viewDetail: 'View details',
@@ -149,7 +149,7 @@ const I18N = {
         reportPeriod: 'Period',
         reportGenerated: 'Generated',
         noIntelligence: 'No research information is available yet',
-        signalInsufficient: 'Run multi-source collection to build historical signals',
+        signalInsufficient: 'Insufficient historical records for this calculation.',
         schedulerPending: 'Pending',
         schedulerEmpty: 'No new records',
         schedulerFailed: 'Failed',
@@ -259,7 +259,41 @@ function toggleTheme() {
 
 const SECTIONS = ['overview', 'papers', 'policies', 'news', 'industry-reports', 'reports', 'paper-report', 'policy-analysis', 'analysis', 'statistics'];
 const NARRATIVE_ROUTES = {'paper-report': 'paper', 'policy-analysis': 'policy', analysis: 'multi_source'};
-const NARRATIVE_TITLES = {paper: ['论文研究报告', 'Paper research report'], policy: ['政策分析', 'Policy analysis'], multi_source: ['趋势分析', 'Trend analysis']};
+const NARRATIVE_TITLES = {paper: ['论文分析', 'Paper analysis'], policy: ['政策分析', 'Policy analysis'], multi_source: ['趋势分析', 'Trend analysis']};
+const ANALYSIS_SECTION_TITLES = {
+    hotspots: ['研究主题', 'Research topics'],
+    technical_evolution: ['技术方法与比较', 'Technical methods and comparisons'],
+    future_directions: ['待研究问题', 'Open research questions'],
+    research_ideas: ['研究方案建议', 'Proposed research designs'],
+    summary: ['主要结论与局限', 'Findings and limitations'],
+    policy_objectives: ['政策目标与适用范围', 'Policy objectives and scope'],
+    policy_mechanisms: ['政策措施与执行机制', 'Policy measures and implementation'],
+    research_implications: ['研究相关条款', 'Provisions relevant to research'],
+    validation_design: ['研究设计与验证建议', 'Research design and validation'],
+    shared_topics: ['共同主题', 'Shared topics'],
+    constraints: ['技术与政策约束', 'Technical and policy constraints'],
+    industry_signals: ['行业应用记录', 'Industry application records'],
+    divergences: ['资料差异', 'Differences between sources'],
+    research_gaps: ['研究问题与资料不足', 'Research questions and data gaps'],
+    opportunities: ['实验方案比较', 'Experimental design comparison'],
+    chains: ['资料关联与验证方案', 'Source relationships and validation plans']
+};
+
+function analysisSectionTitle(section) {
+    return ANALYSIS_SECTION_TITLES[section.id]?.[LANG === 'zh' ? 0 : 1] || section.title || '';
+}
+
+function reportSectionTitle(section) {
+    const match = /^narrative_(paper|policy|multi_source)_(.+)$/.exec(section.key || '');
+    if (match) return NARRATIVE_TITLES[match[1]][LANG === 'zh' ? 0 : 1] + '｜' + analysisSectionTitle({id: match[2], title: section.title});
+    const appendices = {appendix_papers: ['论文', 'Papers'], appendix_policies: ['中国政策', 'China policies'], appendix_news: ['国内新闻', 'China news'], appendix_industry_reports: ['行业报告', 'Industry reports']};
+    return appendices[section.key] ? (LANG === 'zh' ? '来源附录｜' : 'Sources | ') + appendices[section.key][LANG === 'zh' ? 0 : 1] : section.title || '';
+}
+
+function reportTitle(report) {
+    const titles = {weekly: ['能源研究资料周报', 'Energy research weekly report'], stage: ['能源研究资料阶段报告', 'Energy research period report']};
+    return titles[report.report_type]?.[LANG === 'zh' ? 0 : 1] || report.title || '';
+}
 let evidenceReturnFocus = null;
 let menuReturnFocus = null;
 
@@ -315,9 +349,9 @@ function navigateToSection(sectionName, updateHistory = true) {
         state.narrativeView = view;
         updateElement('narrative-page-title', NARRATIVE_TITLES[view][LANG === 'zh' ? 0 : 1]);
         const descriptions = {
-            paper: ['比较研究问题、方法、实验结果与局限，形成连贯的论文研究报告。', 'Compare research questions, methods, experiments, and limitations.'],
-            policy: ['分析中国能源政策的目标、制度约束及其对研究设计和实验验证的影响。', 'Analyze policy objectives, constraints, and implications for research design.'],
-            multi_source: ['结合论文、政策、新闻和行业证据，论证技术演进、分歧与未来研究方向。', 'Explain technical evolution, disagreements, and future directions across four evidence sources.']
+            paper: ['比较论文的研究问题、方法、实验结果及局限。', 'Compare research questions, methods, experiments, and limitations.'],
+            policy: ['梳理中国能源政策的适用范围、主要要求及研究相关条款。', 'Analyze policy objectives, constraints, and implications for research design.'],
+            multi_source: ['比较论文、政策、新闻和行业报告中的研究主题、技术方法及资料差异。', 'Explain technical evolution, disagreements, and future directions across four evidence sources.']
         };
         updateElement('narrative-page-description', descriptions[view][LANG === 'zh' ? 0 : 1]);
         document.querySelectorAll('[data-narrative-view]').forEach(item => {
@@ -652,8 +686,8 @@ function renderNarrative() {
     if (generated) {
         const timestamp = formatReportTime(payload.generated_at);
         generated.textContent = LANG === 'zh'
-            ? `${payload.generation_status === 'generated' ? '成文分析' : '临时证据整理稿'} · 生成时间 ${timestamp || '未记录'} · 正文 ${Number(payload.char_count || 0).toLocaleString()} 字`
-            : `${payload.generation_status === 'generated' ? 'Finished analysis' : 'Evidence preview'} · Generated ${timestamp || 'unknown'} · ${Number(payload.char_count || 0).toLocaleString()} characters`;
+            ? `${payload.generation_status === 'generated' ? '分析报告' : '资料整理稿（正文未完成）'} · 生成时间 ${timestamp || '未记录'} · 正文 ${Number(payload.char_count || 0).toLocaleString()} 字`
+            : `${payload.generation_status === 'generated' ? 'Analysis report' : 'Source outline (analysis pending)'} · Generated ${timestamp || 'unknown'} · ${Number(payload.char_count || 0).toLocaleString()} characters`;
     }
 }
 
@@ -667,20 +701,20 @@ function renderNarrativeCoverage(payload) {
     const selectedCounts = coverage.selected_source_counts || {};
     const corpusCounts = coverage.source_counts || {};
     const chips = ['paper', 'policy'].includes(payload.view)
-        ? `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[payload.view])}</strong>${Number(coverage.selected_evidence_count || 0)} ${LANG === 'zh' ? '条引用证据' : 'cited items'} / ${Number(corpusCounts[payload.view] || coverage.document_count || 0)} ${LANG === 'zh' ? '条语料' : 'corpus items'}</span>`
+        ? `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[payload.view])}</strong>${Number(coverage.selected_evidence_count || 0)} ${LANG === 'zh' ? '条引用资料' : 'cited items'} / ${Number(corpusCounts[payload.view] || coverage.document_count || 0)} ${LANG === 'zh' ? '条资料' : 'source documents'}</span>`
         : Object.entries(selectedCounts).map(([source, count]) =>
-            `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[source] || source)}</strong>${Number(count || 0)} ${LANG === 'zh' ? '条引用证据' : 'cited items'}</span>`
+            `<span class="narrative-source-chip"><strong>${escapeHtml(sourceLabels[source] || source)}</strong>${Number(count || 0)} ${LANG === 'zh' ? '条引用资料' : 'cited items'}</span>`
         ).join('');
     const partial = coverage.status === 'partial';
     const gaps = [...(coverage.gaps || []), ...(payload.limitations || []).filter(item => !(coverage.gaps || []).includes(item))];
-    if (payload.generation_status !== 'generated') gaps.unshift(LANG === 'zh' ? '当前为证据整理稿，尚未完成正式正文写作。请等待完整分析流程生成后刷新。' : 'Evidence preview; the complete analysis pipeline has not yet produced the finished narrative.');
-    if (payload.generation_error) gaps.unshift((LANG === 'zh' ? '正文生成问题：' : 'Generation issue: ') + payload.generation_error);
+    if (payload.generation_status !== 'generated') gaps.unshift(LANG === 'zh' ? '当前仅有资料整理稿，分析正文尚未完成。' : 'Source outline (analysis pending); the complete analysis pipeline has not yet produced the finished narrative.');
+    if (payload.generation_error) gaps.unshift((LANG === 'zh' ? '正文生成失败：' : 'Text generation failed: ') + payload.generation_error);
     container.innerHTML = `<div class="narrative-coverage-summary">
-        <span class="narrative-status ${partial ? 'partial' : ''}">${partial ? (LANG === 'zh' ? '部分覆盖' : 'Partial coverage') : (LANG === 'zh' ? '来源覆盖' : 'Source coverage')}</span>
+        <span class="narrative-status ${partial ? 'partial' : ''}">${partial ? (LANG === 'zh' ? '资料不完整' : 'Incomplete sources') : (LANG === 'zh' ? '资料范围' : 'Source scope')}</span>
         <span>${escapeHtml(coverage.period_start || '')}${coverage.period_end ? ` — ${escapeHtml(coverage.period_end)}` : ''}</span>
         <span>${Number(coverage.month_count || 0)} ${LANG === 'zh' ? '个自然月' : 'months'}</span>
     </div><div class="narrative-source-row">${chips}</div>
-    ${gaps.length ? `<details class="narrative-limitations"><summary>${LANG === 'zh' ? `结论边界与数据缺口（${gaps.length}）` : `Limitations (${gaps.length})`}</summary><ul>${gaps.map(gap => `<li>${escapeHtml(gap)}</li>`).join('')}</ul></details>` : ''}`;
+    ${gaps.length ? `<details class="narrative-limitations"><summary>${LANG === 'zh' ? `数据范围与局限（${gaps.length}）` : `Limitations (${gaps.length})`}</summary><ul>${gaps.map(gap => `<li>${escapeHtml(gap)}</li>`).join('')}</ul></details>` : ''}`;
 }
 
 function renderNarrativeArticle(payload) {
@@ -689,19 +723,19 @@ function renderNarrativeArticle(payload) {
     if (!article || !toc) return;
     const sections = payload.sections || [];
     toc.innerHTML = sections.map((section, index) =>
-        `<a href="#narrative-section-${escapeHtml(section.id)}"><span>${String(index + 1).padStart(2, '0')}</span>${escapeHtml(section.title)}</a>`
+        `<a href="#narrative-section-${escapeHtml(section.id)}"><span>${String(index + 1).padStart(2, '0')}</span>${escapeHtml(analysisSectionTitle(section))}</a>`
     ).join('');
     article.innerHTML = sections.length ? sections.map((section, index) => `<section id="narrative-section-${escapeHtml(section.id)}" class="narrative-section">
-        <h2>${escapeHtml(section.title)}</h2>
+        <h2>${escapeHtml(analysisSectionTitle(section))}</h2>
         <div class="narrative-prose">${decorateNarrativeCitations(section.html || '')}</div>
-    </section>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前没有可展示的正文。' : 'No narrative is available.'}</p>`;
+    </section>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '暂无分析正文。' : 'No analysis text available.'}</p>`;
     bindNarrativeEvidenceButtons(article);
     wrapReadingTables(article);
 }
 
 function decorateNarrativeCitations(html) {
     return String(html || '').replace(/\[((?:POL|P|N|R)\d{2})\]/g, (_, id) =>
-        `<button type="button" class="narrative-citation" data-evidence-id="${id}" aria-label="${LANG === 'zh' ? '查看证据' : 'Open evidence'} ${id}">${id}</button>`
+        `<button type="button" class="narrative-citation" data-evidence-id="${id}" aria-label="${LANG === 'zh' ? '查看引用资料' : 'Open cited source'} ${id}">${id}</button>`
     );
 }
 
@@ -713,13 +747,13 @@ function renderNarrativeOpportunities(payload) {
     if (section.hidden) return;
     const opportunities = payload.opportunities || [];
     container.innerHTML = opportunities.length ? `<table class="narrative-opportunity-table"><thead><tr>
-        <th>${LANG === 'zh' ? '研究问题' : 'Research question'}</th><th>${LANG === 'zh' ? '候选方法' : 'Method'}</th><th>${LANG === 'zh' ? '对比基线' : 'Baseline'}</th><th>${LANG === 'zh' ? '验证环境' : 'Validation'}</th><th>${LANG === 'zh' ? '核心指标' : 'Metrics'}</th><th>${LANG === 'zh' ? '支撑论文' : 'Evidence'}</th>
+        <th>${LANG === 'zh' ? '研究问题' : 'Research question'}</th><th>${LANG === 'zh' ? '候选方法' : 'Method'}</th><th>${LANG === 'zh' ? '对比基线' : 'Baseline'}</th><th>${LANG === 'zh' ? '验证环境' : 'Validation'}</th><th>${LANG === 'zh' ? '评价指标' : 'Metrics'}</th><th>${LANG === 'zh' ? '引用论文' : 'Evidence'}</th>
     </tr></thead><tbody>${opportunities.map(item => `<tr>
         <td><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.question || '')}</span></td>
         <td>${escapeHtml(item.method || '')}</td><td>${escapeHtml(item.baseline || '')}</td><td>${escapeHtml(item.validation || '')}</td>
         <td>${(item.metrics || []).map(metric => `<span class="narrative-metric">${escapeHtml(metric)}</span>`).join('')}</td>
         <td><button type="button" class="narrative-evidence-link" data-evidence-ids="${escapeHtml((item.evidence_ids || []).join(','))}">${(item.evidence_ids || []).length} ${LANG === 'zh' ? '篇' : 'items'}</button></td>
-    </tr>`).join('')}</tbody></table>` : `<p class="trend-note">${LANG === 'zh' ? '当前没有实验机会条目。' : 'No experiment opportunities.'}</p>`;
+    </tr>`).join('')}</tbody></table>` : `<p class="trend-note">${LANG === 'zh' ? '暂无实验方案。' : 'No experimental designs available.'}</p>`;
     bindNarrativeEvidenceButtons(container);
 }
 
@@ -733,10 +767,10 @@ function renderNarrativeChains(payload) {
     container.innerHTML = chains.length ? chains.map(chain => `<article class="narrative-chain-card">
         <div class="narrative-chain-heading"><div><small>${LANG === 'zh' ? '研究问题' : 'Research question'}</small><h3>${escapeHtml(chain.topic || '')}</h3></div><p>${escapeHtml(chain.question || '')}</p></div>
         <div class="narrative-chain-track">${(chain.nodes || []).map((node, index) => `${index ? '<i class="ui-icon icon-arrow-right narrative-chain-arrow" aria-hidden="true"></i>' : ''}<button type="button" class="narrative-chain-node ${node.status === 'missing' ? 'missing' : ''}" data-evidence-ids="${escapeHtml((node.evidence_ids || []).join(','))}" ${node.status === 'missing' ? 'disabled' : ''}>
-            <span>${escapeHtml(node.label || '')}</span><strong>${node.status === 'missing' ? (LANG === 'zh' ? '证据缺口' : 'Evidence gap') : `${(node.evidence_ids || []).length} ${LANG === 'zh' ? '条' : 'items'}`}</strong><small>${escapeHtml(node.summary || '')}</small>
-        </button>`).join('')}<i class="ui-icon icon-arrow-right narrative-chain-arrow" aria-hidden="true"></i><div class="narrative-chain-experiment"><span>${LANG === 'zh' ? '可执行实验' : 'Executable experiment'}</span><strong>${escapeHtml(chain.experiment?.title || '')}</strong><small>${escapeHtml(chain.experiment?.validation || '')}</small></div></div>
+            <span>${escapeHtml(node.label || '')}</span><strong>${node.status === 'missing' ? (LANG === 'zh' ? '缺少引用资料' : 'Missing cited sources') : `${(node.evidence_ids || []).length} ${LANG === 'zh' ? '条' : 'items'}`}</strong><small>${escapeHtml(node.summary || '')}</small>
+        </button>`).join('')}<i class="ui-icon icon-arrow-right narrative-chain-arrow" aria-hidden="true"></i><div class="narrative-chain-experiment"><span>${LANG === 'zh' ? '验证方案' : 'Validation plan'}</span><strong>${escapeHtml(chain.experiment?.title || '')}</strong><small>${escapeHtml(chain.experiment?.validation || '')}</small></div></div>
         <p class="narrative-causality-note"><i class="ui-icon icon-shield-halved" aria-hidden="true"></i>${escapeHtml(chain.causality_note || '')}</p>
-    </article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前没有可展示的证据链。' : 'No evidence chains.'}</p>`;
+    </article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '暂无资料关联记录。' : 'No source relationships available.'}</p>`;
     bindNarrativeEvidenceButtons(container);
 }
 
@@ -753,7 +787,7 @@ function openNarrativeEvidence(evidenceIds, evidenceIndex = null) {
     if (!drawer || !backdrop || !body) return;
     const index = evidenceIndex || state.narrative?.evidence_index || {};
     const ids = [...new Set(evidenceIds || [])].filter(id => index[id]);
-    if (title) title.textContent = LANG === 'zh' ? `证据详情 · ${ids.length} 条` : `Evidence · ${ids.length}`;
+    if (title) title.textContent = LANG === 'zh' ? `引用资料 · ${ids.length} 条` : `Evidence · ${ids.length}`;
     body.innerHTML = ids.length ? ids.map(id => {
         const item = index[id] || {};
         const safeUrl = /^https?:\/\//i.test(item.url || '') ? item.url : '';
@@ -763,7 +797,7 @@ function openNarrativeEvidence(evidenceIds, evidenceIndex = null) {
         return `<article class="narrative-evidence-item"><div class="narrative-evidence-meta"><code>${escapeHtml(id)}</code><span>${escapeHtml(item.source_name || item.source_type || '')}</span><time>${escapeHtml(item.event_date || '')}</time></div>
             <h3>${escapeHtml(item.title || '')}</h3><p>${escapeHtml(item.excerpt || '')}</p>
             ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${LANG === 'zh' ? '打开原始材料' : 'Open source'} <i class="ui-icon icon-arrow-up-right-from-square" aria-hidden="true"></i></a>${auditNote}` : `${auditNote || `<span class="narrative-no-link">${LANG === 'zh' ? '当前记录未提供原文链接' : 'No source URL'}</span>`}`}</article>`;
-    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '未找到对应证据。' : 'Evidence not found.'}</p>`;
+    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '未找到对应的引用资料。' : 'Cited source not found.'}</p>`;
     evidenceReturnFocus = document.activeElement;
     backdrop.hidden = false;
     drawer.inert = false;
@@ -835,7 +869,7 @@ async function loadWordcloud() {
         const container = document.getElementById('wordcloud-container');
         
         if (data.url) {
-            container.innerHTML = `<img src="${escapeHtml(data.url)}" alt="${LANG === 'zh' ? '研究热点词云' : 'Research word cloud'}">`;
+            container.innerHTML = `<img src="${escapeHtml(data.url)}" alt="${LANG === 'zh' ? '关键词词云' : 'Keyword word cloud'}">`;
             container.querySelector('img').addEventListener('error', () => showError('wordcloud-container', t('wordcloudLoadFailed')));
         } else {
             container.innerHTML = `<p>${t('noWordcloud')}</p>`;
@@ -870,6 +904,7 @@ async function loadPapers(page = 1) {
         state.allPapers = data.papers || [];
         state.currentPage = page;
         state.paperTotal = Number(data.total || 0);
+        if (!state.selectedCategory) updateElement('paper-nav-count', state.paperTotal);
         sortPapers(state.paperSort);
         
         // 渲染论文列表
@@ -898,10 +933,10 @@ function renderCollectionQuality(report) {
     const unavailable = report.unavailable_sources || [];
     const percent = report.abstract_completeness == null ? '—' : (report.abstract_completeness * 100).toFixed(1) + '%';
     const parts = report.raw_count == null ? [] : [
-        `累计原始记录 ${report.raw_count} · 去重后 ${report.unique_count} · 合格 ${report.admitted_count} · 摘要完整率 ${percent}`,
+        `采集记录 ${report.raw_count} 条 · 去重后 ${report.unique_count} 条 · 符合收录标准 ${report.admitted_count} 篇 · 摘要完整率 ${percent}`,
         `中科院分区版本 ${(report.cas_editions || []).join(' / ') || '待核验'} · 未完成分片 ${report.incomplete_count || 0}`
     ];
-    if (unavailable.length) parts.push('未接通来源：' + unavailable.join(' / '));
+    if (unavailable.length) parts.push('暂不可用的来源：' + unavailable.join(' / '));
     node.textContent = parts.join('。');
 }
 
@@ -937,13 +972,13 @@ function renderPaperSupportStatus() {
 function renderPapers(papers) {
     const container = document.getElementById('papers-list');
     updateElement('papers-result-count', LANG === 'zh'
-        ? `类别范围共 ${state.paperTotal} 篇 · 本页匹配 ${papers.length} 篇，共加载 ${state.allPapers.length} 篇`
-        : `${state.paperTotal} in category scope · ${papers.length} matches / ${state.allPapers.length} loaded on this page`);
+        ? `目录匹配 ${state.paperTotal} 篇 · 本页 ${state.allPapers.length} 篇 · 页内筛选 ${papers.length} 篇`
+        : `${state.paperTotal} papers in directory results · ${state.allPapers.length} on this page · ${papers.length} after page filters`);
     updateElement('paper-applied-filters', filterDescription({search: state.searchQuery, topic: state.selectedCategory, priority: state.selectedPriority}));
     container.innerHTML = papers.length
         ? papers.map(paper => renderDocumentRow(paper, 'paper')).join('')
         : emptyState(state.searchQuery || state.selectedPriority || state.selectedCategory
-            ? (LANG === 'zh' ? '没有匹配的论文，请调整或清除筛选。' : 'No matching papers. Adjust or clear filters.')
+            ? (LANG === 'zh' ? '未找到符合筛选条件的论文。' : 'No papers match the selected filters.')
             : t('noPapers'));
 }
 
@@ -989,7 +1024,7 @@ function renderDocumentRow(document, sourceType) {
         </div>
         <p class="document-summary clamp-two">${escapeHtml(summary)}</p>
         <div class="document-actions">
-            <details class="document-details"><summary>${LANG === 'zh' ? '展开资料与分析依据' : 'Expand document and analysis'}</summary>
+            <details class="document-details"><summary>${LANG === 'zh' ? '摘要与资料详情' : 'Summary and document details'}</summary>
                 <div class="document-details-body">
                     <h4>${summaryLabel}</h4><p class="paper-abstract">${escapeHtml(summary)}</p>
                     ${sourceType === 'paper' && (document.authors || card.authors_or_orgs || []).length ? `<p class="paper-meta">${LANG === 'zh' ? '作者' : 'Authors'}：${escapeHtml((document.authors || card.authors_or_orgs).join(', '))}</p>` : ''}
@@ -1034,7 +1069,7 @@ async function loadIntelligenceHome() {
     } catch (error) {
         if (state.requestVersions.home !== version) return;
         console.error('加载科研信息首页失败:', error);
-        showError('today-recommendations', LANG === 'zh' ? '重点信息加载失败' : 'Failed to load priority information');
+        showError('today-recommendations', LANG === 'zh' ? '资料列表加载失败' : 'Failed to load documents');
         updateElement('intelligence-result-count', '—');
         document.getElementById('source-snapshot').innerHTML = emptyState(LANG === 'zh' ? '来源数量暂不可用' : 'Source counts unavailable');
     }
@@ -1045,7 +1080,7 @@ function renderTodayRecommendations(documents) {
     if (!container) return;
     if (!documents.length) {
         container.innerHTML = emptyState(hasFilters(state.homeFilters)
-            ? (LANG === 'zh' ? '没有符合当前条件的资料，可清除筛选后重新查看。' : 'No matches. Clear filters to see available sources.') : t('noIntelligence'));
+            ? (LANG === 'zh' ? '未找到符合筛选条件的资料。' : 'No documents match the selected filters.') : t('noIntelligence'));
         return;
     }
     const labels = LANG === 'zh'
@@ -1061,7 +1096,7 @@ function renderTodayRecommendations(documents) {
             <h3>${sourceLink(url, card.title || document.title || '', '') || escapeHtml(card.title || document.title || '')}</h3>
             <div class="recommendation-meta"><span>${labels[sourceType] || escapeHtml(sourceType)}</span><span>${escapeHtml(card.source_name || document.source_name || '')}</span><time>${escapeHtml(String(card.published_at || document.published_at || document.published || '').slice(0, 10) || (LANG === 'zh' ? '发布日期未提供' : 'Publication date unavailable'))}</time></div>
             <p class="clamp-two">${escapeHtml(summary)}</p>
-            <footer>${renderRankingPanel(card, true)}<details class="recommendation-details"><summary>${LANG === 'zh' ? '摘要与推荐依据' : 'Summary and rationale'}</summary><div><p><small>${LANG === 'zh' ? '系统摘要' : 'System summary'}</small><br>${escapeHtml(summary)}</p>${suggestion.why_relevant ? `<p><small>${t('relevanceReason')}</small><br>${escapeHtml(suggestion.why_relevant)}</p>` : ''}${sourceLink(url, t('originalSource'))}</div></details></footer>
+            <footer>${renderRankingPanel(card, true)}<details class="recommendation-details"><summary>${LANG === 'zh' ? '摘要与评分依据' : 'Summary and scoring rationale'}</summary><div><p><small>${LANG === 'zh' ? '系统摘要' : 'System summary'}</small><br>${escapeHtml(summary)}</p>${suggestion.why_relevant ? `<p><small>${t('relevanceReason')}</small><br>${escapeHtml(suggestion.why_relevant)}</p>` : ''}${sourceLink(url, t('originalSource'))}</div></details></footer>
         </article>`;
     }).join('');
 }
@@ -1088,7 +1123,7 @@ function renderHomeTrendSignals() {
         const metrics = item.metrics || {};
         const mode = item.mode === 'quantitative'
             ? (LANG === 'zh' ? '定量预测' : 'Quantitative')
-            : (LANG === 'zh' ? '低置信情景' : 'Low-confidence scenario');
+            : (LANG === 'zh' ? '定性情景' : 'Qualitative scenario');
         return {
             title: item.topic || item.topic_id,
             body: `${trajectoryLabel(item.trajectory)} · ${confidenceLabel(item.confidence)} · ${mode}`,
@@ -1097,7 +1132,7 @@ function renderHomeTrendSignals() {
         };
     });
     if (forecastSignals.length) {
-        container.innerHTML = `<p class="signal-scope">${LANG === 'zh' ? '系统预测 · 截至' : 'System forecast · As of'} ${escapeHtml(state.forecast.as_of || '—')}</p>` + forecastSignals.map((item, index) => `<div class="home-trend-signal group"><span class="block-handle" aria-hidden="true">⋮⋮</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span>${item.gaps ? `<span>${escapeHtml(item.gaps)}</span>` : ''}${item.evidenceIds.length ? `<button class="narrative-evidence-link" type="button" data-signal-index="${index}">${LANG === 'zh' ? '查看依据' : 'View evidence'} · ${item.evidenceIds.length}</button>` : ''}</div>`).join('');
+        container.innerHTML = `<p class="signal-scope">${LANG === 'zh' ? '预测结果 · 截至' : 'Forecasts · As of'} ${escapeHtml(state.forecast.as_of || '—')}</p>` + forecastSignals.map((item, index) => `<div class="home-trend-signal group"><span class="block-handle" aria-hidden="true">⋮⋮</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span>${item.gaps ? `<span>${escapeHtml(item.gaps)}</span>` : ''}${item.evidenceIds.length ? `<button class="narrative-evidence-link" type="button" data-signal-index="${index}">${LANG === 'zh' ? '查看依据' : 'View cited sources'} · ${item.evidenceIds.length}</button>` : ''}</div>`).join('');
         container.querySelectorAll('[data-signal-index]').forEach(button => button.addEventListener('click', () => {
             const ids = forecastSignals[Number(button.dataset.signalIndex)].evidenceIds;
             openNarrativeEvidence(ids, documentEvidenceIndex(ids));
@@ -1110,7 +1145,7 @@ function renderHomeTrendSignals() {
     const directions = (state.analysis?.cross_source_analysis?.directions || []).slice(0, 2);
     const signals = rising.map(item => ({
         title: item.name,
-        body: `${LANG === 'zh' ? '近 7 天变化' : '7-day change'} ${Number(item.delta || 0) >= 0 ? '+' : ''}${Number(item.delta || 0)}`
+        body: `${LANG === 'zh' ? '近 7 天记录数变化' : '7-day change'} ${Number(item.delta || 0) >= 0 ? '+' : ''}${Number(item.delta || 0)}`
     })).concat(directions.map(item => ({title: item.direction, body: item.judgment || item.rationale || ''})));
     container.innerHTML = signals.length
         ? signals.map(item => `<div class="home-trend-signal group"><span class="block-handle" aria-hidden="true">⋮⋮</span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div>`).join('')
@@ -1185,8 +1220,8 @@ async function loadReport(reportType) {
 
 function renderIntelligenceReport(report) {
     const home = document.getElementById('home-report-entry');
-    if (home) home.innerHTML = `<a href="#reports" data-section="reports">${escapeHtml(report.title || '')}</a><p>${escapeHtml(report.period_start || '—')} — ${escapeHtml(report.period_end || '—')}</p><p>${t('reportGenerated')} ${escapeHtml(formatReportTime(report.generated_at))}</p><p>${LANG === 'zh' ? '本期收录' : 'Period sample'} ${Number(report.document_count || 0)} ${LANG === 'zh' ? '条资料' : 'documents'}</p>`;
-    updateElement('report-title', report.title || '');
+    if (home) home.innerHTML = `<a href="#reports" data-section="reports">${escapeHtml(reportTitle(report))}</a><p>${escapeHtml(report.period_start || '—')} — ${escapeHtml(report.period_end || '—')}</p><p>${t('reportGenerated')} ${escapeHtml(formatReportTime(report.generated_at))}</p><p>${LANG === 'zh' ? '本期收录' : 'Period sample'} ${Number(report.document_count || 0)} ${LANG === 'zh' ? '条资料' : 'documents'}</p>`;
+    updateElement('report-title', reportTitle(report));
     updateElement(
         'report-period',
         `${t('reportPeriod')}：${report.period_start || '—'} — ${report.period_end || '—'} · ${t('reportGenerated')} ${formatReportTime(report.generated_at)}`
@@ -1194,9 +1229,9 @@ function renderIntelligenceReport(report) {
     const sourceCounts = report.source_counts || {};
     const quality = report.data_quality || {};
     const limitations = document.getElementById('report-limitations');
-    if (limitations) limitations.innerHTML = `<p>${LANG === 'zh' ? '正文历史证据范围' : 'Historical evidence window'}：${escapeHtml(quality.period_start || '—')} — ${escapeHtml(quality.period_end || '—')} · ${quality.document_count ?? '—'} ${LANG === 'zh' ? '条语料' : 'corpus items'} · ${quality.selected_evidence_count ?? '—'} ${LANG === 'zh' ? '条引用证据' : 'cited items'}</p>${(quality.gaps || []).length ? `<details><summary>${LANG === 'zh' ? '数据缺口与结论边界' : 'Data gaps and limitations'} (${quality.gaps.length})</summary><ul>${quality.gaps.map(gap => `<li>${escapeHtml(gap)}</li>`).join('')}</ul></details>` : ''}`;
+    if (limitations) limitations.innerHTML = `<p>${LANG === 'zh' ? '引用资料范围' : 'Cited source period'}：${escapeHtml(quality.period_start || '—')} — ${escapeHtml(quality.period_end || '—')} · ${quality.document_count ?? '—'} ${LANG === 'zh' ? '条资料' : 'source documents'} · ${quality.selected_evidence_count ?? '—'} ${LANG === 'zh' ? '条引用资料' : 'cited items'}</p>${(quality.gaps || []).length ? `<details><summary>${LANG === 'zh' ? '数据范围与局限' : 'Data gaps and limitations'} (${quality.gaps.length})</summary><ul>${quality.gaps.map(gap => `<li>${escapeHtml(gap)}</li>`).join('')}</ul></details>` : ''}`;
     const pendingNarratives = Object.entries(report.narrative_generation || {}).filter(([, status]) => status !== 'generated');
-    if (limitations && pendingNarratives.length) limitations.innerHTML += `<p>${LANG === 'zh' ? '以下部分仍为临时证据整理稿：' : 'Evidence previews awaiting completed writing: '}${pendingNarratives.map(([view]) => escapeHtml((NARRATIVE_TITLES[view] || [view, view])[LANG === 'zh' ? 0 : 1])).join('、')}</p>`;
+    if (limitations && pendingNarratives.length) limitations.innerHTML += `<p>${LANG === 'zh' ? '以下部分仍为资料整理稿（正文未完成）：' : 'Sections awaiting analysis text: '}${pendingNarratives.map(([view]) => escapeHtml((NARRATIVE_TITLES[view] || [view, view])[LANG === 'zh' ? 0 : 1])).join('、')}</p>`;
     updateElement('report-document-count', Number(report.document_count || 0));
     updateElement('report-paper-count', Number(sourceCounts.paper || 0));
     updateElement('report-policy-count', Number(sourceCounts.policy || 0));
@@ -1209,7 +1244,7 @@ function renderIntelligenceReport(report) {
     if (!container) return;
     const sections = report.sections || [];
     document.getElementById('report-toc').innerHTML = sections.map((section, index) =>
-        '<a href="#report-section-' + index + '"><span>' + String(index + 1).padStart(2, '0') + '</span>' + escapeHtml(section.title || '') + '</a>'
+        '<a href="#report-section-' + index + '"><span>' + String(index + 1).padStart(2, '0') + '</span>' + escapeHtml(reportSectionTitle(section)) + '</a>'
     ).join('');
     if (!sections.length) {
         container.innerHTML = `<div class="report-empty">${t('reportEmpty')}</div>`;
@@ -1221,7 +1256,7 @@ function renderIntelligenceReport(report) {
         return `<article id="report-section-${index}" class="report-section-card ${isNarrative ? 'report-section-narrative' : ''} report-section-${escapeHtml(section.key || '')}">
             <header>
                 <span class="report-section-index">${String(index + 1).padStart(2, '0')}</span>
-                <h2>${escapeHtml(section.title || '')}</h2>
+                <h2>${escapeHtml(reportSectionTitle(section))}</h2>
                 <span class="report-section-count">${isNarrative ? `${Number(section.char_count || 0).toLocaleString()} ${LANG === 'zh' ? '字' : 'chars'}` : items.length}</span>
             </header>
             <div class="${isNarrative ? 'report-narrative-body analysis-content' : 'report-section-items'}" ${isNarrative ? `data-report-view="${escapeHtml(section.view || '')}"` : ''}>
@@ -1269,8 +1304,8 @@ function renderReportEvidence(item) {
     const watchIndicators = item.watch_indicators || [];
     if (!evidenceIds.length && !counterSignals.length && !watchIndicators.length) return '';
     return `<details class="report-evidence">
-        <summary>${LANG === 'zh' ? '查看证据、反证与监测项' : 'Evidence, counter-signals and monitoring'}</summary>
-        ${evidenceIds.length ? `<div><strong>${LANG === 'zh' ? '证据ID' : 'Evidence IDs'}</strong>${evidenceIds.map(value => `<code>${escapeHtml(value)}</code>`).join('')}</div>` : ''}
+        <summary>${LANG === 'zh' ? '引用资料、限制条件与监测指标' : 'Sources, limitations and monitoring indicators'}</summary>
+        ${evidenceIds.length ? `<div><strong>${LANG === 'zh' ? '引用编号' : 'Source IDs'}</strong>${evidenceIds.map(value => `<code>${escapeHtml(value)}</code>`).join('')}</div>` : ''}
         ${counterSignals.length ? `<div><strong>${LANG === 'zh' ? '反证条件' : 'Counter-signals'}</strong>${counterSignals.map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div>` : ''}
         ${watchIndicators.length ? `<div><strong>${LANG === 'zh' ? '监测指标' : 'Watch indicators'}</strong>${watchIndicators.map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div>` : ''}
     </details>`;
@@ -1343,7 +1378,7 @@ function renderDirectoryDocuments(sourceType, documents) {
     const labels = {policy: t('emptyPolicyTitle'), news: t('emptyNewsTitle'), industry_report: t('emptyReportTitle')};
     container.innerHTML = documents.length
         ? documents.map(document => renderDocumentRow(document, sourceType)).join('')
-        : emptyState(filtered ? (LANG === 'zh' ? '没有匹配资料，请调整或清除筛选。' : 'No matches. Adjust or clear filters.') : labels[sourceType]);
+        : emptyState(filtered ? (LANG === 'zh' ? '未找到符合筛选条件的资料。' : 'No documents match the selected filters.') : labels[sourceType]);
 }
 
 function renderRelatedDocuments(card) {
@@ -1425,7 +1460,7 @@ function renderRankingPanel(card, compact = false) {
         ${!compact && (rows || reason) ? `<details class="ranking-details">
             <summary>${t('scoreBreakdown')}</summary>
             <div class="score-grid">${rows}</div>
-            <p>${LANG === 'zh' ? '综合评分与适用维度均为 0–100 分，用于安排阅读顺序，不代表准确率或商业价值。' : 'Overall and applicable dimension scores use a 0–100 scale for reading priority, not accuracy or commercial value.'}</p>
+            <p>${LANG === 'zh' ? '评分范围为 0–100 分，用于阅读排序；分值不表示事实准确率。' : 'Scores use a 0–100 scale for reading order; they do not measure factual accuracy.'}</p>
             ${reason ? `<p><strong>${t('relevanceReason')}：</strong>${escapeHtml(reason)}</p>` : ''}
         </details>` : ''}
     </div>`;
@@ -1436,8 +1471,8 @@ function normalizePriority(value) {
 }
 
 function priorityLabel(priority) {
-    if (LANG === 'en') return {high: 'High', medium: 'Medium', low: 'Low'}[priority];
-    return {high: '高优先级', medium: '中优先级', low: '低优先级'}[priority];
+    if (LANG === 'en') return {high: 'Priority: high', medium: 'Priority: medium', low: 'Priority: low'}[priority];
+    return {high: '优先级：高', medium: '优先级：中', low: '优先级：低'}[priority];
 }
 
 function renderOpenAlexPanel(card) {
@@ -1646,11 +1681,11 @@ function renderForecastQuality() {
     const gaps = quality.gaps || [];
     container.innerHTML = `<div class="quality-summary">
         <div><span>${LANG === 'zh' ? '有效历史' : 'Usable history'}</span><strong>${Number(quality.history_month_count || 0)} / 24</strong><small>${LANG === 'zh' ? '个月' : 'months'}</small></div>
-        <div><span>${LANG === 'zh' ? '事件定期资料' : 'Event-dated records'}</span><strong>${Number(quality.document_count || 0)}</strong><small>${escapeHtml(quality.period_start || '')} — ${escapeHtml(quality.period_end || '')}</small></div>
-        <div><span>${LANG === 'zh' ? '来源覆盖' : 'Coverage'}</span><strong>${escapeHtml(coverageText)}</strong><small>${LANG === 'zh' ? '缺口不按零值计算' : 'Missing coverage is not treated as zero'}</small></div>
+        <div><span>${LANG === 'zh' ? '有明确日期的资料' : 'Dated records'}</span><strong>${Number(quality.document_count || 0)}</strong><small>${escapeHtml(quality.period_start || '')} — ${escapeHtml(quality.period_end || '')}</small></div>
+        <div><span>${LANG === 'zh' ? '资料范围' : 'Coverage'}</span><strong>${escapeHtml(coverageText)}</strong><small>${LANG === 'zh' ? '缺口不按零值计算' : 'Missing coverage is not treated as zero'}</small></div>
     </div>
     <div class="quality-source-row">${sources || `<span class="quality-chip warning">${LANG === 'zh' ? '暂无来源统计' : 'No source totals'}</span>`}</div>
-    ${gaps.length ? `<div class="quality-warning"><i class="ui-icon icon-triangle-exclamation" aria-hidden="true"></i><div><strong>${LANG === 'zh' ? '结论边界' : 'Limitations'}</strong>${gaps.map(gap => `<p>${escapeHtml(gap)}</p>`).join('')}</div></div>` : ''}`;
+    ${gaps.length ? `<div class="quality-warning"><i class="ui-icon icon-triangle-exclamation" aria-hidden="true"></i><div><strong>${LANG === 'zh' ? '数据局限' : 'Limitations'}</strong>${gaps.map(gap => `<p>${escapeHtml(gap)}</p>`).join('')}</div></div>` : ''}`;
 }
 
 function renderForecastChart() {
@@ -1708,7 +1743,7 @@ function renderForecastChart() {
     });
     if (note) note.textContent = forecast?.mode === 'quantitative'
         ? (LANG === 'zh' ? '虚线为 Theil–Sen 稳健预测，阴影为80%区间；预测不是确定事实。' : 'Dashed line is a robust forecast with an 80% interval.')
-        : (LANG === 'zh' ? `数据未达到定量门槛：${(forecast?.data_gaps || []).join('；') || '当前仅展示历史证据'}` : 'Quantitative threshold not met; history only.');
+        : (LANG === 'zh' ? `数据量未达到定量预测要求：${(forecast?.data_gaps || []).join('；') || '仅展示历史记录'}` : 'Quantitative threshold not met; history only.');
 }
 
 function renderForecastTopicCards() {
@@ -1716,7 +1751,7 @@ function renderForecastTopicCards() {
     if (!container) return;
     const forecasts = state.forecast?.forecasts || [];
     if (!forecasts.length) {
-        container.innerHTML = `<p class="trend-note">${LANG === 'zh' ? '当前筛选下没有近期预测卡，请切换周期或置信度。' : 'No near-term cards for these filters.'}</p>`;
+        container.innerHTML = `<p class="trend-note">${LANG === 'zh' ? '未找到符合筛选条件的预测结果。' : 'No forecasts match the selected filters.'}</p>`;
         return;
     }
     container.innerHTML = forecasts.map(item => {
@@ -1729,7 +1764,7 @@ function renderForecastTopicCards() {
             <p class="research-action"><i class="ui-icon icon-flask" aria-hidden="true"></i>${escapeHtml(item.research_action || '')}</p>
             <div class="driver-list">${(item.drivers || []).map(driver => `<span>${escapeHtml(driver)}</span>`).join('')}</div>
             <details><summary>${LANG === 'zh' ? '反证条件与数据缺口' : 'Counter-signals and gaps'}</summary><ul>${(item.counter_signals || []).map(signal => `<li>${escapeHtml(signal)}</li>`).join('')}</ul></details>
-            <button type="button" class="forecast-evidence-btn" data-evidence-ids="${ids}"><i class="ui-icon icon-folder-open" aria-hidden="true"></i>${LANG === 'zh' ? '查看支撑材料' : 'View evidence'} · ${(item.evidence_ids || []).length}</button>
+            <button type="button" class="forecast-evidence-btn" data-evidence-ids="${ids}"><i class="ui-icon icon-folder-open" aria-hidden="true"></i>${LANG === 'zh' ? '查看引用资料' : 'View cited sources'} · ${(item.evidence_ids || []).length}</button>
         </article>`;
     }).join('');
     container.querySelectorAll('.forecast-evidence-btn').forEach(button => {
@@ -1748,8 +1783,8 @@ function renderForecastTransmission() {
     const items = state.forecast?.lead_lag || [];
     container.innerHTML = items.length ? items.map(item => {
         const steps = (item.sequence || []).map((step, index) => `<div class="transmission-step"><span>${escapeHtml(sourceLabels[step.source_type] || step.source_type)}</span><strong>${escapeHtml(step.onset || '')}</strong><small>${Number(step.count || 0)} ${LANG === 'zh' ? '条' : 'items'}</small></div>${index < item.sequence.length - 1 ? '<i class="ui-icon icon-arrow-right" aria-hidden="true"></i>' : ''}`).join('');
-        return `<article class="transmission-item"><div><h3>${escapeHtml(item.topic)}</h3><span class="signal-status status-${escapeHtml(item.status)}">${item.status === 'supported' ? (LANG === 'zh' ? '有重复证据' : 'Supported') : (LANG === 'zh' ? '证据不足' : 'Insufficient')}</span></div><div class="transmission-track">${steps || `<p>${escapeHtml(item.limitation || '')}</p>`}</div><small>${escapeHtml(item.limitation || '')}</small></article>`;
-    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前筛选下没有传导证据。' : 'No transmission evidence.'}</p>`;
+        return `<article class="transmission-item"><div><h3>${escapeHtml(item.topic)}</h3><span class="signal-status status-${escapeHtml(item.status)}">${item.status === 'supported' ? (LANG === 'zh' ? '多条记录支持' : 'Supported') : (LANG === 'zh' ? '证据不足' : 'Insufficient')}</span></div><div class="transmission-track">${steps || `<p>${escapeHtml(item.limitation || '')}</p>`}</div><small>${escapeHtml(item.limitation || '')}</small></article>`;
+    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '未找到符合筛选条件的跨来源记录。' : 'No transmission evidence.'}</p>`;
 }
 
 function renderForecastScenarios() {
@@ -1761,14 +1796,14 @@ function renderForecastScenarios() {
         <p class="scenario-base"><strong>${LANG === 'zh' ? '基准' : 'Base'}：</strong>${escapeHtml(item.base_case || '')}</p>
         <p class="scenario-up"><strong>${LANG === 'zh' ? '上行' : 'Upside'}：</strong>${escapeHtml(item.upside || '')}</p>
         <p class="scenario-down"><strong>${LANG === 'zh' ? '下行' : 'Downside'}：</strong>${escapeHtml(item.downside || '')}</p>
-    </article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '请选择“战略”或“双周期”查看情景。' : 'Choose strategic or both horizons.'}</p>`;
+    </article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '请选择中长期或全部周期查看情景。' : 'Select the longer-term or all-horizons view to see scenarios.'}</p>`;
 }
 
 function renderForecastMonitoring() {
     const container = document.getElementById('forecast-monitoring');
     if (!container) return;
     const items = (state.forecast?.forecasts || []).length ? state.forecast.forecasts : (state.forecast?.scenarios || []);
-    container.innerHTML = items.length ? items.map(item => `<article class="monitoring-card"><h3>${escapeHtml(item.topic)}</h3><div><strong>${LANG === 'zh' ? '持续监测' : 'Watch'}</strong>${(item.watch_indicators || item.triggers || []).map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div><div class="counter-monitor"><strong>${LANG === 'zh' ? '下调判断条件' : 'Downgrade when'}</strong>${(item.counter_signals || []).map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div></article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前筛选下暂无监测项。' : 'No monitoring items.'}</p>`;
+    container.innerHTML = items.length ? items.map(item => `<article class="monitoring-card"><h3>${escapeHtml(item.topic)}</h3><div><strong>${LANG === 'zh' ? '持续监测' : 'Watch'}</strong>${(item.watch_indicators || item.triggers || []).map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div><div class="counter-monitor"><strong>${LANG === 'zh' ? '判断修正条件' : 'Conditions for revising the assessment'}</strong>${(item.counter_signals || []).map(value => `<span>${escapeHtml(value)}</span>`).join('')}</div></article>`).join('') : `<p class="trend-note">${LANG === 'zh' ? '当前筛选下暂无监测指标。' : 'No monitoring indicators available.'}</p>`;
 }
 
 function openEvidenceDrawer(evidenceIds) {
@@ -1786,10 +1821,10 @@ function openEvidenceDrawer(evidenceIds) {
     list.innerHTML = uniqueIds.length ? uniqueIds.map(id => {
         const document = index.get(String(id));
         const title = document?.title || id;
-        const source = document?.source_name || document?.source_type || (LANG === 'zh' ? '历史语料' : 'Historical corpus');
+        const source = document?.source_name || document?.source_type || (LANG === 'zh' ? '历史资料' : 'Historical sources');
         const url = document?.url || document?.entry_url || '';
         return `<article><div><span>${escapeHtml(source)}</span><small>${escapeHtml(document?.published_at || '')}</small></div>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>` : `<strong>${escapeHtml(title)}</strong>`}<code>${escapeHtml(id)}</code></article>`;
-    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '没有可展示的证据ID。' : 'No evidence IDs.'}</p>`;
+    }).join('') : `<p class="trend-note">${LANG === 'zh' ? '没有可展示的引用编号。' : 'No evidence IDs.'}</p>`;
     drawer.open = true;
     drawer.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
@@ -1807,7 +1842,7 @@ function signed(value) {
 }
 
 function confidenceLabel(value) {
-    const labels = LANG === 'zh' ? {high: '高置信', medium: '中置信', low: '低置信'} : {high: 'High', medium: 'Medium', low: 'Low'};
+    const labels = LANG === 'zh' ? {high: '置信等级：高', medium: '置信等级：中', low: '置信等级：低'} : {high: 'High', medium: 'Medium', low: 'Low'};
     return labels[value] || labels.low;
 }
 
@@ -1817,8 +1852,8 @@ function trajectoryLabel(value) {
 }
 
 function modeLabel(value) {
-    if (LANG === 'zh') return value === 'quantitative' ? '定量预测' : '低置信情景';
-    return value === 'quantitative' ? 'Quantitative' : 'Low-confidence scenario';
+    if (LANG === 'zh') return value === 'quantitative' ? '定量预测' : '定性情景';
+    return value === 'quantitative' ? 'Quantitative' : 'Qualitative scenario';
 }
 
 const CHART_PALETTES = {light: ['#678593', '#7e9586', '#b0976d', '#9d7c70', '#8d8898'], dark: ['#9cb7c2', '#a7bfae', '#ceba95', '#c7a79b', '#b9b2c6']};
@@ -2412,7 +2447,7 @@ function documentEvidenceIndex(ids) {
         index[id] = evidence || (record ? {
             title: record.title, source_name: record.source_name, event_date: record.published_at || record.published,
             excerpt: record.summary || record.abstract, url: record.url || record.entry_url
-        } : {title: LANG === 'zh' ? '历史证据记录' : 'Historical evidence', excerpt: LANG === 'zh' ? '当前页面未加载该记录的详情，暂不提供原文跳转。' : 'Details are not loaded for this historical record; no source link is available.'});
+        } : {title: LANG === 'zh' ? '历史资料记录' : 'Historical sources', excerpt: LANG === 'zh' ? '该记录的详细信息未加载。' : 'Details have not been loaded for this historical record.'});
     }
     return index;
 }

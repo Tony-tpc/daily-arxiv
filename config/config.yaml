@@ -662,9 +662,9 @@ web:
   host: "0.0.0.0"
   port: 5000
   debug: false
-  title: "中国能源具身智能信息收集平台"
+  title: "能源研究资料平台"
   # Web 描述 / Web description
-  description: "聚焦中国能源政策、能源智能体与源网荷储自主决策"
+  description: "中国能源政策、能源系统智能控制与源网荷储协调研究资料"
 
 # 调度配置 / Scheduler settings
 scheduler:

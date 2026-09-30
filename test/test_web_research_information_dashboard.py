@@ -17,14 +17,14 @@ class WebResearchInformationDashboardTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         for element_id in (
-            'today-recommendations', 'home-source-filter', 'home-topic-filter',
+            'today-recommendations', 'paper-nav-count', 'home-source-filter', 'home-topic-filter',
             'home-priority-filter', 'home-date-from', 'home-date-to',
             'trend-chart', 'source-comparison-chart', 'entity-trend-chart',
             'narrative-content', 'narrative-opportunities', 'narrative-chains',
         ):
             self.assertIn(f'id="{element_id}"', html)
-        self.assertIn('重点信息', html)
-        self.assertIn('多源信息速览', html)
+        self.assertIn('资料列表', html)
+        self.assertIn('资料数量', html)
 
     def test_unified_api_filters_source_topic_priority_and_date(self):
         documents = [

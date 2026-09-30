@@ -22,9 +22,9 @@
             <span class="brand-mark" aria-hidden="true"><i class="ui-icon icon-book-open" aria-hidden="true"></i></span>
             <div class="brand-text"><strong>{{ title }}</strong></div>
         </div>
-        <nav class="workspace-breadcrumb" aria-label="{{ '当前位置' if language == 'zh' else 'Current location' }}"><span>{{ '工作台' if language == 'zh' else 'Workspace' }}</span><span class="breadcrumb-divider" aria-hidden="true">/</span><span id="current-page-label" aria-current="page">{{ '概览' if language == 'zh' else 'Overview' }}</span></nav>
+        <nav class="workspace-breadcrumb" aria-label="{{ '当前位置' if language == 'zh' else 'Current location' }}"><span>{{ '资料库' if language == 'zh' else 'Library' }}</span><span class="breadcrumb-divider" aria-hidden="true">/</span><span id="current-page-label" aria-current="page">{{ '概览' if language == 'zh' else 'Overview' }}</span></nav>
         <div class="navbar-actions">
-            <span class="workspace-label">{{ '研究与战略工作台' if language == 'zh' else 'Research workspace' }}</span>
+            <span class="workspace-label">{{ '能源政策与系统研究' if language == 'zh' else 'Energy policy and systems research' }}</span>
             <button type="button" class="btn-icon" id="theme-toggle" aria-label="{{ '切换主题' if language == 'zh' else 'Toggle theme' }}" title="{{ '切换主题' if language == 'zh' else 'Toggle theme' }}"><i class="ui-icon icon-moon" aria-hidden="true"></i></button>
         </div>
     </header>
@@ -32,12 +32,12 @@
     <div class="main-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header"><button type="button" class="btn-icon sidebar-toggle" id="sidebar-toggle-btn" aria-label="{{ '关闭导航' if language == 'zh' else 'Close navigation' }}"><i class="ui-icon icon-xmark" aria-hidden="true"></i></button></div>
-            <div class="sidebar-intro"><i class="ui-icon icon-book-open" aria-hidden="true"></i><div><strong>{{ '能源研究空间' if language == 'zh' else 'Energy research' }}</strong><small>{{ '资料 · 洞察 · 研究' if language == 'zh' else 'Sources · Insights · Research' }}</small></div></div>
+            <div class="sidebar-intro"><i class="ui-icon icon-book-open" aria-hidden="true"></i><div><strong>{{ '能源研究资料' if language == 'zh' else 'Energy research' }}</strong><small>{{ '论文 · 政策 · 行业资料' if language == 'zh' else 'Papers · Policies · Industry reports' }}</small></div></div>
             <nav class="sidebar-nav" aria-label="{{ '主导航' if language == 'zh' else 'Main navigation' }}">
                 {% set groups = [
-                    ('工作台', 'Workspace', [('overview', '概览', 'Overview', 'icon-table-columns', '')]),
-                    ('信息资料', 'Information', [('papers', '论文列表', 'Papers', 'icon-file-lines', ''), ('policies', '中国政策', 'China policies', 'icon-landmark', 'policy'), ('news', '国内新闻', 'China news', 'icon-newspaper', 'news'), ('industry-reports', '行业报告', 'Industry reports', 'icon-industry', 'industry-report')]),
-                    ('分析与报告', 'Analysis & reports', [('paper-report', '论文研究报告', 'Paper research report', 'icon-book-open', ''), ('policy-analysis', '政策分析', 'Policy analysis', 'icon-landmark', ''), ('analysis', '趋势分析', 'Trend analysis', 'icon-chart-line', ''), ('reports', '汇总报告', 'Collected reports', 'icon-file-lines', ''), ('statistics', '统计数据', 'Statistics', 'icon-chart-column', '')])
+                    ('总览', 'Overview', [('overview', '概览', 'Overview', 'icon-table-columns', '')]),
+                    ('资料分类', 'Document types', [('papers', '论文列表', 'Papers', 'icon-file-lines', 'paper'), ('policies', '中国政策', 'China policies', 'icon-landmark', 'policy'), ('news', '国内新闻', 'China news', 'icon-newspaper', 'news'), ('industry-reports', '行业报告', 'Industry reports', 'icon-industry', 'industry-report')]),
+                    ('研究分析', 'Research analysis', [('paper-report', '论文分析', 'Paper analysis', 'icon-book-open', ''), ('policy-analysis', '政策分析', 'Policy analysis', 'icon-landmark', ''), ('analysis', '趋势分析', 'Trend analysis', 'icon-chart-line', ''), ('reports', '汇总报告', 'Collected reports', 'icon-file-lines', ''), ('statistics', '统计数据', 'Statistics', 'icon-chart-column', '')])
                 ] %}
                 {% for zh, en, items in groups %}
                 <div class="nav-group">
@@ -48,26 +48,26 @@
                 </div>
                 {% endfor %}
             </nav>
-            <div class="sidebar-footnote"><i class="ui-icon icon-folder-open" aria-hidden="true"></i><p>{{ '中国能源政策 · 能源智能体\n源网荷储自主决策' if language == 'zh' else 'China energy policy · Energy agents\nAutonomous energy systems' }}</p></div>
+            <div class="sidebar-footnote"><i class="ui-icon icon-folder-open" aria-hidden="true"></i><p>{{ '中国能源政策 · 能源系统研究\n智能控制与源网荷储协调' if language == 'zh' else 'China energy policy · Energy agents\nAutonomous energy systems' }}</p></div>
         </aside>
         <main class="main-content" id="main-content" tabindex="-1">
             <section id="overview-section" class="content-section active" aria-labelledby="overview-title">
                 <div class="section-header">
-                    <div><h1 id="overview-title">{{ '能源情报概览' if language == 'zh' else 'Energy intelligence overview' }}</h1><p class="section-desc">{{ '汇集关键资料，跟踪研究信号与政策变化。' if language == 'zh' else 'Track key research, policy developments and source coverage.' }}</p></div>
-                    <a href="#reports" data-section="reports" class="btn-paper btn-primary"><i class="ui-icon icon-book-open" aria-hidden="true"></i>{{ '阅读研究报告' if language == 'zh' else 'Read research report' }}</a>
+                    <div><h1 id="overview-title">{{ '资料概览' if language == 'zh' else 'Document overview' }}</h1><p class="section-desc">{{ '收录论文、国内能源政策、新闻及行业报告，提供检索与分类浏览。' if language == 'zh' else 'Search and browse papers, Chinese energy policies, news and industry reports.' }}</p></div>
+                    <a href="#reports" data-section="reports" class="btn-paper btn-primary"><i class="ui-icon icon-book-open" aria-hidden="true"></i>{{ '查看汇总报告' if language == 'zh' else 'View collected report' }}</a>
                 </div>
-                <div class="overview-scope"><span>{{ '多源信息速览' if language == 'zh' else 'Source snapshot' }} <span class="scope-note">{{ '· 当前筛选结果' if language == 'zh' else '· Current filters' }}</span></span><span id="workspace-data-date">{{ '分析生成时间：读取中' if language == 'zh' else 'Analysis generated: loading' }}</span></div>
+                <div class="overview-scope"><span>{{ '资料数量' if language == 'zh' else 'Document counts' }} <span class="scope-note">{{ '· 当前筛选结果' if language == 'zh' else '· Current filters' }}</span></span><span id="workspace-data-date">{{ '分析生成时间：读取中' if language == 'zh' else 'Analysis generated: loading' }}</span></div>
                 <div class="source-snapshot" id="source-snapshot" aria-live="polite"></div>
 
                 <!-- 研究信息首页 -->
                 <div class="intelligence-home-grid">
                     <div class="content-card group intelligence-reading-card"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                         <div class="card-header">
-                            <div class="header-left"><h2>{{ '重点信息' if language == 'zh' else 'Priority information' }}</h2></div>
+                            <div class="header-left"><h2>{{ '资料列表' if language == 'zh' else 'Documents' }}</h2></div>
                             <span class="update-time" id="intelligence-result-count">0 {{ '条' if language == 'zh' else 'items' }}</span>
                         </div>
                         <div class="card-body">
-                            <div class="intelligence-filter-grid" aria-label="{{ '科研信息筛选' if language == 'zh' else 'Research information filters' }}">
+                            <div class="intelligence-filter-grid" aria-label="{{ '资料筛选' if language == 'zh' else 'Document filters' }}">
                                 <label class="filter-label"><span>{{ '来源类型' if language == 'zh' else 'Source type' }}</span><select id="home-source-filter" class="filter-select" aria-label="{{ '来源类型' if language == 'zh' else 'Source type' }}">
                                     <option value="all">{{ '全部来源' if language == 'zh' else 'All sources' }}</option>
                                     <option value="paper">{{ '论文' if language == 'zh' else 'Papers' }}</option>
@@ -75,13 +75,13 @@
                                     <option value="news">{{ '国内新闻' if language == 'zh' else 'China news' }}</option>
                                     <option value="industry_report">{{ '行业报告' if language == 'zh' else 'Industry reports' }}</option>
                                 </select></label>
-                                <label class="filter-label"><span>{{ '主题' if language == 'zh' else 'Topic' }}</span><input id="home-topic-filter" type="search" placeholder="{{ '主题：如虚拟电厂' if language == 'zh' else 'Topic, e.g. virtual power plant' }}" aria-label="{{ '主题' if language == 'zh' else 'Topic' }}"></label>
+                                <label class="filter-label"><span>{{ '主题' if language == 'zh' else 'Topic' }}</span><input id="home-topic-filter" type="search" placeholder="{{ '输入研究主题' if language == 'zh' else 'Enter a research topic' }}" aria-label="{{ '主题' if language == 'zh' else 'Topic' }}"></label>
                                 <details class="filter-more"><summary>{{ '日期与优先级' if language == 'zh' else 'Dates and priority' }}</summary><div class="filter-extra">
                                 <label class="filter-label"><span>{{ '阅读优先级' if language == 'zh' else 'Reading priority' }}</span><select id="home-priority-filter" class="filter-select" aria-label="{{ '阅读优先级' if language == 'zh' else 'Reading priority' }}">
                                     <option value="">{{ '全部优先级' if language == 'zh' else 'All priorities' }}</option>
-                                    <option value="high">{{ '高 · 精读' if language == 'zh' else 'High · Deep read' }}</option>
-                                    <option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium · Skim' }}</option>
-                                    <option value="low">{{ '低 · 存档' if language == 'zh' else 'Low · Archive' }}</option>
+                                    <option value="high">{{ '高' if language == 'zh' else 'High' }}</option>
+                                    <option value="medium">{{ '中' if language == 'zh' else 'Medium' }}</option>
+                                    <option value="low">{{ '低' if language == 'zh' else 'Low' }}</option>
                                 </select></label>
                                 <label class="filter-label"><span>{{ '开始日期' if language == 'zh' else 'Start date' }}</span><input id="home-date-from" type="date" aria-label="{{ '开始日期' if language == 'zh' else 'Start date' }}"></label>
                                 <label class="filter-label"><span>{{ '结束日期' if language == 'zh' else 'End date' }}</span><input id="home-date-to" type="date" aria-label="{{ '结束日期' if language == 'zh' else 'End date' }}"></label>
@@ -91,7 +91,7 @@
                                 <button type="button" id="home-filter-clear" class="btn-paper btn-secondary">{{ '清除筛选' if language == 'zh' else 'Clear filters' }}</button>
                                 </div>
                             </div>
-                            <p class="list-caption">{{ '按综合评分排序；摘要为系统整理，可展开核对依据。' if language == 'zh' else 'Ordered by overall score; system summaries and rationale can be expanded.' }}</p>
+                            <p class="list-caption">{{ '按综合评分降序排列。摘要由系统生成，可通过原文链接核对。' if language == 'zh' else 'Sorted by overall score. Summaries are generated by the system; original sources are linked for verification.' }}</p>
                             <p id="home-applied-filters" class="applied-filters" aria-live="polite"></p>
                             <div id="today-recommendations" class="today-recommendations"><div class="loading"><div class="spinner"></div></div></div>
                         </div>
@@ -99,13 +99,13 @@
                     <aside class="intelligence-signal-column">
 
                         <div class="content-card group home-signals-card"><span class="block-handle" aria-hidden="true">⋮⋮</span>
-                            <div class="card-header"><div class="header-left"><h2>{{ '趋势信号' if language == 'zh' else 'Trend Signals' }}</h2></div></div>
+                            <div class="card-header"><div class="header-left"><h2>{{ '主题预测' if language == 'zh' else 'Topic forecasts' }}</h2></div></div>
                             <div class="card-body home-trend-signals" id="home-trend-signals"></div>
                         </div>
-                        <section class="home-report-entry"><h2>{{ '研究报告' if language == 'zh' else 'Research report' }}</h2><div id="home-report-entry"></div></section>
+                        <section class="home-report-entry"><h2>{{ '最新汇总报告' if language == 'zh' else 'Latest collected report' }}</h2><div id="home-report-entry"></div></section>
                         <div class="content-card group scheduler-status-card"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                             <div class="card-header">
-                                <div class="header-left"><h2>{{ '自动采集任务' if language == 'zh' else 'Collection Jobs' }}</h2></div>
+                                <div class="header-left"><h2>{{ '采集任务' if language == 'zh' else 'Collection jobs' }}</h2></div>
                                 <button type="button" id="scheduler-status-refresh" class="scheduler-refresh-btn" title="{{ '刷新任务状态' if language == 'zh' else 'Refresh job status' }}"><i class="ui-icon icon-rotate" aria-hidden="true"></i></button>
                             </div>
                             <div class="card-body scheduler-job-list" id="scheduler-job-status"><div class="loading-small"><div class="spinner-small"></div></div></div>
@@ -117,7 +117,7 @@
                 <div class="content-card group featured-reading-card"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                     <div class="card-header">
                         <div class="header-left">
-                            <h2>{{ '论文阅读' if language == 'zh' else 'Featured papers' }}</h2>
+                            <h2>{{ '论文摘要' if language == 'zh' else 'Paper abstracts' }}</h2>
                         </div>
                         <div class="header-right">
                             <a href="#papers" class="btn-link" data-section="papers">{{ '查看全部' if language == 'zh' else 'View all' }} <i class="ui-icon icon-arrow-right" aria-hidden="true"></i></a>
@@ -166,9 +166,9 @@
                         <label for="paper-priority-filter">{{ '优先级' if language == 'zh' else 'Priority' }}:</label>
                         <select id="paper-priority-filter" class="filter-select">
                             <option value="">{{ '全部' if language == 'zh' else 'All' }}</option>
-                            <option value="high">{{ '高 · 精读' if language == 'zh' else 'High · Deep read' }}</option>
-                            <option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium · Skim' }}</option>
-                            <option value="low">{{ '低 · 存档' if language == 'zh' else 'Low · Archive' }}</option>
+                            <option value="high">{{ '高' if language == 'zh' else 'High' }}</option>
+                            <option value="medium">{{ '中' if language == 'zh' else 'Medium' }}</option>
+                            <option value="low">{{ '低' if language == 'zh' else 'Low' }}</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -189,7 +189,7 @@
                 <div id="papers-list" class="papers-list">
                     <div class="loading">
                         <div class="spinner"></div>
-                        <p>{{ '加载论文中...' if language == 'zh' else 'Loading papers...' }}</p>
+                        <p>{{ '正在加载论文…' if language == 'zh' else 'Loading papers...' }}</p>
                     </div>
                 </div>
 
@@ -201,8 +201,8 @@
 
             {% for section, source, prefix, zh, en, description_zh, description_en in [
                 ('policies', 'policy', 'policy', '中国政策', 'China policies', '国家能源局、国家发展改革委等权威机构的能源政策。', 'Energy policy from authoritative Chinese institutions.'),
-                ('news', 'news', 'news', '国内新闻', 'China news', '中国能源系统、虚拟电厂与智能决策的时效信息。', 'Developments in China energy systems and autonomous decisions.'),
-                ('industry-reports', 'industry_report', 'industry-report', '行业报告', 'Industry reports', '能源产业发展、技术应用与行业研究资料。', 'Energy industry research, development and technology adoption.')
+                ('news', 'news', 'news', '国内新闻', 'China news', '国内能源系统、虚拟电厂及智能控制相关报道。', 'News on energy systems, virtual power plants and intelligent control in China.'),
+                ('industry-reports', 'industry_report', 'industry-report', '行业报告', 'Industry reports', '能源产业、技术应用及行业统计资料。', 'Reports on the energy industry, technology applications and industry statistics.')
             ] %}
             <section id="{{ section }}-section" class="content-section source-directory" data-source-type="{{ source }}">
                 <div class="section-header directory-header">
@@ -215,7 +215,7 @@
                     <label class="filter-group"><span>{{ '主题' if language == 'zh' else 'Topic' }}</span><input type="search" data-directory-topic="{{ source }}" placeholder="{{ '全部主题' if language == 'zh' else 'All topics' }}"></label>
                     <label class="filter-group"><span>{{ '开始日期' if language == 'zh' else 'From' }}</span><input type="date" data-directory-date-from="{{ source }}"></label>
                     <label class="filter-group"><span>{{ '结束日期' if language == 'zh' else 'To' }}</span><input type="date" data-directory-date-to="{{ source }}"></label>
-                    <label class="filter-group"><span>{{ '优先级' if language == 'zh' else 'Priority' }}</span><select data-directory-priority="{{ source }}"><option value="">{{ '全部' if language == 'zh' else 'All' }}</option><option value="high">{{ '高 · 精读' if language == 'zh' else 'High' }}</option><option value="medium">{{ '中 · 略读' if language == 'zh' else 'Medium' }}</option><option value="low">{{ '低 · 存档' if language == 'zh' else 'Low' }}</option></select></label>
+                    <label class="filter-group"><span>{{ '优先级' if language == 'zh' else 'Priority' }}</span><select data-directory-priority="{{ source }}"><option value="">{{ '全部' if language == 'zh' else 'All' }}</option><option value="high">{{ '高' if language == 'zh' else 'High' }}</option><option value="medium">{{ '中' if language == 'zh' else 'Medium' }}</option><option value="low">{{ '低' if language == 'zh' else 'Low' }}</option></select></label>
                     </div></details>
                     <label class="filter-group"><span>{{ '排序' if language == 'zh' else 'Sort' }}</span><select data-directory-sort="{{ source }}"><option value="relevance">{{ '综合评分' if language == 'zh' else 'Overall score' }}</option><option value="date">{{ '发布日期' if language == 'zh' else 'Date' }}</option><option value="title">{{ '标题' if language == 'zh' else 'Title' }}</option></select></label>
                     <button type="button" class="btn-paper btn-secondary" data-directory-clear="{{ source }}">{{ '清除筛选' if language == 'zh' else 'Clear filters' }}</button>
@@ -231,8 +231,8 @@
                 <div class="section-header report-page-header">
                     <div>
 
-                        <h1 id="report-title">{{ '中国能源具身智能研究信息周报' if language == 'zh' else 'Energy Embodied Intelligence Weekly' }}</h1>
-                        <p class="section-desc" id="report-period">{{ '正在读取最新报告…' if language == 'zh' else 'Loading the latest report…' }}</p>
+                        <h1 id="report-title">{{ '能源研究资料周报' if language == 'zh' else 'Energy research weekly report' }}</h1>
+                        <p class="section-desc" id="report-period">{{ '正在加载报告…' if language == 'zh' else 'Loading the latest report…' }}</p>
                     </div>
 
                 </div>
@@ -244,7 +244,7 @@
                         </select>
                         <button type="button" id="report-refresh" class="report-refresh-btn"><i class="ui-icon icon-rotate" aria-hidden="true"></i>{{ '刷新' if language == 'zh' else 'Refresh' }}</button>
                     </div>
-                <p class="analysis-disclosure">{{ '系统分析与 AI 生成内容，请结合引用材料核实。下列数量为报告周期内的资料；正文可引用更长时间范围的历史证据。' if language == 'zh' else 'System analysis and AI-generated content: verify against cited sources. Counts below cover the report period; the narrative may use a wider historical evidence window.' }}</p>
+                <p class="analysis-disclosure">{{ '报告由系统生成。下列数量为报告周期内收录的资料，正文引用范围见下方说明。' if language == 'zh' else 'This report is generated by the system. Counts cover documents collected in the report period; the period of cited sources is stated below.' }}</p>
                 <div id="report-limitations" class="report-limitations"></div>
                 <div class="report-metrics" aria-label="{{ '报告概览' if language == 'zh' else 'Report overview' }}">
                     <div><span>{{ '收录文档' if language == 'zh' else 'Documents' }}</span><strong id="report-document-count">—</strong></div>
@@ -255,7 +255,7 @@
                 <div class="narrative-reading-layout">
                     <aside class="narrative-toc-card"><details class="reader-toc" open><summary class="narrative-toc-heading">{{ '报告目录' if language == 'zh' else 'Report contents' }}</summary><nav id="report-toc"></nav></details></aside>
                     <div id="intelligence-report" class="intelligence-report-reader">
-                    <div class="loading"><div class="spinner"></div><p>{{ '正在读取报告…' if language == 'zh' else 'Loading report…' }}</p></div>
+                    <div class="loading"><div class="spinner"></div><p>{{ '正在加载报告…' if language == 'zh' else 'Loading report…' }}</p></div>
                 </div>
                 </div>
             </section>
@@ -263,23 +263,23 @@
             <!-- 长篇趋势分析部分 -->
             <section id="analysis-section" class="content-section">
                 <div class="section-header">
-                    <h1 id="narrative-page-title">{{ '论文研究报告' if language == 'zh' else 'Paper research report' }}</h1>
-                    <p class="section-desc" id="narrative-page-description">{{ '围绕研究问题、方法差异和实验依据，阅读连贯的论文分析。' if language == 'zh' else 'A continuous analysis of research questions, methods, and experimental evidence.' }}</p>
+                    <h1 id="narrative-page-title">{{ '论文分析' if language == 'zh' else 'Paper analysis' }}</h1>
+                    <p class="section-desc" id="narrative-page-description">{{ '比较论文的研究问题、方法、实验结果及局限。' if language == 'zh' else 'Compare research questions, methods, experimental results and limitations.' }}</p>
                 </div>
 
                 <div class="narrative-toolbar">
                     <div class="narrative-tabs" role="tablist" aria-label="{{ '分析视图' if language == 'zh' else 'Narrative views' }}">
-                        <button type="button" class="narrative-tab active" role="tab" aria-selected="true" data-narrative-view="paper">{{ '论文研究报告' if language == 'zh' else 'Paper research report' }}</button>
+                        <button type="button" class="narrative-tab active" role="tab" aria-selected="true" data-narrative-view="paper">{{ '论文分析' if language == 'zh' else 'Paper analysis' }}</button>
                         <button type="button" class="narrative-tab" role="tab" tabindex="-1" aria-selected="false" data-narrative-view="policy">{{ '政策分析' if language == 'zh' else 'Policy analysis' }}</button>
                         <button type="button" class="narrative-tab" role="tab" tabindex="-1" aria-selected="false" data-narrative-view="multi_source">{{ '趋势分析' if language == 'zh' else 'Trend analysis' }}</button>
                     </div>
                     <div class="narrative-run-meta">
-                        <span id="narrative-generated">{{ '正在读取分析…' if language == 'zh' else 'Loading analysis…' }}</span>
+                        <span id="narrative-generated">{{ '正在加载分析…' if language == 'zh' else 'Loading analysis…' }}</span>
                         <button type="button" id="narrative-refresh" class="report-refresh-btn"><i class="ui-icon icon-rotate" aria-hidden="true"></i>{{ '刷新分析' if language == 'zh' else 'Refresh' }}</button>
                     </div>
                 </div>
 
-                <p class="analysis-disclosure">{{ '系统分析 · 原文事实可由证据编号回查；未来方向为研究假设，不代表确定预测。' if language == 'zh' else 'System analysis · Evidence IDs link to sources; future directions are research hypotheses, not certain predictions.' }}</p>
+                <p class="analysis-disclosure">{{ '章节中的引用编号对应原始资料。研究方向与验证方案属于分析建议。' if language == 'zh' else 'Citation IDs link to source documents. Research directions and validation plans are analytical proposals.' }}</p>
                 <div id="narrative-coverage" class="narrative-coverage" aria-live="polite">
                     <div class="loading-small"><div class="spinner-small"></div></div>
                 </div>
@@ -290,20 +290,20 @@
                         <nav id="narrative-toc" aria-label="{{ '正文目录' if language == 'zh' else 'Narrative contents' }}"></nav></details>
                     </aside>
                     <article id="narrative-content" class="content-card narrative-article analysis-content" tabindex="-1">
-                        <div class="loading"><div class="spinner"></div><p>{{ '正在读取长篇分析…' if language == 'zh' else 'Loading long-form analysis…' }}</p></div>
+                        <div class="loading"><div class="spinner"></div><p>{{ '正在加载分析正文…' if language == 'zh' else 'Loading long-form analysis…' }}</p></div>
                     </article>
                 </div>
 
                 <section id="narrative-opportunity-section" class="content-card group narrative-support-section"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                     <div class="card-header">
-                        <div class="header-left"><h2>{{ '实验机会矩阵' if language == 'zh' else 'Experiment opportunity matrix' }}</h2></div>
+                        <div class="header-left"><h2>{{ '实验方案比较' if language == 'zh' else 'Experimental design comparison' }}</h2></div>
                     </div>
                     <div id="narrative-opportunities" class="narrative-table-wrap"></div>
                 </section>
 
                 <section id="narrative-chain-section" class="content-card group narrative-support-section" hidden><span class="block-handle" aria-hidden="true">⋮⋮</span>
                     <div class="card-header">
-                        <div class="header-left"><h2>{{ '四来源证据链' if language == 'zh' else 'Four-source evidence chains' }}</h2></div>
+                        <div class="header-left"><h2>{{ '资料关联与验证方案' if language == 'zh' else 'Source relationships and validation plans' }}</h2></div>
                     </div>
                     <div id="narrative-chains" class="narrative-chain-list"></div>
                 </section>
@@ -315,7 +315,7 @@
                 <div id="statistics-error" hidden></div>
                 <div class="section-header">
                     <h1>{{ '统计数据' if language == 'zh' else 'Statistics' }}</h1>
-                    <p class="section-desc">{{ '统计范围随图表注明；分析语料与当前论文页是不同样本。' if language == 'zh' else 'Each chart states its sample; the analysis corpus differs from the current paper page.' }}</p>
+                    <p class="section-desc">{{ '各图表单独注明统计范围；论文对比表使用当前页数据。' if language == 'zh' else 'Each chart states its data scope. Paper comparison tables use the current page.' }}</p>
                 </div>
 
                 <div class="content-card group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
@@ -325,7 +325,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p id="category-chart-scope" class="chart-scope"></p><div class="chart-frame"><canvas id="category-chart"></canvas></div><p id="category-chart-status" class="trend-note" role="status">{{ '正在读取统计数据…' if language == 'zh' else 'Loading statistics…' }}</p>
+                        <p id="category-chart-scope" class="chart-scope"></p><div class="chart-frame"><canvas id="category-chart"></canvas></div><p id="category-chart-status" class="trend-note" role="status">{{ '正在加载统计数据…' if language == 'zh' else 'Loading statistics…' }}</p>
                     </div>
                 </div>
 
@@ -336,7 +336,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p id="trend-chart-scope" class="chart-scope"></p><div class="chart-frame"><canvas id="trend-chart"></canvas></div><p id="trend-chart-status" class="trend-note" role="status">{{ '正在读取统计数据…' if language == 'zh' else 'Loading statistics…' }}</p>
+                        <p id="trend-chart-scope" class="chart-scope"></p><div class="chart-frame"><canvas id="trend-chart"></canvas></div><p id="trend-chart-status" class="trend-note" role="status">{{ '正在加载统计数据…' if language == 'zh' else 'Loading statistics…' }}</p>
                         <div class="trend-keyword-strip" id="trend-keyword-strip"></div>
                     </div>
                 </div>
@@ -344,18 +344,18 @@
                 <div class="chart-pair-grid">
                     <div class="content-card group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                         <div class="card-header"><div class="header-left"><h2>{{ '来源对比' if language == 'zh' else 'Source Comparison' }}</h2></div></div>
-                        <div class="card-body"><p id="source-comparison-chart-scope" class="chart-scope"></p><div class="chart-frame"><canvas id="source-comparison-chart"></canvas></div><p id="source-comparison-chart-status" class="trend-note" role="status">{{ '正在读取统计数据…' if language == 'zh' else 'Loading statistics…' }}</p><p id="source-comparison-empty" class="trend-note"></p></div>
+                        <div class="card-body"><p id="source-comparison-chart-scope" class="chart-scope"></p><div class="chart-frame"><canvas id="source-comparison-chart"></canvas></div><p id="source-comparison-chart-status" class="trend-note" role="status">{{ '正在加载统计数据…' if language == 'zh' else 'Loading statistics…' }}</p><p id="source-comparison-empty" class="trend-note"></p></div>
                     </div>
                     <div class="content-card group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
-                        <div class="card-header"><div class="header-left"><h2>{{ '实体提及分布' if language == 'zh' else 'Entity mentions' }}</h2></div></div>
-                        <div class="card-body"><p id="entity-trend-chart-scope" class="chart-scope"></p><div class="chart-frame"><canvas id="entity-trend-chart"></canvas></div><p id="entity-trend-chart-status" class="trend-note" role="status">{{ '正在读取统计数据…' if language == 'zh' else 'Loading statistics…' }}</p><p id="entity-trend-empty" class="trend-note"></p></div>
+                        <div class="card-header"><div class="header-left"><h2>{{ '机构与实体提及次数' if language == 'zh' else 'Organization and entity mentions' }}</h2></div></div>
+                        <div class="card-body"><p id="entity-trend-chart-scope" class="chart-scope"></p><div class="chart-frame"><canvas id="entity-trend-chart"></canvas></div><p id="entity-trend-chart-status" class="trend-note" role="status">{{ '正在加载统计数据…' if language == 'zh' else 'Loading statistics…' }}</p><p id="entity-trend-empty" class="trend-note"></p></div>
                     </div>
                 </div>
 
                 <div class="content-card group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                     <div class="card-header">
                         <div class="header-left">
-                            <h2>{{ '方法 × 场景 × 机制矩阵' if language == 'zh' else 'Method × Scenario × Mechanism Matrix' }}</h2>
+                            <h2>{{ '研究方法与应用场景' if language == 'zh' else 'Methods and application settings' }}</h2>
                         </div>
                     </div>
                     <div class="card-body">
@@ -377,17 +377,17 @@
                 <div class="content-card group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                     <div class="card-header">
                         <div class="header-left">
-                            <h2>{{ '研究热点词云' if language == 'zh' else 'Research Word Cloud' }}</h2>
+                            <h2>{{ '关键词词云' if language == 'zh' else 'Keyword word cloud' }}</h2>
                         </div>
                         <div class="header-right">
                             <span class="update-time" id="wordcloud-update">{{ '分析日期' if language == 'zh' else 'Analysis date' }} <span id="last-update-time">-</span></span>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="chart-scope">{{ '词云仅用于发现检索词，字号不表示战略重要性。' if language == 'zh' else 'Explore search terms; word size does not indicate strategic importance.' }}</p><div class="wordcloud-container" id="wordcloud-container">
+                        <p class="chart-scope">{{ '词云用于查看关键词。字号不代表研究价值或重要性。' if language == 'zh' else 'The word cloud shows keywords. Font size does not indicate research value or importance.' }}</p><div class="wordcloud-container" id="wordcloud-container">
                             <div class="loading">
                                 <div class="spinner"></div>
-                                <p>{{ '加载中...' if language == 'zh' else 'Loading...' }}</p>
+                                <p>{{ '正在加载…' if language == 'zh' else 'Loading...' }}</p>
                             </div>
                         </div>
                     </div>
@@ -398,10 +398,10 @@
     </div>
 
                 <div id="narrative-drawer-backdrop" class="narrative-drawer-backdrop" hidden></div>
-                <aside id="narrative-evidence-drawer" class="narrative-evidence-drawer" role="dialog" aria-modal="true" aria-hidden="true" inert aria-label="{{ '证据材料' if language == 'zh' else 'Evidence' }}">
+                <aside id="narrative-evidence-drawer" class="narrative-evidence-drawer" role="dialog" aria-modal="true" aria-hidden="true" inert aria-label="{{ '引用资料' if language == 'zh' else 'Evidence' }}">
                     <div class="narrative-drawer-header">
-                        <div><small>{{ '可回查材料' if language == 'zh' else 'Traceable source' }}</small><h2 id="narrative-evidence-title">{{ '证据详情' if language == 'zh' else 'Evidence detail' }}</h2></div>
-                        <button type="button" id="narrative-drawer-close" class="btn-icon" aria-label="{{ '关闭证据抽屉' if language == 'zh' else 'Close evidence drawer' }}"><i class="ui-icon icon-xmark" aria-hidden="true"></i></button>
+                        <div><small>{{ '引用来源' if language == 'zh' else 'Cited source' }}</small><h2 id="narrative-evidence-title">{{ '引用资料' if language == 'zh' else 'Cited source details' }}</h2></div>
+                        <button type="button" id="narrative-drawer-close" class="btn-icon" aria-label="{{ '关闭引用资料' if language == 'zh' else 'Close cited sources' }}"><i class="ui-icon icon-xmark" aria-hidden="true"></i></button>
                     </div>
                     <div id="narrative-evidence-body" class="narrative-evidence-body"></div>
                 </aside>
@@ -414,7 +414,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>{{ '研究资料与分析仅供参考，请结合原始来源核实。' if language == 'zh' else 'Verify research and analysis against original sources.' }}</p>
+            <p>{{ '资料内容以原始来源为准。' if language == 'zh' else 'Refer to the original sources when verifying document content.' }}</p>
         </div>
     </footer>
 

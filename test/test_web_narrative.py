@@ -149,8 +149,8 @@ class WebNarrativeTests(unittest.TestCase):
             Path(__file__).resolve().parents[1] / "static" / "js" / "main.js"
         ).read_text(encoding="utf-8")
         self.assertIn("coverage.selected_evidence_count", javascript)
-        self.assertIn("条引用证据", javascript)
-        self.assertIn("条语料", javascript)
+        self.assertIn("条引用资料", javascript)
+        self.assertIn("条资料", javascript)
 
 
 def _cached_payload():

@@ -35,13 +35,14 @@ class WebRankingTests(unittest.TestCase):
         self.assertEqual(len(card["ranking_score_breakdown"]), 5)
 
     def test_index_contains_priority_filter_and_relevance_sort(self):
-        response = app.test_client().get("/")
+        with patch.dict(app.config, {"TITLE": "研究资料测试平台"}):
+            response = app.test_client().get("/")
         html = response.get_data(as_text=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('id="paper-priority-filter"', html)
         self.assertIn('value="relevance"', html)
-        self.assertIn("中国能源具身智能信息收集平台", html)
+        self.assertIn("研究资料测试平台", html)
 
     def test_papers_api_defaults_to_relevance_order(self):
         papers = {

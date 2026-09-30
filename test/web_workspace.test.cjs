@@ -111,6 +111,42 @@ test('paper API 404 is an empty dataset, while a server failure remains retryabl
     assert.ok(app.window.errors.includes('papers-list'));
 });
 
+test('paper sidebar count uses the directory total and survives filters and failures', async () => {
+    const app = workspace();
+    app.run('renderPapers = () => {}; renderFeaturedPapers = () => {}; renderResearchMatrix = () => {}; renderComparisonTable = () => {}; sortPapers = () => {}; showError = () => {};');
+    app.context.fetch = async () => ({ok: true, json: async () => ({papers: [{id: 'p'}], total: 76, total_pages: 4})});
+    await app.run('loadPapers(1)');
+    assert.equal(app.get('paper-nav-count').textContent, 76);
+    await app.run('loadPapers(2)');
+    assert.equal(app.get('paper-nav-count').textContent, 76);
+    app.run("state.selectedCategory = '储能'; state.searchQuery = '调度'");
+    app.context.fetch = async () => ({ok: true, json: async () => ({papers: [], total: 9, total_pages: 1})});
+    await app.run('loadPapers()');
+    assert.equal(app.run('state.paperTotal'), 9);
+    assert.equal(app.get('paper-nav-count').textContent, 76);
+    app.context.fetch = async () => ({ok: false, status: 500});
+    await app.run('loadPapers()');
+    assert.equal(app.get('paper-nav-count').textContent, 76);
+    app.run("state.selectedCategory = ''");
+    app.context.fetch = async () => ({ok: false, status: 404});
+    await app.run('loadPapers()');
+    assert.equal(app.get('paper-nav-count').textContent, 0);
+});
+
+test('an outdated paper response cannot overwrite the sidebar total', async () => {
+    const app = workspace();
+    const requests = [];
+    app.run('renderPapers = () => {}; renderFeaturedPapers = () => {}; renderResearchMatrix = () => {}; renderComparisonTable = () => {}; sortPapers = () => {};');
+    app.context.fetch = () => new Promise(resolve => requests.push(resolve));
+    const first = app.run('loadPapers(1)');
+    const second = app.run('loadPapers(2)');
+    requests[1]({ok: true, json: async () => ({papers: [], total: 76, total_pages: 4})});
+    await second;
+    requests[0]({ok: true, json: async () => ({papers: [], total: 100, total_pages: 5})});
+    await first;
+    assert.equal(app.get('paper-nav-count').textContent, 76);
+});
+
 test('home leads with source summary, keeps full rationale available, and reports missing dates', () => {
     const app = workspace();
     app.run(`renderTodayRecommendations([{title: '储能发布信息', source_type: 'industry_report',
@@ -161,7 +197,7 @@ test('papers expose original English abstract alongside system summary and citat
 test('three research entrances keep their own view and share the article reader', () => {
     const app = workspace();
     app.run('loadNarrative = () => { window.loadedView = state.narrativeView; };');
-    for (const [route, view, title] of [['paper-report','paper','论文研究报告'], ['policy-analysis','policy','政策分析'], ['analysis','multi_source','趋势分析']]) {
+    for (const [route, view, title] of [['paper-report','paper','论文分析'], ['policy-analysis','policy','政策分析'], ['analysis','multi_source','趋势分析']]) {
         app.run(`navigateToSection('${route}')`);
         assert.equal(app.window.location.hash, '#' + route);
         assert.equal(app.window.loadedView, view);
@@ -174,7 +210,7 @@ test('three research entrances keep their own view and share the article reader'
 test('paper result feedback distinguishes category total, loaded page, and local matches', () => {
     const app = workspace();
     app.run(`state.paperTotal=45;state.allPapers=Array.from({length:20},()=>({}));state.searchQuery='储能';renderPapers([])`);
-    assert.match(app.get('papers-result-count').textContent, /45.*0.*20/);
+    assert.match(app.get('papers-result-count').textContent, /45.*20.*0/);
     assert.match(app.get('paper-applied-filters').textContent, /储能/);
 });
 

@@ -55,8 +55,8 @@ INTELLIGENCE_SOURCE_TYPES = {"paper", *DIRECTORY_SOURCE_TYPES}
 WEB_I18N = {
     'zh': {
         'html_lang': 'zh-CN',
-        'title_default': 'Daily arXiv - AI Research Tracker',
-        'description_default': '每日追踪最新的 AI 研究论文',
+        'title_default': '能源研究资料平台',
+        'description_default': '中国能源政策与能源系统研究资料',
         'error_no_analysis': '没有找到分析数据',
         'error_no_papers': '没有找到论文数据',
         'error_no_summaries': '没有找到总结数据',
@@ -68,8 +68,8 @@ WEB_I18N = {
     },
     'en': {
         'html_lang': 'en-US',
-        'title_default': 'Daily arXiv - AI Research Tracker',
-        'description_default': 'Track the latest AI research papers daily',
+        'title_default': 'Energy research documents',
+        'description_default': 'Chinese energy policy and energy systems research documents',
         'error_no_analysis': 'Analysis data not found',
         'error_no_papers': 'Paper data not found',
         'error_no_summaries': 'Summary data not found',
