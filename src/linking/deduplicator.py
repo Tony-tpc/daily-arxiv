@@ -8,6 +8,7 @@ import unicodedata
 from difflib import SequenceMatcher
 from typing import Any, Dict, Iterable, List, Tuple
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from src.sources.observations import policy_identity
 
 
 RELATION_TYPES = {
@@ -70,6 +71,7 @@ class Deduplicator:
         """Union records matching DOI, canonical URL, or same-type title similarity."""
         parent = list(range(len(documents)))
         group_dois = [{normalize_doi(d.get("doi") or d.get("url"))} - {""} for d in documents]
+        group_policies = [{policy_identity(d)} - {""} for d in documents]
 
         def find(index: int) -> int:
             while parent[index] != index:
@@ -82,8 +84,11 @@ class Deduplicator:
             if left_root != right_root:
                 if group_dois[left_root] and group_dois[right_root] and group_dois[left_root] != group_dois[right_root]:
                     return
+                if group_policies[left_root] and group_policies[right_root] and group_policies[left_root] != group_policies[right_root]:
+                    return
                 parent[right_root] = left_root
                 group_dois[left_root].update(group_dois[right_root])
+                group_policies[left_root].update(group_policies[right_root])
 
         doi_index: Dict[str, int] = {}
         url_index: Dict[str, int] = {}
@@ -211,6 +216,14 @@ class Deduplicator:
 
         provenance = copy.deepcopy(merged.get("provenance") or {})
         metadata = copy.deepcopy(provenance.get("metadata") or {})
+        from src.sources.observations import observations
+        observed = {}
+        for item in group:
+            for observation in observations(item):
+                key = (observation.get('source_id'), observation.get('url'), observation.get('published_at'))
+                observed[key] = copy.deepcopy(observation)
+        if observed:
+            metadata['observations'] = list(observed.values())
         if len(group) > 1:
             metadata["merged_documents"] = [
                 {

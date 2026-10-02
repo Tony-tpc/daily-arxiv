@@ -402,6 +402,32 @@ sources:
         url: "https://www.chinanews.com.cn/rss/china.xml"
         source_category: "policy_news"
         region: "CN"
+      - name: "国家能源局市场监管动态"
+        source_id: nea-market-news
+        owner_id: nea.gov.cn
+        tier: T1
+        first_party: true
+        format: html
+        url: "https://www.nea.gov.cn/sjzz/jgs/"
+        item_selector: "li.clearfix"
+        link_selector: "h3 a[href]"
+        date_selector: "span.time"
+        fetch_detail: true
+        detail_content_selector: ".article-content"
+        region: CN
+      - name: "人民网能源频道"
+        source_id: people-energy
+        owner_id: people.com.cn
+        tier: T2
+        first_party: false
+        format: html
+        url: "https://energy.people.com.cn/"
+        item_selector: "li"
+        link_selector: "a[href]"
+        date_selector: "span"
+        fetch_detail: true
+        detail_content_selector: ".rm_txt_con, .box_con"
+        region: CN
     backfill_feeds:
       - name: "国家能源局市场监管动态"
         url: "https://www.nea.gov.cn/sjzz/jgs/"
@@ -822,3 +848,14 @@ logging:
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: "logs/daily_arxiv.log"
   console: true
+
+# AIHOT-inspired energy editorial pipeline; thresholds need domain calibration.
+hotspots:
+  enabled: true
+  state_path: data/hotspots/state.sqlite3
+  max_documents_per_run: 50
+  max_calls_per_run: 300
+  thresholds:
+    T1: 60
+    T1_5: 65
+    T2: 76

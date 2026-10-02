@@ -67,3 +67,41 @@ test.test_incremental_pipeline`，确保历史快照中的旧企业动态也会�
 API Key 只放 `.env`。新增站点前确认公开访问条款、请求频率与 robots 规则；设置合理 timeout 和 `max_entries`，不得绕过登录、验证码或访问控制。
 
 可从 `docs/examples/minimal_config.yaml` 起步；执行前备份 `config/config.yaml`，再将示例复制到该路径。
+# AIHOT-inspired incremental listings
+
+RSS feeds now also accept `format: html` or `format: json`. HTML shares list-item
+parsing with historical collection. `item_selector`, `link_selector`, and
+`date_selector` identify original metadata; `fetch_detail` and
+`detail_content_selector` optionally retrieve the article body. Empty HTML selector
+results are errors, not successful empty fetches. Existing policy/report collectors
+retain their specialized extraction.
+
+Each feed may declare `source_id` (stable unique identifier), `owner_id` (publisher
+institution shared by its feeds), `tier` (`T1`, `T1_5`, `T2`), and `first_party`.
+Without an override, the configured feed URL supplies a stable identity; known
+government/media subdomains share an owner. Unknown publishers fall back to the
+hostname, never to an invented institution.
+
+JSON feeds use an explicit dot-separated array path and field mapping:
+
+```yaml
+- name: Example energy feed
+  enabled: false
+  source_id: example-energy
+  owner_id: example.org
+  tier: T2
+  first_party: false
+  region: CN
+  format: json
+  url: https://example.org/energy.json
+  items_path: data.items
+  fields:
+    title: title
+    link: url
+    published: published_at
+    summary: summary
+```
+
+This is a disabled schema example, not a production source. Missing mapped fields
+or non-array results fail the source independently. See [hotspots.md](hotspots.md)
+for selection, caching, ranking windows and publication rules.

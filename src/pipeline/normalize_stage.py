@@ -14,6 +14,7 @@ from src.sources.policy_adapter import is_policy_in_scope
 from src.sources.rss_adapter import is_news_in_scope
 from src.storage.base import build_storage
 from src.utils import get_data_path, load_json
+from src.sources.observations import attach_observations
 
 from .context import PipelineContext
 
@@ -68,7 +69,9 @@ def run(context: PipelineContext) -> PipelineContext:
             context.artifacts['normalized_snapshot'] = 'data/papers/latest_enriched.json'
 
     runtime_config = context.config.get('runtime', {})
-    if context.normalized_records and runtime_config.get('merge_with_latest', False):
+    if (context.normalized_records or context.config.get('hotspots', {}).get('enabled', False)) and (
+        runtime_config.get('merge_with_latest', False) or context.config.get('hotspots', {}).get('enabled', False)
+    ):
         try:
             latest = build_storage(context.config).load_latest()
             existing = _normalize_existing_documents(
@@ -101,6 +104,7 @@ def run(context: PipelineContext) -> PipelineContext:
                 f"Could not load the incremental baseline; processing only the new batch: {exc}",
             ))
 
+    context.normalized_records = [attach_observations(item, context.config) for item in context.normalized_records]
     if not context.normalized_records and not context.config.get('paper_discovery', {}).get('enabled', False):
         context.stop_requested = True
     return context

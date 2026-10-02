@@ -39,6 +39,7 @@ class PipelineContext:
     report_result: Dict[str, Any] = field(default_factory=dict)
     artifacts: Dict[str, str] = field(default_factory=dict)
     stop_requested: bool = False
+    editorial_processed: bool = False
 
 
 def create_pipeline_context(config: Dict[str, Any], logger: logging.Logger, text: TextPicker) -> PipelineContext:

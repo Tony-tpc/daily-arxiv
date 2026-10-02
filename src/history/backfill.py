@@ -410,19 +410,12 @@ class _HTMLArchiveCollector:
     def _item_to_record(
         self, item: Any, page_url: str, source: Dict[str, Any]
     ) -> Dict[str, Any] | None:
-        link = item.select_one(str(source.get("link_selector", "a[href]")))
-        if link is None and getattr(item, "name", None) == "a":
-            link = item
-        if link is None or not link.get("href"):
+        from src.sources.listing import listing_item
+        parsed = listing_item(item, page_url, source)
+        if not parsed:
             return None
-        title = " ".join(
-            str(link.get("title") or link.get_text(" ", strip=True)).split()
-        )
-        url = urljoin(page_url, str(link.get("href")))
-        date_node = item.select_one(str(source.get("date_selector", ""))) \
-            if source.get("date_selector") else None
-        date_text = date_node.get_text(" ", strip=True) if date_node else item.get_text(" ", strip=True)
-        published_at = _extract_date(date_text) or _extract_date(url)
+        title, url = parsed['title'], parsed['link']
+        published_at = parsed['published'] or _extract_date(url)
         if not title or not published_at:
             return None
         if self.source_name == "policy" and not is_policy_in_scope(

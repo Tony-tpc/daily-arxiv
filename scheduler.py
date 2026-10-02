@@ -291,7 +291,27 @@ def register_source_jobs(
             misfire_grace_time=int(spec.get("misfire_grace_time", 3600)),
             replace_existing=True,
         )
+    if config.get('hotspots', {}).get('enabled', False):
+        scheduler.add_job(
+            refresh_hotspots, trigger=IntervalTrigger(hours=1, timezone=tz),
+            kwargs={'config': config}, id='hotspots_hourly', name='热点每小时重算',
+            max_instances=1, coalesce=True, misfire_grace_time=3600, replace_existing=True,
+        )
     return specs
+
+
+def refresh_hotspots(config: Dict[str, Any]) -> None:
+    """Hourly cache-only refresh, serialized with source pipelines; no LLM/network."""
+    from src.hotspots.ranking import record_source_health, recompute
+    from src.hotspots.store import HotspotStore
+    with _PIPELINE_LOCK:
+        store = HotspotStore(config)
+        now = datetime.now(timezone.utc)
+        record_source_health(store, config, now)
+        recompute(config, store=store, now=now)
+        _update_job_status(config, 'hotspots_hourly', {
+            'status': 'success', 'last_success_at': now.isoformat(), 'sources': [],
+        })
 
 
 def scheduled_task(logger=None, notifier=None, language="zh") -> bool:

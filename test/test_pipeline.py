@@ -56,7 +56,9 @@ class PipelineTests(unittest.TestCase):
                 Mock(run=lambda ctx: _record(calls, 'admission', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'ranking', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'linking', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'editorial', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'summarize', ctx)),
+                Mock(run=lambda ctx: _record(calls, 'hotspot', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'export', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'extract', ctx)),
                 Mock(run=lambda ctx: _record(calls, 'cross_source', ctx)),
@@ -68,7 +70,7 @@ class PipelineTests(unittest.TestCase):
             run_pipeline(context)
 
         self.assertEqual(calls, [
-            'fetch', 'normalize', 'admission', 'ranking', 'linking', 'summarize', 'export',
+            'fetch', 'normalize', 'admission', 'ranking', 'linking', 'editorial', 'summarize', 'hotspot', 'export',
             'extract', 'cross_source', 'profile', 'analyze', 'link_audit', 'report',
         ])
 

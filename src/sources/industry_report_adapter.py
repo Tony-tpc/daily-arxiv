@@ -128,7 +128,7 @@ class IndustryReportSourceAdapter(RSSSourceAdapter):
             try:
                 response = self.client.get(source_url, headers=headers)
                 if response.status_code == 304:
-                    source_state["checked_at"] = now
+                    source_state.update(checked_at=now, last_success_at=now, last_error='')
                     continue
                 response.raise_for_status()
             except httpx.HTTPError as exc:

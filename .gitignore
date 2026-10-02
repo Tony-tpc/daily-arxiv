@@ -73,3 +73,6 @@ temp/
 # others
 *COMPLETE.md
 *FIX_SUMMARY.md
+
+data/hotspots/
+data/aihot-*.log

@@ -17,6 +17,7 @@ from src.models.document_schema import SourceType, create_document
 from src.utils import load_json, save_json
 
 from .base import BaseSourceAdapter
+from .listing import parse_listing
 
 
 def is_news_in_scope(record: Dict[str, Any], config: Dict[str, Any]) -> bool:
@@ -113,7 +114,7 @@ class RSSSourceAdapter(BaseSourceAdapter):
             try:
                 response = self.client.get(feed_url, headers=headers)
                 if response.status_code == 304:
-                    feed_state["checked_at"] = now
+                    feed_state.update(checked_at=now, last_success_at=now, last_error='')
                     continue
                 response.raise_for_status()
             except httpx.HTTPError as exc:
@@ -121,7 +122,13 @@ class RSSSourceAdapter(BaseSourceAdapter):
                 self.logger.warning("RSS fetch failed for %s: %s", feed_url, exc)
                 continue
 
-            parsed = feedparser.parse(response.content)
+            try:
+                parsed = ({'entries': parse_listing(response, feed_config), 'feed': {}}
+                          if feed_config.get('format') in {'html', 'json'} else feedparser.parse(response.content))
+            except (ValueError, TypeError, KeyError) as exc:
+                feed_state.update(checked_at=now, last_error=str(exc))
+                self.logger.warning('Listing parse failed for %s: %s', feed_url, exc)
+                continue
             if parsed.get("bozo") and not parsed.get("entries"):
                 message = str(parsed.get("bozo_exception", "invalid feed"))
                 feed_state.update({"checked_at": now, "last_error": message})
@@ -150,6 +157,22 @@ class RSSSourceAdapter(BaseSourceAdapter):
                 dedup_key = record["dedup_key"]
                 if dedup_key in self.state["seen"]:
                     continue
+                if feed_config.get('fetch_detail') and not record['content']:
+                    try:
+                        from bs4 import BeautifulSoup
+                        detail = self.client.get(record['url'])
+                        detail.raise_for_status()
+                        soup = BeautifulSoup(detail.content, 'html.parser')
+                        body = soup.select_one(feed_config.get('detail_content_selector', 'article'))
+                        if body is not None:
+                            record['content'] = body.get_text(' ', strip=True)
+                            record['summary'] = record['content'][:1000]
+                    except httpx.HTTPError as exc:
+                        self.logger.warning('Listing detail failed for %s: %s', record['url'], exc)
+                    if not record['content']:
+                        # Keep the item retryable and do not conditionally skip its listing.
+                        feed_state.update(etag='', last_modified='', last_error='Article body unavailable')
+                        continue
                 self.state["seen"][dedup_key] = now
                 records.append(record)
 

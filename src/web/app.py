@@ -881,6 +881,12 @@ def get_research_information():
             date_to=str(request.args.get('date_to', '')).strip(),
             sort_by=str(request.args.get('sort', 'relevance')).strip().lower(),
         )
+        view = str(request.args.get('view', '')).strip()
+        if view not in {'', 'selected', 'all'}:
+            return jsonify({'error': 'view 必须是 selected 或 all'}), 400
+        if view == 'selected':
+            from src.hotspots.publication import selected_documents
+            documents = selected_documents(config, documents)
         source_counts = {}
         for document in documents:
             key = str(document.get('source_type') or 'unknown')
@@ -1021,6 +1027,38 @@ def get_wordcloud():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.get('/api/hotspots')
+def get_hotspots():
+    """Read a precomputed board; no collection, model calls or database writes."""
+    from src.hotspots.publication import publication
+    board = request.args.get('board', 'industry')
+    if board not in {'industry', 'academic'}:
+        return jsonify({'error': 'board 必须是 industry 或 academic'}), 400
+    payload = publication(config, _load_intelligence_documents())
+    return jsonify({
+        'board': board, 'entries': payload['boards'][board], 'computed_at': payload['computed_at'],
+        'stale': payload['stale'], 'reason': payload.get('reason', ''),
+        'coverage': {
+            'complete': bool(payload['boards'][board]) and all(entry.get('coverage', {}).get('complete', False) for entry in payload['boards'][board]),
+            'reason': ('仅统计通过准入的本地资料；缺乏可比覆盖时不计算涨跌'
+                       if payload['computed_at'] else '尚未生成可核实的榜单快照'),
+        },
+        'window_hours': 48 if board == 'industry' else 720,
+        'metric': '独立来源事件热度 · 24小时半衰期' if board == 'industry' else '去重论文活跃度 · 15天半衰期 · 机构多样性辅助排序',
+        'empty_reason': '窗口内尚无至少两个独立来源的事件' if board == 'industry' else '窗口内尚无至少两篇论文支持的具体研究主题',
+    })
+
+
+@app.get('/api/hotspots/<hotspot_id>')
+def get_hotspot_detail(hotspot_id):
+    from src.hotspots.publication import publication
+    payload = publication(config, _load_intelligence_documents())
+    detail = payload['details'].get(hotspot_id)
+    if not detail:
+        return jsonify({'error': '热点不存在、已过期或证据不再符合准入条件'}), 404
+    return jsonify({**detail, 'computed_at': payload['computed_at'], 'stale': payload['stale']})
 
 
 @app.errorhandler(404)
