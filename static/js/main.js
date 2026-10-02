@@ -194,6 +194,8 @@ const state = {
         news: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance', page: 1, totalPages: 0},
         industry_report: {documents: [], total: 0, search: '', topic: '', priority: '', dateFrom: '', dateTo: '', sort: 'relevance', page: 1, totalPages: 0}
     },
+    homeView: 'selected',
+    homePage: 1,
     homeFilters: {sourceType: 'all', topic: '', priority: '', dateFrom: '', dateTo: ''},
     allCategories: [],
     analysis: null,
@@ -257,7 +259,7 @@ function toggleTheme() {
 
 // ==================== 导航 ==================== //
 
-const SECTIONS = ['overview', 'papers', 'policies', 'news', 'industry-reports', 'reports', 'paper-report', 'policy-analysis', 'analysis', 'statistics'];
+const SECTIONS = ['hot-industry', 'hot-academic', 'hotspot', 'overview', 'papers', 'policies', 'news', 'industry-reports', 'reports', 'paper-report', 'policy-analysis', 'analysis', 'statistics'];
 const NARRATIVE_ROUTES = {'paper-report': 'paper', 'policy-analysis': 'policy', analysis: 'multi_source'};
 const NARRATIVE_TITLES = {paper: ['论文分析', 'Paper analysis'], policy: ['政策分析', 'Policy analysis'], multi_source: ['趋势分析', 'Trend analysis']};
 const ANALYSIS_SECTION_TITLES = {
@@ -305,7 +307,7 @@ function initNavigation() {
         navigateToSection(link.dataset.section);
     });
     const restoreRoute = () => {
-        const section = window.location.hash.slice(1);
+        const section = window.location.hash.slice(1).split('/')[0];
         if (SECTIONS.includes(section)) navigateToSection(section, false);
         else if (!section) navigateToSection('overview', false);
     };
@@ -362,6 +364,7 @@ function navigateToSection(sectionName, updateHistory = true) {
         });
         if (changed || !state.narrative) loadNarrative();
     }
+    window.EnergyHotspots?.navigate(sectionName);
     if (sectionName === 'statistics') requestAnimationFrame(() => renderResearchTrendModules());
     window.scrollTo({top: 0, behavior: 'auto'});
 }
@@ -370,7 +373,7 @@ function initMobileMenu() {
     document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileMenu);
     document.getElementById('sidebar-toggle-btn').addEventListener('click', closeMobileMenu);
     document.getElementById('sidebar-backdrop').addEventListener('click', closeMobileMenu);
-    window.matchMedia('(min-width: 1024px)').addEventListener('change', closeMobileMenu);
+    window.matchMedia('(min-width: 961px)').addEventListener('change', closeMobileMenu);
     document.addEventListener('keydown', event => {
         const drawer = document.getElementById('narrative-evidence-drawer');
         const sidebar = document.getElementById('sidebar');
@@ -1041,10 +1044,13 @@ function renderDocumentRow(document, sourceType) {
     </article>`;
 }
 
-async function loadIntelligenceHome() {
+async function loadIntelligenceHome(page = 1) {
+    state.homePage = page;
     const version = (state.requestVersions.home || 0) + 1;
     state.requestVersions.home = version;
     showLoading('today-recommendations');
+    const pager = document.getElementById('home-feed-pagination');
+    if (pager) pager.innerHTML = '';
     const filters = state.homeFilters;
     const params = new URLSearchParams({
         source_type: filters.sourceType,
@@ -1052,7 +1058,9 @@ async function loadIntelligenceHome() {
         priority: filters.priority,
         date_from: filters.dateFrom,
         date_to: filters.dateTo,
-        sort: 'relevance',
+        view: state.homeView || 'selected',
+        sort: 'date',
+        page: state.homePage,
         per_page: 8
     });
     try {
@@ -1065,6 +1073,7 @@ async function loadIntelligenceHome() {
             : `${payload.total || 0} matches · ${(payload.documents || []).length} shown`);
         updateElement('home-applied-filters', filterDescription(filters));
         renderTodayRecommendations(payload.documents || []);
+        window.EnergyHotspots?.renderFeedPagination(payload);
         renderSourceSnapshot(payload.source_counts || {});
     } catch (error) {
         if (state.requestVersions.home !== version) return;
@@ -1080,23 +1089,33 @@ function renderTodayRecommendations(documents) {
     if (!container) return;
     if (!documents.length) {
         container.innerHTML = emptyState(hasFilters(state.homeFilters)
-            ? (LANG === 'zh' ? '未找到符合筛选条件的资料。' : 'No documents match the selected filters.') : t('noIntelligence'));
+            ? (LANG === 'zh' ? '未找到符合筛选条件的资料。' : 'No documents match the selected filters.')
+            : state.homeView === 'selected' ? (LANG === 'zh' ? '近期暂无完成审核的精选，可切换“全部资料”浏览原资料库。' : 'No recent selected records yet. Switch to All documents to browse the library.') : t('noIntelligence'));
         return;
     }
     const labels = LANG === 'zh'
         ? {paper: '论文', policy: '政策', news: '新闻', industry_report: '行业报告'}
         : {paper: 'Paper', policy: 'Policy', news: 'News', industry_report: 'Industry report'};
+    let lastDate = null;
     container.innerHTML = documents.map(document => {
         const card = document.web_card || document;
         const suggestion = card.reading_suggestion || document.reading_suggestion || {};
         const url = card.links?.source_url || card.links?.primary_url || document.url || document.entry_url || '';
         const sourceType = card.source_type || document.source_type || 'paper';
-        const summary = card.summary || card.description || document.summary || document.abstract || '';
-        return `<article class="recommendation-card group"><span class="block-handle" aria-hidden="true">⋮⋮</span>
-            <h3>${sourceLink(url, card.title || document.title || '', '') || escapeHtml(card.title || document.title || '')}</h3>
+        const summary = document.summary || card.summary || card.description || document.abstract || '';
+        const date = String(document.published_at || '').slice(0, 10);
+        const daybar = date !== lastDate ? `<h3 class="feed-daybar">${escapeHtml(date || (LANG === 'zh' ? '日期未提供' : 'Date unavailable'))}</h3>` : '';
+        lastDate = date;
+        const title = document.display_title || card.title || document.title || '';
+        const editorial = document.editorial;
+        const reason = document.recommendation_reason || suggestion.why_relevant;
+        const titleLink = document.hotspot_id ? `<a href="#hotspot/${encodeURIComponent(document.hotspot_id)}">${escapeHtml(title)}</a>` : sourceLink(url, title, '') || escapeHtml(title);
+        const score = editorial?.status === 'complete' ? `<span class="editorial-score">${LANG === 'zh' ? '精选评分' : 'Editorial'} <strong>${Number(editorial.score).toFixed(0)}</strong></span>` : renderRankingPanel(card, true);
+        return `${daybar}<article class="recommendation-card group">
+            <h3>${titleLink}</h3>
             <div class="recommendation-meta"><span>${labels[sourceType] || escapeHtml(sourceType)}</span><span>${escapeHtml(card.source_name || document.source_name || '')}</span><time>${escapeHtml(String(card.published_at || document.published_at || document.published || '').slice(0, 10) || (LANG === 'zh' ? '发布日期未提供' : 'Publication date unavailable'))}</time></div>
             <p class="clamp-two">${escapeHtml(summary)}</p>
-            <footer>${renderRankingPanel(card, true)}<details class="recommendation-details"><summary>${LANG === 'zh' ? '摘要与评分依据' : 'Summary and scoring rationale'}</summary><div><p><small>${LANG === 'zh' ? '系统摘要' : 'System summary'}</small><br>${escapeHtml(summary)}</p>${suggestion.why_relevant ? `<p><small>${t('relevanceReason')}</small><br>${escapeHtml(suggestion.why_relevant)}</p>` : ''}${sourceLink(url, t('originalSource'))}</div></details></footer>
+            <footer>${score}<details class="recommendation-details"><summary>${LANG === 'zh' ? '摘要与评分依据' : 'Summary and scoring rationale'}</summary><div><p><small>${LANG === 'zh' ? '系统摘要' : 'System summary'}</small><br>${escapeHtml(summary)}</p>${reason ? `<p><small>${t('relevanceReason')}</small><br>${escapeHtml(reason)}</p>` : ''}${(editorial?.scores || []).map((round, index) => `<p><small>${LANG === 'zh' ? '独立评分' : 'Independent score'} ${index + 1} · ${escapeHtml(round.score)}</small><br>${escapeHtml(round.reason || '')}</p>`).join('')}${sourceLink(url, t('originalSource'))}</div></details></footer>
         </article>`;
     }).join('');
 }

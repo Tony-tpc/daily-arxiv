@@ -258,7 +258,7 @@ test('home source counts and result feedback use only the newest filtered respon
     app.run(`state.homeFilters={sourceType:'news',topic:'电力',priority:'high',dateFrom:'2026-09-01',dateTo:'2026-09-22'}`);
     const recent = app.run('loadIntelligenceHome()');
     const query = new URLSearchParams(requests[1].url.split('?')[1]);
-    for (const [key,value] of Object.entries({source_type:'news',topic:'电力',priority:'high',date_from:'2026-09-01',date_to:'2026-09-22',per_page:'8',sort:'relevance'})) assert.equal(query.get(key),value);
+    for (const [key,value] of Object.entries({source_type:'news',topic:'电力',priority:'high',date_from:'2026-09-01',date_to:'2026-09-22',per_page:'8',sort:'date',view:'selected'})) assert.equal(query.get(key),value);
     requests[1].resolve({ok:true,json:async()=>({documents:[{id:'news'}],total:1,source_counts:{news:1}})}); await recent;
     requests[0].resolve({ok:true,json:async()=>({documents:[],total:33,source_counts:{policy:27}})}); await old;
     assert.equal(app.window.counts.news,1);

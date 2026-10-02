@@ -35,7 +35,7 @@
             <div class="sidebar-intro"><i class="ui-icon icon-book-open" aria-hidden="true"></i><div><strong>{{ '能源研究资料' if language == 'zh' else 'Energy research' }}</strong><small>{{ '论文 · 政策 · 行业资料' if language == 'zh' else 'Papers · Policies · Industry reports' }}</small></div></div>
             <nav class="sidebar-nav" aria-label="{{ '主导航' if language == 'zh' else 'Main navigation' }}">
                 {% set groups = [
-                    ('总览', 'Overview', [('overview', '概览', 'Overview', 'icon-table-columns', '')]),
+                    ('发现', 'Discover', [('overview', '最新精选', 'Selected', 'icon-table-columns', ''), ('hot-industry', '行业热点', 'Industry hot', 'icon-chart-line', ''), ('hot-academic', '学术热点', 'Research hot', 'icon-book-open', '')]),
                     ('资料分类', 'Document types', [('papers', '论文列表', 'Papers', 'icon-file-lines', 'paper'), ('policies', '中国政策', 'China policies', 'icon-landmark', 'policy'), ('news', '国内新闻', 'China news', 'icon-newspaper', 'news'), ('industry-reports', '行业报告', 'Industry reports', 'icon-industry', 'industry-report')]),
                     ('研究分析', 'Research analysis', [('paper-report', '论文分析', 'Paper analysis', 'icon-book-open', ''), ('policy-analysis', '政策分析', 'Policy analysis', 'icon-landmark', ''), ('analysis', '趋势分析', 'Trend analysis', 'icon-chart-line', ''), ('reports', '汇总报告', 'Collected reports', 'icon-file-lines', ''), ('statistics', '统计数据', 'Statistics', 'icon-chart-column', '')])
                 ] %}
@@ -53,8 +53,16 @@
         <main class="main-content" id="main-content" tabindex="-1">
             <section id="overview-section" class="content-section active" aria-labelledby="overview-title">
                 <div class="section-header">
-                    <div><h1 id="overview-title">{{ '资料概览' if language == 'zh' else 'Document overview' }}</h1><p class="section-desc">{{ '收录论文、国内能源政策、新闻及行业报告，提供检索与分类浏览。' if language == 'zh' else 'Search and browse papers, Chinese energy policies, news and industry reports.' }}</p></div>
+                    <div><p class="page-kicker">ENERGY RESEARCH · DAILY</p><h1 id="overview-title">{{ '精选' if language == 'zh' else 'Selected' }}</h1><p class="section-desc">{{ '从能源政策、产业进展与学术研究中，找到值得关注的变化。' if language == 'zh' else 'Follow meaningful changes in energy policy, industry and research.' }}</p></div>
                     <a href="#reports" data-section="reports" class="btn-paper btn-primary"><i class="ui-icon icon-book-open" aria-hidden="true"></i>{{ '查看汇总报告' if language == 'zh' else 'View collected report' }}</a>
+                </div>
+                <div class="hot-home-grid" aria-label="{{ '当前热点' if language == 'zh' else 'Current hotspots' }}">
+                    {% for board, label_zh, label_en, window in [('industry', '行业事件', 'Industry events', '48h'), ('academic', '学术研究', 'Research topics', '30d')] %}
+                    <section class="hot-strip" aria-labelledby="home-hot-{{ board }}-heading">
+                        <header><h2 id="home-hot-{{ board }}-heading"><span class="hot-dot" aria-hidden="true"></span>{{ label_zh if language == 'zh' else label_en }} <small>{{ window }}</small></h2><a href="#hot-{{ board }}" data-section="hot-{{ board }}">{{ '完整榜单' if language == 'zh' else 'Full ranking' }} →</a></header>
+                        <div id="home-hot-{{ board }}" aria-live="polite"><p class="hot-placeholder">{{ '正在读取热点…' if language == 'zh' else 'Loading hotspots…' }}</p></div>
+                    </section>
+                    {% endfor %}
                 </div>
                 <div class="overview-scope"><span>{{ '资料数量' if language == 'zh' else 'Document counts' }} <span class="scope-note">{{ '· 当前筛选结果' if language == 'zh' else '· Current filters' }}</span></span><span id="workspace-data-date">{{ '分析生成时间：读取中' if language == 'zh' else 'Analysis generated: loading' }}</span></div>
                 <div class="source-snapshot" id="source-snapshot" aria-live="polite"></div>
@@ -63,10 +71,11 @@
                 <div class="intelligence-home-grid">
                     <div class="content-card group intelligence-reading-card"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                         <div class="card-header">
-                            <div class="header-left"><h2>{{ '资料列表' if language == 'zh' else 'Documents' }}</h2></div>
+                            <div class="header-left"><h2>{{ '最新精选' if language == 'zh' else 'Latest selected' }}</h2></div>
                             <span class="update-time" id="intelligence-result-count">0 {{ '条' if language == 'zh' else 'items' }}</span>
                         </div>
                         <div class="card-body">
+                            <div class="feed-tabs" role="group" aria-label="{{ '资料视图' if language == 'zh' else 'Feed view' }}"><button type="button" data-feed-view="selected" aria-pressed="true">{{ '精选' if language == 'zh' else 'Selected' }}</button><button type="button" data-feed-view="all" aria-pressed="false">{{ '全部资料' if language == 'zh' else 'All documents' }}</button></div>
                             <div class="intelligence-filter-grid" aria-label="{{ '资料筛选' if language == 'zh' else 'Document filters' }}">
                                 <label class="filter-label"><span>{{ '来源类型' if language == 'zh' else 'Source type' }}</span><select id="home-source-filter" class="filter-select" aria-label="{{ '来源类型' if language == 'zh' else 'Source type' }}">
                                     <option value="all">{{ '全部来源' if language == 'zh' else 'All sources' }}</option>
@@ -91,9 +100,10 @@
                                 <button type="button" id="home-filter-clear" class="btn-paper btn-secondary">{{ '清除筛选' if language == 'zh' else 'Clear filters' }}</button>
                                 </div>
                             </div>
-                            <p class="list-caption">{{ '按综合评分降序排列。摘要由系统生成，可通过原文链接核对。' if language == 'zh' else 'Sorted by overall score. Summaries are generated by the system; original sources are linked for verification.' }}</p>
+                            <p class="list-caption">{{ '按原始发布日期排列。精选分数与事件热度独立计算。' if language == 'zh' else 'Ordered by original publication date. Editorial scores and event heat are separate metrics.' }}</p>
                             <p id="home-applied-filters" class="applied-filters" aria-live="polite"></p>
                             <div id="today-recommendations" class="today-recommendations"><div class="loading"><div class="spinner"></div></div></div>
+                            <nav id="home-feed-pagination" class="feed-pagination" aria-label="{{ '精选分页' if language == 'zh' else 'Feed pagination' }}"></nav>
                         </div>
                     </div>
                     <aside class="intelligence-signal-column">
@@ -132,6 +142,16 @@
                     </div>
                 </div>
             </section>
+
+            {% for board, label_zh, label_en in [('industry', '行业事件热点', 'Industry events'), ('academic', '学术研究热点', 'Research activity')] %}
+            <section id="hot-{{ board }}-section" class="content-section" aria-labelledby="hot-{{ board }}-title">
+                <div class="section-header"><div><p class="page-kicker">ENERGY INTELLIGENCE</p><h1 id="hot-{{ board }}-title">{{ label_zh if language == 'zh' else label_en }}</h1><p class="section-desc">{{ ('近48小时的独立来源报道，按时间衰减计算。' if board == 'industry' else '近30天的具体研究问题，以去重论文衡量活跃度。') if language == 'zh' else ('Independent reporting over 48 hours, with time decay.' if board == 'industry' else 'Specific research questions supported by distinct papers over 30 days.') }}</p></div><button type="button" class="btn-paper btn-secondary" data-refresh-hot="{{ board }}">{{ '刷新' if language == 'zh' else 'Refresh' }}</button></div>
+                <p class="hot-board-meta" id="hot-{{ board }}-meta" aria-live="polite"></p>
+                <div id="hot-{{ board }}-list" class="hot-board-list" aria-live="polite"></div>
+                <details class="hot-method"><summary>{{ '如何计算' if language == 'zh' else 'How this ranking works' }}</summary><p>{{ ('同一机构只计算一次，24小时半衰期，至少两个独立来源才上榜。来源采集不完整或缺乏可比历史时不显示涨跌。' if board == 'industry' else '至少两篇不同论文，15天半衰期。同分时参考有证据的机构多样性与精选均分；数据库收录数量不计为独立论文。统计仅覆盖本地准入资料。') if language == 'zh' else ('One contribution per publisher, a 24-hour half-life, and at least two independent publishers. Incomplete coverage has no growth estimate.' if board == 'industry' else 'At least two distinct papers, with a 15-day half-life. Verified institution diversity and editorial scores break ties. Coverage is limited to the admitted local corpus.') }}</p></details>
+            </section>
+            {% endfor %}
+            <section id="hotspot-section" class="content-section" aria-label="{{ '热点详情' if language == 'zh' else 'Hotspot detail' }}"><div id="hotspot-detail" aria-live="polite"></div></section>
 
             <!-- 论文列表部分 -->
             <section id="papers-section" class="content-section">
@@ -429,5 +449,6 @@
         window.APP_LANGUAGE = "{{ language }}";
     </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/hotspots.js') }}"></script>
 </body>
 </html>

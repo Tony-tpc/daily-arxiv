@@ -23,7 +23,9 @@ class WebResearchInformationDashboardTests(unittest.TestCase):
             'narrative-content', 'narrative-opportunities', 'narrative-chains',
         ):
             self.assertIn(f'id="{element_id}"', html)
-        self.assertIn('资料列表', html)
+        self.assertIn('最新精选', html)
+        self.assertIn('id="hot-industry-section"', html)
+        self.assertIn('id="hot-academic-section"', html)
         self.assertIn('资料数量', html)
 
     def test_unified_api_filters_source_topic_priority_and_date(self):
