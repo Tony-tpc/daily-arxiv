@@ -105,3 +105,15 @@ JSON feeds use an explicit dot-separated array path and field mapping:
 This is a disabled schema example, not a production source. Missing mapped fields
 or non-array results fail the source independently. See [hotspots.md](hotspots.md)
 for selection, caching, ranking windows and publication rules.
+
+Incremental HTML/RSS feeds can set `max_age_days` to skip old dated entries before
+fetching details (NEA market news uses 7 days). Missing dates are never invented.
+Historical backfill remains a separate task. TLS verification remains enabled;
+certificate/hostname failures are recorded and shown as failed sources.
+
+`origin_owner_id` may identify the explicitly verified original institution for a
+repost feed, or be stored in document provenance metadata by a targeted collector.
+It must come from visible source credit, never a model guess. The host transporting
+a repost does not count as another institution. Configure `owner_id` only after
+verifying ownership; unrecognized bare hostnames are not treated as confirmed
+independent institutions for industry publication.

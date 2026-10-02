@@ -8,6 +8,8 @@ def run(context):
         return context
     engine = EditorialEngine(context.config)
     record_source_health(engine.store, context.config, engine.now)
+    from src.hotspots.topics import TopicEngine
+    TopicEngine(context.config, engine.client, now=engine.now).process(context.normalized_records)
     context.normalized_records = engine.process(context.normalized_records)
     context.editorial_processed = True
     context.artifacts['hotspot_state'] = str(engine.store.path)

@@ -1,6 +1,6 @@
 """Isolated browser QA server; never persists fixture records or changes configuration.
 
-Run with ``python -m test.manual_web_fixtures`` and visit port 5002:
+Run with ``python -m test.manual_web_fixtures`` and visit port 5003:
 ``/?case=fail-once``, ``/?case=sparse``, ``/?case=many``, ``/?case=empty``.
 The default page/API responses use the production read-only Flask views.
 """
@@ -29,7 +29,7 @@ const seen = new Set();
 window.fetch = async (input, options) => {
     const url = new URL(input, location.href);
     const key = url.pathname + (url.searchParams.get('source_type') || '');
-    if (scenario === 'fail-once' && url.pathname.startsWith('/api/') && !seen.has(key)) {
+    if (['fail','fail-once'].includes(scenario) && url.pathname.startsWith('/api/') && (scenario === 'fail' || !seen.has(key))) {
         seen.add(key);
         return new Response(JSON.stringify({error:'Isolated QA failure'}), {status:503});
     }
@@ -39,8 +39,8 @@ window.fetch = async (input, options) => {
         const board = url.searchParams.get('board') || (url.pathname.includes('academic') ? 'academic' : 'industry');
         const names = board === 'industry' ? ['新型储能参与电力市场试点发布配套实施细则', '多地推进虚拟电厂接入与需求响应协同', '跨省电力现货交易完善绿电结算机制', '配电网数字化改造进入集中验证阶段', '源网荷储协同示范形成调度评估框架'] : ['面向分布式储能的安全多智能体协同调度', '部分可观测环境下的配电网电压控制', '考虑预测不确定性的源网荷储优化', '需求响应中的隐私保护与分布式决策', '物理约束驱动的电力系统自主控制'];
         const entries = names.map((title,i) => ({id:board+'-fixture-'+i,kind:board,title,rank:i+1,score:board==='industry'?38.6-i*4:5.8-i*.7,source_count:4,paper_count:6,institution_count:3,report_count:5,trend:i===0?'up':'unknown',trend_pct:i===0?12.5:null,summary:'隔离验收样例：梳理实施规则、参与主体与技术约束，关注政策落地后对电力系统调度和储能运行的影响。此数据仅用于界面验收。'}));
-        if (url.pathname === '/api/hotspots') return json({entries,computed_at:'2026-10-02T04:00:00+00:00',metric:board==='industry'?'48小时 · 独立机构加权报道':'30天 · 去重论文活跃度',coverage:{complete:true}});
-        return json({...entries[0],computed_at:'2026-10-02T04:00:00+00:00',summary_kind:'digest',series:[8,9,13,null,18,23,28].map((score,i)=>({at:`2026-10-01T${String(i+10).padStart(2,'0')}:00:00Z`,score})),evidence:[1,2,3].map((n)=>({title:'隔离验收：配套规则与试点进展 '+n,source_name:n===1?'主管部门':'专业研究机构',published_at:'2026-10-01T10:00:00+08:00',summary:'围绕市场参与条件、运行约束和效果评估提供证据。',link_status:'unverified'}))});
+        if (url.pathname === '/api/hotspots') return json({entries,computed_at:'2026-10-02T04:00:00+00:00',metric:board==='industry'?'7天 · 独立机构加权报道':'180天 · 去重论文活跃度',coverage:{complete:true}});
+        return json({...entries[0],computed_at:'2026-10-02T04:00:00+00:00',summary_kind:'analysis',analysis:{summary:'隔离样例：共同议题综合分析',evidence_ids:['sample-1','sample-2'],sections:(board==='industry'?['events','changes','drivers','impacts','uncertainty','watchpoints']:['question','attention','methods','progress','limitations','next_steps']).map(key=>({key,title:'隔离验收：'+key,text:'跨资料比较共同变化、不同方法与证据局限；此内容仅作排版验收，不进入正式榜单。'.repeat(4),kind:'inference',evidence_ids:['sample-1','sample-2']}))},series:[8,9,13,null,18,23,28].map((score,i)=>({at:`2026-10-01T${String(i+10).padStart(2,'0')}:00:00Z`,score})),evidence:[1,2,3].map((n)=>({id:'sample-'+n,title:'隔离验收：配套规则与试点进展 '+n,source_name:n===1?'主管部门':'专业研究机构',published_at:'2026-10-01T10:00:00+08:00',summary:'围绕市场参与条件、运行约束和效果评估提供证据。',link_status:'unverified'}))});
     }
     if (scenario === 'hotspots' && url.pathname === '/api/research-information') {
         const page = Number(url.searchParams.get('page') || 1);
@@ -80,4 +80,4 @@ window.fetch = async (input, options) => {
 
 
 if __name__ == "__main__":
-    create_fixture_app().run(host="127.0.0.1", port=5002, debug=False)
+    create_fixture_app().run(host="127.0.0.1", port=5003, debug=False)

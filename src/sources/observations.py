@@ -25,6 +25,7 @@ def source_identity(settings: dict, url: str = '') -> dict:
     return {
         'source_id': str(settings.get('source_id') or hashlib.sha256(str(settings.get('url') or host).encode()).hexdigest()[:16]),
         'owner_id': str(settings.get('owner_id') or owner),
+        'owner_verified': bool(settings.get('owner_id') or owner in {'people.com.cn', 'chinanews.com.cn', 'nea.gov.cn', 'ndrc.gov.cn', 'eeo.com.cn'}),
         'tier': str(settings.get('tier') or ('T1' if host.endswith('.gov.cn') else 'T2')),
         'first_party': bool(settings.get('first_party', host.endswith('.gov.cn'))),
     }
@@ -53,6 +54,7 @@ def attach_observations(document: dict, config: dict) -> dict:
     published = str(document.get('published_at') or '')
     metadata['observations'] = [{
         **identity, 'document_id': str(document.get('id', '')),
+        'origin_owner_id': metadata.get('origin_owner_id') or settings.get('origin_owner_id', ''),
         'source_name': document.get('source_name', ''), 'url': document.get('url', ''),
         'published_at': published, 'collected_at': document.get('collected_at', ''),
         'time_precision': 'time' if 'T' in published or ' ' in published else 'day' if len(published) == 10 else 'unknown',

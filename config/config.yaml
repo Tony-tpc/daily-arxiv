@@ -266,7 +266,7 @@ sources:
           - "market mechanism"
     keywords: []
     max_results: 20
-    days_back: 30
+    days_back: 180
     fallback_days_back: 365
     sort_by: "relevance"
     sort_order: "descending"
@@ -305,26 +305,26 @@ sources:
     enabled: true
     per_page: 100
     max_pages_per_run: 40
-    recent_days: 90
+    recent_days: 180
     request_timeout_seconds: 30
   crossref:
     enabled: true
     per_page: 100
     max_pages_per_run: 40
-    recent_days: 90
+    recent_days: 180
     request_timeout_seconds: 30
     mailto: ''
   openaire:
     enabled: true
     per_page: 100
     max_pages_per_run: 40
-    recent_days: 90
+    recent_days: 180
     request_timeout_seconds: 30
   semantic_scholar:
     enabled: true
     per_page: 100
     max_pages_per_run: 40
-    recent_days: 90
+    recent_days: 180
     request_timeout_seconds: 30
     api_key: ''
     request_interval_seconds: 1.1
@@ -404,6 +404,7 @@ sources:
         region: "CN"
       - name: "国家能源局市场监管动态"
         source_id: nea-market-news
+        max_age_days: 7
         owner_id: nea.gov.cn
         tier: T1
         first_party: true

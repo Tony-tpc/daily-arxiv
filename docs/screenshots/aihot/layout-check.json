@@ -1,0 +1,916 @@
+{
+  "light": [
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 375,
+      "text": 4271,
+      "width": 390
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 375,
+      "text": 241,
+      "width": 390
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 375,
+      "text": 643,
+      "width": 390
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 375,
+      "text": 17102,
+      "width": 390
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 375,
+      "text": 7844,
+      "width": 390
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 375,
+      "text": 15846,
+      "width": 390
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 375,
+      "text": 279,
+      "width": 390
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 375,
+      "text": 104,
+      "width": 390
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 375,
+      "text": 109,
+      "width": 390
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 375,
+      "text": 115,
+      "width": 390
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 375,
+      "text": 20253,
+      "width": 390
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 375,
+      "text": 7966,
+      "width": 390
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 375,
+      "text": 1728,
+      "width": 390
+    },
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 625,
+      "text": 4271,
+      "width": 640
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 625,
+      "text": 241,
+      "width": 640
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 625,
+      "text": 643,
+      "width": 640
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 625,
+      "text": 17102,
+      "width": 640
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 625,
+      "text": 7844,
+      "width": 640
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 625,
+      "text": 15846,
+      "width": 640
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 625,
+      "text": 279,
+      "width": 640
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 625,
+      "text": 104,
+      "width": 640
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 625,
+      "text": 109,
+      "width": 640
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 625,
+      "text": 115,
+      "width": 640
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 625,
+      "text": 20253,
+      "width": 640
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 625,
+      "text": 7966,
+      "width": 640
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 625,
+      "text": 1728,
+      "width": 640
+    },
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 945,
+      "text": 4271,
+      "width": 960
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 945,
+      "text": 241,
+      "width": 960
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 945,
+      "text": 643,
+      "width": 960
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 945,
+      "text": 17102,
+      "width": 960
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 945,
+      "text": 7844,
+      "width": 960
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 945,
+      "text": 15846,
+      "width": 960
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 945,
+      "text": 279,
+      "width": 960
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 945,
+      "text": 104,
+      "width": 960
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 945,
+      "text": 109,
+      "width": 960
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 945,
+      "text": 115,
+      "width": 960
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 945,
+      "text": 20600,
+      "width": 960
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 945,
+      "text": 7966,
+      "width": 960
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 945,
+      "text": 1728,
+      "width": 960
+    },
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 1425,
+      "text": 4271,
+      "width": 1440
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 1425,
+      "text": 241,
+      "width": 1440
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 1425,
+      "text": 643,
+      "width": 1440
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 1425,
+      "text": 17102,
+      "width": 1440
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 1425,
+      "text": 7844,
+      "width": 1440
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 1425,
+      "text": 15846,
+      "width": 1440
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 1425,
+      "text": 279,
+      "width": 1440
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 1425,
+      "text": 104,
+      "width": 1440
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 1425,
+      "text": 109,
+      "width": 1440
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 1425,
+      "text": 115,
+      "width": 1440
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 1425,
+      "text": 20600,
+      "width": 1440
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 1425,
+      "text": 7966,
+      "width": 1440
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 1425,
+      "text": 1728,
+      "width": 1440
+    },
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 1905,
+      "text": 4271,
+      "width": 1920
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 1905,
+      "text": 241,
+      "width": 1920
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 1905,
+      "text": 643,
+      "width": 1920
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 1905,
+      "text": 17102,
+      "width": 1920
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 1905,
+      "text": 7844,
+      "width": 1920
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 1905,
+      "text": 15846,
+      "width": 1920
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 1905,
+      "text": 279,
+      "width": 1920
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 1905,
+      "text": 104,
+      "width": 1920
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 1905,
+      "text": 109,
+      "width": 1920
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 1905,
+      "text": 115,
+      "width": 1920
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 1905,
+      "text": 20600,
+      "width": 1920
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 1905,
+      "text": 7966,
+      "width": 1920
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 1905,
+      "text": 1728,
+      "width": 1920
+    }
+  ],
+  "dark": [
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 375,
+      "text": 4271,
+      "width": 390
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 375,
+      "text": 241,
+      "width": 390
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 375,
+      "text": 643,
+      "width": 390
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 375,
+      "text": 17102,
+      "width": 390
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 375,
+      "text": 7844,
+      "width": 390
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 375,
+      "text": 15846,
+      "width": 390
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 375,
+      "text": 279,
+      "width": 390
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 375,
+      "text": 104,
+      "width": 390
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 375,
+      "text": 109,
+      "width": 390
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 375,
+      "text": 115,
+      "width": 390
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 375,
+      "text": 20253,
+      "width": 390
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 375,
+      "text": 7966,
+      "width": 390
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 375,
+      "text": 1728,
+      "width": 390
+    },
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 625,
+      "text": 4271,
+      "width": 640
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 625,
+      "text": 241,
+      "width": 640
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 625,
+      "text": 643,
+      "width": 640
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 625,
+      "text": 17102,
+      "width": 640
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 625,
+      "text": 7844,
+      "width": 640
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 625,
+      "text": 15846,
+      "width": 640
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 625,
+      "text": 279,
+      "width": 640
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 625,
+      "text": 104,
+      "width": 640
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 625,
+      "text": 109,
+      "width": 640
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 625,
+      "text": 115,
+      "width": 640
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 625,
+      "text": 20253,
+      "width": 640
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 625,
+      "text": 7966,
+      "width": 640
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 625,
+      "text": 1728,
+      "width": 640
+    },
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 945,
+      "text": 4271,
+      "width": 960
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 945,
+      "text": 241,
+      "width": 960
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 945,
+      "text": 643,
+      "width": 960
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 945,
+      "text": 17102,
+      "width": 960
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 945,
+      "text": 7844,
+      "width": 960
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 945,
+      "text": 15846,
+      "width": 960
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 945,
+      "text": 279,
+      "width": 960
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 945,
+      "text": 104,
+      "width": 960
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 945,
+      "text": 109,
+      "width": 960
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 945,
+      "text": 115,
+      "width": 960
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 945,
+      "text": 20600,
+      "width": 960
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 945,
+      "text": 7966,
+      "width": 960
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 945,
+      "text": 1728,
+      "width": 960
+    },
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 1425,
+      "text": 4271,
+      "width": 1440
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 1425,
+      "text": 241,
+      "width": 1440
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 1425,
+      "text": 643,
+      "width": 1440
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 1425,
+      "text": 17102,
+      "width": 1440
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 1425,
+      "text": 7844,
+      "width": 1440
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 1425,
+      "text": 15846,
+      "width": 1440
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 1425,
+      "text": 279,
+      "width": 1440
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 1425,
+      "text": 104,
+      "width": 1440
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 1425,
+      "text": 109,
+      "width": 1440
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 1425,
+      "text": 115,
+      "width": 1440
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 1425,
+      "text": 20600,
+      "width": 1440
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 1425,
+      "text": 7966,
+      "width": 1440
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 1425,
+      "text": 1728,
+      "width": 1440
+    },
+    {
+      "active": "overview-section",
+      "route": "#overview",
+      "scroll": 1905,
+      "text": 4271,
+      "width": 1920
+    },
+    {
+      "active": "hot-industry-section",
+      "route": "#hot-industry",
+      "scroll": 1905,
+      "text": 241,
+      "width": 1920
+    },
+    {
+      "active": "hot-academic-section",
+      "route": "#hot-academic",
+      "scroll": 1905,
+      "text": 643,
+      "width": 1920
+    },
+    {
+      "active": "papers-section",
+      "route": "#papers",
+      "scroll": 1905,
+      "text": 17102,
+      "width": 1920
+    },
+    {
+      "active": "policies-section",
+      "route": "#policies",
+      "scroll": 1905,
+      "text": 7844,
+      "width": 1920
+    },
+    {
+      "active": "news-section",
+      "route": "#news",
+      "scroll": 1905,
+      "text": 15846,
+      "width": 1920
+    },
+    {
+      "active": "industry-reports-section",
+      "route": "#industry-reports",
+      "scroll": 1905,
+      "text": 279,
+      "width": 1920
+    },
+    {
+      "active": "analysis-section",
+      "route": "#paper-report",
+      "scroll": 1905,
+      "text": 104,
+      "width": 1920
+    },
+    {
+      "active": "analysis-section",
+      "route": "#policy-analysis",
+      "scroll": 1905,
+      "text": 109,
+      "width": 1920
+    },
+    {
+      "active": "analysis-section",
+      "route": "#analysis",
+      "scroll": 1905,
+      "text": 115,
+      "width": 1920
+    },
+    {
+      "active": "reports-section",
+      "route": "#reports",
+      "scroll": 1905,
+      "text": 20600,
+      "width": 1920
+    },
+    {
+      "active": "statistics-section",
+      "route": "#statistics",
+      "scroll": 1905,
+      "text": 7966,
+      "width": 1920
+    },
+    {
+      "active": "hotspot-section",
+      "route": "#hotspot/academic-b157e0bdfef52feebe4e",
+      "scroll": 1905,
+      "text": 1728,
+      "width": 1920
+    }
+  ]
+}

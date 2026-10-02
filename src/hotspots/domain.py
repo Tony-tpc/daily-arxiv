@@ -12,6 +12,8 @@ from src.sources.policy_adapter import is_policy_in_scope
 from src.sources.rss_adapter import is_news_in_scope
 
 LOCAL_TZ = timezone(timedelta(hours=8))
+INDUSTRY_WINDOW_DAYS = 7
+ACADEMIC_WINDOW_DAYS = 180
 
 
 def timestamp(value: object) -> datetime | None:
@@ -50,11 +52,8 @@ def allowed(document: dict, config: dict) -> bool:
 
 
 def recent(document: dict, now: datetime) -> bool:
-    from src.sources.observations import observations
     times = [timestamp(document.get('published_at'))]
-    if document.get('source_type') != 'paper':
-        times.extend(timestamp(item.get('published_at')) for item in observations(document))
-    days = 30 if document.get('source_type') == 'paper' else 2
+    days = ACADEMIC_WINDOW_DAYS if document.get('source_type') == 'paper' else INDUSTRY_WINDOW_DAYS
     return any(at is not None and now - timedelta(days=days) < at <= now for at in times)
 
 
@@ -79,7 +78,9 @@ def lexical_similarity(a: str, b: str) -> float:
 def strong_identity(document: dict) -> tuple[str, str]:
     from src.sources.observations import policy_identity
     if document.get('doi'):
-        return 'doi', str(document['doi']).lower().removeprefix('https://doi.org/')
+        return 'doi', str(document['doi']).strip().lower().removeprefix('https://doi.org/')
+    if document.get('arxiv_id'):
+        return 'arxiv', re.sub(r'v\d+$', '', str(document['arxiv_id']).strip().lower())
     number = policy_identity(document)
     if number:
         return 'policy', str(number)

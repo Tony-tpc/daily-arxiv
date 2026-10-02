@@ -497,9 +497,9 @@ button:active:not(:disabled), a.btn-paper:active, .page-link:active, .nav-item:a
 .hot-new { padding: 0 6px; color: var(--primary-color); background: var(--active-bg); border-radius: 4px; }
 .hot-trend.rising { color: var(--primary-color); }
 .hot-trend.quiet { color: var(--text-tertiary); }
-.hot-empty { min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 32px 24px; text-align: center; color: var(--text-secondary); }
-.hot-empty p { margin: 0; max-width: 40ch; font-size: 14px; }
-.hot-empty small { max-width: 45ch; font-size: 12px; }
+.hot-empty { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; padding: 20px 24px; color: var(--text-secondary); }
+.hot-empty p { margin: 0; font-size: 14px; }
+.hot-empty small { font-size: 12px; }
 .empty-orbit { color: var(--primary-color); font-size: 32px; line-height: 1; }
 .hot-stale { border-top: 1px solid var(--border-color); padding: 12px 20px; margin: 0; font-size: 12px; color: var(--warning-text); }
 .hot-board-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 20px; color: var(--text-secondary); font-size: 12px; }
@@ -521,7 +521,7 @@ button:active:not(:disabled), a.btn-paper:active, .page-link:active, .nav-item:a
 .feed-pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 20px 0; font-size: 12px; color: var(--text-secondary); }
 .hot-back { display: inline-block; margin-bottom: 24px; font-size: 13px; }
 .hot-detail-header { padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); }
-.hot-detail-header h1 { max-width: 36ch; margin-bottom: 16px; }
+.hot-detail-header h1 { max-width: 100%; margin-bottom: 16px; }
 .hot-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 24px; margin-bottom: 24px; }
 .hot-digest, .hot-measure, .hot-history, .hot-evidence, .hot-background { padding: 24px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); }
 .hot-digest > p { white-space: pre-line; line-height: 1.9; }
@@ -627,26 +627,13 @@ button:active:not(:disabled), a.btn-paper:active, .page-link:active, .nav-item:a
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
-.hot-mini-row.hot-discovery-card, .hot-event-card.hot-discovery-card { grid-template-columns: minmax(0, 1fr); }
-.hot-discovery-note { padding: 8px 16px; margin: 0; }
-
-/* Keep both discovery sections compact even when their record counts differ. */
+/* Topic rows use the available width, including when a board contains one result. */
 .hot-strip { display: grid; grid-template-columns: 160px minmax(0, 1fr); }
 .hot-strip > header { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; }
 #home-hot-industry, #home-hot-academic { min-width: 0; }
-#home-hot-academic { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-#home-hot-academic > .hot-discovery-note, #home-hot-academic > .hot-empty,
-#home-hot-academic > .hot-placeholder, #home-hot-academic > .hot-stale { grid-column: 1 / -1; }
-#home-hot-academic > article { border-left: 1px solid var(--border-color); }
-@media (max-width: 1100px) {
-    .hot-strip { grid-template-columns: 140px minmax(0, 1fr); }
-    #home-hot-academic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-width: 640px) {
     .hot-strip { display: block; }
     .hot-strip > header { flex-direction: row; align-items: center; justify-content: space-between; }
-    #home-hot-academic { grid-template-columns: minmax(0, 1fr); }
-    #home-hot-academic > article { border-left: 0; }
 }
 
 /* All readers occupy their actual grid track; only previews clamp their text. */
@@ -656,3 +643,11 @@ button:active:not(:disabled), a.btn-paper:active, .page-link:active, .nav-item:a
 .hot-timeline li > div, .narrative-section, .chart-container, .chart-frame { min-width: 0; }
 .narrative-prose > *, .report-narrative-body > * { max-width: 100%; }
 .hot-home-grid .hot-summary { margin-top: 8px; }
+
+.topic-analysis-section { padding: 20px 24px; margin-bottom: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); }
+.topic-analysis-section h2 { font-size: 17px; margin-bottom: 12px; }
+.topic-analysis-section h2 small { font-size: 11px; font-weight: 400; color: var(--text-secondary); }
+.topic-analysis-section p { margin: 0 0 12px; white-space: pre-line; line-height: 1.85; overflow-wrap: anywhere; }
+.hot-evidence details > summary { margin-bottom: 16px; }
+.hot-timeline li:focus { outline: 2px solid var(--primary-color); outline-offset: 4px; }
+@media (max-width: 640px) { .topic-analysis-section { padding: 16px; } }

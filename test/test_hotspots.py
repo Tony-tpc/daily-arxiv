@@ -10,7 +10,8 @@ from unittest.mock import Mock, patch
 import httpx
 
 from src.hotspots.domain import content_key, recent, timestamp
-from src.hotspots.editorial import EditorialEngine
+from src.hotspots.editorial import EditorialEngine, CachedClient
+from src.hotspots.topics import TopicEngine, SECTION_KEYS, RULE_VERSION, member_key, unique_members, profiles
 from src.hotspots.publication import publication, selected_documents
 from src.hotspots.ranking import recompute
 from src.hotspots.store import HotspotStore
@@ -24,9 +25,10 @@ NOW = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
 
 def document(id='a', source='one.example', hours=1, kind='news'):
     return {'id': id, 'source_type': kind, 'title': '虚拟电厂参与电力市场新机制',
-            'raw_text': '针对虚拟电厂参与现货电力市场的协调控制机制，发布具体试点规则。' * 10,
+            'raw_text': (('针对虚拟电厂参与现货电力市场的协调控制机制，发布具体试点规则。' if id.endswith('a') or id == 'a' else '研究多智能体对微电网的自治控制与现货价格变化，分析储能电站的收益机制。') + id) * 10,
             'source_name': source, 'url': f'https://{source}/{id}', 'region': 'CN',
             'published_at': (NOW - timedelta(hours=hours)).isoformat(), 'collected_at': NOW.isoformat(),
+            'provenance': {'metadata': {'origin_owner_id': source}},
             'authors_or_orgs': ['Researcher'], 'doi': f'10.1234/{id}' if kind == 'paper' else None}
 
 
@@ -69,13 +71,19 @@ class HotspotTests(unittest.TestCase):
     def seed(self, docs, group='industry-test'):
         store = HotspotStore(self.config)
         kind = 'academic' if docs[0]['source_type'] == 'paper' else 'industry'
-        store.execute('INSERT OR IGNORE INTO groups VALUES (?,?,?)', (group, kind, '虚拟电厂市场协调控制'))
+        store.execute('INSERT OR IGNORE INTO analysis_topics (id,kind,definition) VALUES (?,?,?)',
+                      (group, kind, json.dumps({'title': '虚拟电厂市场协调控制'})))
         for doc in docs:
             attach_observations(doc, self.config)
-            store.save_document(doc, content_key(doc), {'status': 'complete', 'selected': True, 'score': 80}, NOW.isoformat(), group)
-            for obs in doc['provenance']['metadata']['observations']:
-                clock = {'since': (NOW - timedelta(days=5)).isoformat(), 'last_success_at': NOW.isoformat(), 'interval_hours': 8}
-                store.execute('INSERT OR REPLACE INTO sources VALUES (?,?)', (obs['source_id'], json.dumps(clock)))
+            store.save_document(doc, content_key(doc), {'status': 'complete', 'selected': True, 'score': 80}, NOW.isoformat())
+            store.execute('INSERT OR REPLACE INTO analysis_profiles VALUES (?,?,?,?,?,?,?,?)',
+                          (doc['id'], content_key(doc), 'test', json.dumps(doc), '{}', 'complete', group, ''))
+        rows = unique_members([r for r in profiles(store) if r['topic_id'] == group])
+        analysis = {'summary': '跨资料综合结论', 'evidence_ids': [r['id'] for r in rows],
+                    'sections': [{'key': k, 'title': k, 'text': '有证据的综合分析', 'kind': 'fact',
+                                  'evidence_ids': [r['id'] for r in rows]} for k in SECTION_KEYS[kind]]}
+        store.execute('UPDATE analysis_topics SET input_hash=?,analysis=? WHERE id=?',
+                      (member_key(rows, RULE_VERSION), json.dumps(analysis), group))
         return store
 
     def test_two_scores_are_independent_and_restart_reuses_results(self):
@@ -131,8 +139,28 @@ class HotspotTests(unittest.TestCase):
 
     def test_old_and_future_documents_do_not_call_model(self):
         engine = EditorialEngine(self.config, client=self.client, now=NOW)
-        engine.process([document(hours=49), document('future', hours=-1)])
+        engine.process([document(hours=169), document('future', hours=-1)])
         self.assertFalse(self.client.requests)
+
+    def test_window_boundaries_use_original_publication_time(self):
+        for kind, days in [('news', 7), ('paper', 180)]:
+            with self.subTest(kind=kind):
+                self.assertTrue(recent(document(kind=kind, hours=days * 24 - 1), NOW))
+                self.assertFalse(recent(document(kind=kind, hours=days * 24), NOW))
+                self.assertFalse(recent(document(kind=kind, hours=-1), NOW))
+
+    def test_expanded_windows_are_shared_by_selection_grouping_and_publication(self):
+        for kind, days, board in [('news', 6, 'industry'), ('paper', 179, 'academic')]:
+            with self.subTest(kind=kind):
+                docs = [document(kind + 'a', hours=days * 24, kind=kind),
+                        document(kind + 'b', 'two.example', hours=days * 24, kind=kind)]
+                engine = EditorialEngine(self.config, client=self.client, now=NOW)
+                engine.process(docs)
+                recompute(self.config, store=self.seed(docs, board + "-test"), now=NOW)
+                self.assertEqual(len(selected_documents(self.config, docs, now=NOW)), 2)
+                entries = publication(self.config, docs, now=NOW)['boards'][board]
+                self.assertEqual(len(entries), 1)
+                self.assertEqual(entries[0]['report_count'], 2)
 
     def test_hard_exclusions_precede_selection(self):
         doc = document()
@@ -179,7 +207,7 @@ class HotspotTests(unittest.TestCase):
         self.assertEqual(len(merged), 1)
         self.assertEqual(len(merged[0]['provenance']['metadata']['observations']), 2)
         result = recompute(self.config, store=self.seed(merged), now=NOW)
-        self.assertEqual(result['boards']['industry'][0]['source_count'], 2)
+        self.assertEqual(result['boards']['industry'], [])  # One deduplicated report is insufficient.
 
     def test_source_failure_does_not_fabricate_decline(self):
         store = self.seed([document('a'), document('b', 'two.example')])
@@ -207,13 +235,6 @@ class HotspotTests(unittest.TestCase):
         self.assertEqual(entry['institution_count'], 0)
         self.assertLessEqual(entry['score'], 2)
 
-    def test_unrelated_events_with_same_keywords_remain_separate(self):
-        self.client.relation = 'UNRELATED'
-        docs = [document('a'), document('b', 'two.example')]
-        engine = EditorialEngine(self.config, client=self.client, now=NOW)
-        engine.process(docs)
-        self.assertEqual(len({row['group_id'] for row in engine.store.documents()}), 2)
-
     def test_different_policy_numbers_and_dois_survive_title_deduplication(self):
         docs = [document('a', kind='policy'), document('b', kind='policy')]
         docs[0]['policy_number'], docs[1]['policy_number'] = '能源发〔2026〕1号', '能源发〔2026〕2号'
@@ -222,18 +243,6 @@ class HotspotTests(unittest.TestCase):
         for item in papers:
             item['authors_or_orgs'] = ['同一作者']
         self.assertEqual(len(Deduplicator().process(papers)['documents']), 2)
-
-    def test_same_event_uses_independent_relation_review(self):
-        self.client.relation = 'SAME_OCCURRENCE'
-        engine = EditorialEngine(self.config, client=self.client, now=NOW)
-        docs = [document('a'), document('b', 'two.example')]
-        docs[1]['title'] += '最新进展'
-        with patch('src.hotspots.editorial.lexical_similarity', return_value=0.5):
-            engine.process(docs)
-        self.assertEqual(len({row['group_id'] for row in engine.store.documents()}), 1)
-        relations = [request for request in self.client.requests if 'SAME_OCCURRENCE' in request[1]]
-        self.assertEqual(len(relations), 2)
-        self.assertEqual(relations[0], relations[1])
 
     def test_changed_admission_suppresses_cached_entry_and_links_are_audited(self):
         docs = [document('a'), document('b', 'two.example')]
@@ -259,12 +268,32 @@ class HotspotTests(unittest.TestCase):
         with patch.dict(web.config, self.config), patch.object(web, '_load_intelligence_documents', return_value=[]):
             client = web.app.test_client()
             self.assertEqual(client.get('/api/hotspots').get_json()['entries'], [])
+            self.assertEqual(client.get('/api/hotspots').get_json()['window_hours'], 168)
+            self.assertEqual(client.get('/api/hotspots?board=academic').get_json()['window_hours'], 4320)
             self.assertEqual(client.get('/api/hotspots?board=invalid').status_code, 400)
             self.assertEqual(client.get('/api/hotspots/missing').status_code, 404)
             self.assertFalse(Path(self.config['hotspots']['state_path']).exists())
 
 
 class ListingTests(unittest.TestCase):
+    def test_incremental_window_skips_old_detail_failures_without_changing_dates(self):
+        with tempfile.TemporaryDirectory() as root:
+            feed = {'name': '能源', 'url': 'https://energy.example/list', 'format': 'html',
+                    'date_selector': 'span', 'max_age_days': 7, 'fetch_detail': True}
+            adapter = RSSSourceAdapter({'sources': {'rss': {'feeds': [feed], 'state_path': root + '/state.json', 'snapshot_dir': root + '/raw'}}})
+            def response(url, **kwargs):
+                text = ('<li><a href="/old">旧能源政策</a><span>2026-09-01</span></li>'
+                        '<li><a href="/new">新能源政策</a><span>2026-10-01</span></li>') if url.endswith('/list') else '<article>电力系统管理规则原文</article>'
+                return httpx.Response(200, text=text, request=httpx.Request('GET', url))
+            adapter.client = Mock(get=Mock(side_effect=response))
+            with patch('src.sources.rss_adapter.datetime', wraps=datetime) as clock:
+                clock.now.return_value = NOW
+                records = adapter.fetch()
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]['published_at'], '2026-10-01')
+            self.assertFalse(any(c.args[0].endswith('/old') for c in adapter.client.get.call_args_list))
+            self.assertEqual(adapter.state['feeds'][feed['url']]['last_error'], '')
+
     def test_failed_detail_is_retried_and_another_source_still_succeeds(self):
         with tempfile.TemporaryDirectory() as root:
             feed = {'name': '能源', 'url': 'https://energy.example/list', 'format': 'html', 'fetch_detail': True}

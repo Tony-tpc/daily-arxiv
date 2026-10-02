@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import html
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import urlsplit, urlunsplit
@@ -154,6 +154,12 @@ class RSSSourceAdapter(BaseSourceAdapter):
                     continue
                 if not self._matches_content_filters(record, feed_config):
                     continue
+                if feed_config.get('max_age_days'):
+                    from src.hotspots.domain import timestamp
+                    published = timestamp(record.get('published_at'))
+                    cutoff = datetime.now(timezone.utc) - timedelta(days=int(feed_config['max_age_days']))
+                    if published is not None and published <= cutoff:
+                        continue
                 dedup_key = record["dedup_key"]
                 if dedup_key in self.state["seen"]:
                     continue

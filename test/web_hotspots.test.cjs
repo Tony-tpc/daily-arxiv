@@ -56,6 +56,19 @@ test('empty rankings and unverified evidence do not invent links or charts', () 
     assert.doesNotMatch(html,/href="https:\/\/example.com"/);
 });
 
+test('analysis precedes folded evidence with member citations and small nonzero activity', () => {
+    const {api}=workspace();
+    const html=api.renderDetail({...entry('研究主题'),kind:'academic',score:.006,
+        analysis:{evidence_ids:['a'],sections:[{title:'方法比较',text:'<unsafe>比较',kind:'inference',evidence_ids:['a','outside']}]},
+        evidence:[{id:'a',title:'证据 A',doi:'10.1234/a',original_text:'Original abstract',link_status:'unverified'}]});
+    assert.match(html,/0\.0060/);
+    assert.match(html,/&lt;unsafe&gt;比较/);
+    assert.match(html,/data-hot-evidence="a"/);
+    assert.doesNotMatch(html,/data-hot-evidence="outside"/);
+    assert.ok(html.indexOf('方法比较')<html.indexOf('证据与进展'));
+    assert.match(html,/<details><summary>原始摘要 \/ 正文/);
+});
+
 test('history uses actual zero and breaks paths at missing collection intervals', () => {
     const {api}=workspace();
     const html=api.sparkline([0,null,1,2].map((score,i)=>({at:`2026-10-02T0${i}:00:00Z`,score})));
@@ -71,4 +84,20 @@ test('selected feed pagination exposes current page and boundaries', () => {
     assert.match(get('home-feed-pagination').innerHTML,/data-feed-page="3" disabled/);
     api.renderFeedPagination({total:0});
     assert.equal(get('home-feed-pagination').innerHTML,'');
+});
+
+
+test('empty boards show processing progress and never fall back to single documents', async () => {
+    const {api,get,requests}=workspace();
+    const pending=api.loadBoard('academic');
+    requests[0].resolve({ok:true,json:async()=>({entries:[],discovery:[{
+        id:'single', title:'<script>paper</script>',summary:'Real abstract',selected:true,
+        source_name:'Journal',published_at:'2026-09-01',url:'https://unverified.example',link_status:'unverified'
+    }],processing:{eligible_documents:31,ready_documents:19,pending_documents:2,awaiting_content:12}})});
+    await pending;
+    const home=get('home-hot-academic').innerHTML, full=get('hot-academic-list').innerHTML;
+    assert.match(home,/31/);
+    assert.match(home,/19/);
+    assert.doesNotMatch(full,/Real abstract|paper|学术精选/);
+    assert.doesNotMatch(full,/hot-rank|hot-value|href="https:\/\/unverified.example"|<script>/);
 });

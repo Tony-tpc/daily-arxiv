@@ -1032,22 +1032,26 @@ def get_wordcloud():
 @app.get('/api/hotspots')
 def get_hotspots():
     """Read a precomputed board; no collection, model calls or database writes."""
+    from src.hotspots.domain import ACADEMIC_WINDOW_DAYS, INDUSTRY_WINDOW_DAYS
     from src.hotspots.publication import publication
     board = request.args.get('board', 'industry')
     if board not in {'industry', 'academic'}:
         return jsonify({'error': 'board 必须是 industry 或 academic'}), 400
-    payload = publication(config, _load_intelligence_documents())
+    documents = _load_intelligence_documents()
+    payload = publication(config, documents)
     return jsonify({
         'board': board, 'entries': payload['boards'][board], 'computed_at': payload['computed_at'],
+        'processing': payload.get('processing', {}).get(board, {}),
+        'analysis_type': 'research_problem' if board == 'academic' else 'industry_issue',
         'stale': payload['stale'], 'reason': payload.get('reason', ''),
         'coverage': {
             'complete': bool(payload['boards'][board]) and all(entry.get('coverage', {}).get('complete', False) for entry in payload['boards'][board]),
             'reason': ('仅统计通过准入的本地资料；缺乏可比覆盖时不计算涨跌'
                        if payload['computed_at'] else '尚未生成可核实的榜单快照'),
         },
-        'window_hours': 48 if board == 'industry' else 720,
-        'metric': '独立来源事件热度 · 24小时半衰期' if board == 'industry' else '去重论文活跃度 · 15天半衰期 · 机构多样性辅助排序',
-        'empty_reason': '窗口内尚无至少两个独立来源的事件' if board == 'industry' else '窗口内尚无至少两篇论文支持的具体研究主题',
+        'window_hours': 24 * (INDUSTRY_WINDOW_DAYS if board == 'industry' else ACADEMIC_WINDOW_DAYS),
+        'metric': '独立来源议题热度 · 24小时半衰期' if board == 'industry' else '去重论文活跃度 · 15天半衰期 · 机构多样性辅助排序',
+        'empty_reason': '窗口内尚无完成综合分析、且具有两个独立来源的行业议题' if board == 'industry' else '窗口内尚无完成综合分析、且具有两篇论文支持的研究主题',
     })
 
 

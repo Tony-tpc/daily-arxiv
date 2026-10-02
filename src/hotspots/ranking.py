@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from src.sources.observations import observations, source_identity
 from src.utils import load_json
 
-from .domain import allowed, fingerprint, recent, timestamp
+from .domain import INDUSTRY_WINDOW_DAYS, allowed, fingerprint, lexical_similarity, recent, timestamp
 from .store import HotspotStore
 
 
@@ -32,11 +32,24 @@ def record_source_health(store: HotspotStore, config: dict, now: datetime) -> No
 
 def _participants(rows: list[dict], at: datetime) -> dict:
     participants = {}
+    seen_text = set()
     for row in rows:
-        for observation in observations(row['document']):
+        doc = row['document']
+        if doc.get('source_type') == 'paper':
+            continue
+        text = ''.join(str(doc.get('raw_text') or '').split())
+        if text and any(text == old or lexical_similarity(text, old) >= .95 for old in seen_text):
+            continue
+        seen_text.add(text)
+        # A merged title observation without its own body cannot establish an
+        # independent report. Keep all observations for audit, count the actual body.
+        own = [o for o in observations(doc) if o.get('url') == doc.get('url')]
+        for observation in (own or observations(doc)[:1]):
             published = timestamp(observation.get('published_at'))
-            owner = observation.get('owner_id')
-            if not owner or not published or not at - timedelta(hours=48) < published <= at:
+            owner = observation.get('origin_owner_id') or observation.get('owner_id')
+            verified = (observation.get('origin_owner_id') or observation.get('owner_verified') or
+                        owner in {'people.com.cn', 'chinanews.com.cn', 'nea.gov.cn', 'ndrc.gov.cn', 'eeo.com.cn'})
+            if not verified or not owner or not published or not at - timedelta(days=INDUSTRY_WINDOW_DAYS) < published <= at:
                 continue
             current = participants.setdefault(owner, {'at': published, 'sources': set(), 'observations': []})
             current['at'] = max(current['at'], published)
@@ -59,106 +72,92 @@ def audit_key(document: dict) -> str:
 
 
 def recompute(config: dict, *, now: datetime | None = None, store: HotspotStore | None = None) -> dict:
-    """Publish all detail and board data together; an empty board is a valid result."""
+    """Atomically publish only completed, cross-evidence topic analyses."""
+    from .topics import RULE_VERSION, member_key, profiles, topics, unique_members
     now = now or datetime.now(timezone.utc)
     store = store or HotspotStore(config)
-    sources = {row['id']: json.loads(row['payload']) for row in store.rows('SELECT * FROM sources')}
-    audits = {row['key']: json.loads(row['payload']) for row in store.rows('SELECT * FROM audits')}
-    groups = {row['id']: row for row in store.rows('SELECT * FROM groups')}
-    digests = {row['id']: row for row in store.rows('SELECT * FROM digests')}
+    records = profiles(store)
     grouped = {}
-    for row in store.documents():
-        if row['group_id'] and row['editorial'].get('status') == 'complete' and row['editorial'].get('selected') and allowed(row['document'], config):
-            grouped.setdefault(row['group_id'], []).append(row)
-    entries = {'industry': [], 'academic': []}
-    details = {}
-    for group_id, rows in grouped.items():
-        group = groups.get(group_id)
-        if not group:
+    progress = {kind: {'eligible_documents': 0, 'ready_documents': 0, 'pending_documents': 0,
+                       'awaiting_content': 0, 'blocked_documents': 0, 'source_count': 0,
+                       'candidate_topics': 0, 'analyzing_topics': 0, 'failed_topics': 0,
+                       'largest_topic_documents': 0, 'largest_topic_sources': 0,
+                       'failed_sources': []} for kind in ('industry', 'academic')}
+    owners = set()
+    for row in records:
+        doc = row['document']
+        if not allowed(doc, config) or not recent(doc, now):
             continue
-        kind = group['kind']
-        active = [row for row in rows if recent(row['document'], now)]
-        if not active:
+        kind = 'academic' if doc['source_type'] == 'paper' else 'industry'
+        progress[kind]['eligible_documents'] += 1
+        bucket = {'complete': 'ready_documents', 'pending': 'pending_documents',
+                  'awaiting_content': 'awaiting_content', 'blocked': 'blocked_documents'}.get(row['status'], 'pending_documents')
+        progress[kind][bucket] += 1
+        if row['status'] == 'complete' and row['topic_id']:
+            grouped.setdefault(row['topic_id'], []).append(row)
+            if kind == 'industry':
+                owners.update(_participants([row], now))
+    progress['industry']['source_count'] = len(owners)
+    source_rows = [json.loads(r['payload']) for r in store.rows('SELECT payload FROM sources')]
+    progress['industry']['failed_sources'] = [{'name': r.get('name', ''), 'error': r['error']}
+                                            for r in source_rows if r.get('error')]
+    audits = {r['key']: json.loads(r['payload']) for r in store.rows('SELECT * FROM audits')}
+    selected = {r['id']: r['editorial'] for r in store.documents()}
+    previous = store.latest().get('details', {})
+    boards, details = {'industry': [], 'academic': []}, {}
+    for topic in topics(store):
+        kind, rows = topic['kind'], grouped.get(topic['id'], [])
+        rows = unique_members(rows)
+        if not rows:
             continue
-        # A database provider is never an independent academic contribution.
-        if kind == 'academic':
-            unique = {}
-            for row in active:
-                doc = row['document']
-                identity = str(doc.get('doi') or doc.get('arxiv_id') or doc['id']).lower().removeprefix('https://doi.org/')
-                unique.setdefault(identity, row)
-            active = list(unique.values())
-            score = sum(0.5 ** ((now - timestamp(row['document']['published_at'])).total_seconds() / (15 * 86400)) for row in active)
-            institutions = sorted({str(value) for row in active for value in row['document'].get('openalex_institutions', []) if value})
-            count = len(active)
-            source_count = 0
-            coverage = {'complete': False, 'reason': '学术库按周采集；活跃度不表示全领域统计或实时增长'}
-            trend, change = 'unknown', None
-        else:
-            current = _participants(rows, now)
-            previous = _participants(rows, now - timedelta(hours=6))
-            score, count, source_count = _heat(current, now), len(current), len(current)
-            institutions = []
-            cohort = {}
-            for owner in current.keys() | previous.keys():
-                ids = current.get(owner, {}).get('sources', set()) | previous.get(owner, {}).get('sources', set())
-                if ids and all(_clock_ok(sources.get(sid, {}), now)
-                               and (timestamp(sources.get(sid, {}).get('since')) or now) <= now - timedelta(hours=54) for sid in ids):
-                    cohort[owner] = True
-            complete = bool(current) and all(_clock_ok(sources.get(sid, {}), now) for item in current.values() for sid in item['sources'])
-            coverage = {'complete': complete, 'reason': '' if complete else '部分来源采集不完整，暂无可比趋势'}
-            prev = _heat({key: value for key, value in previous.items() if key in cohort}, now - timedelta(hours=6))
-            cur = _heat({key: value for key, value in current.items() if key in cohort}, now)
-            change = round((cur - prev) / prev * 100, 1) if prev > 0 and complete else None
-            trend = 'unknown' if change is None else 'up' if change > 10 else 'down' if change < -10 else 'flat'
-        representative = sorted(active, key=lambda row: (not any(o.get('first_party') for o in observations(row['document'])),
-                                 -float(row['editorial'].get('score', 0)), row['id']))[0]
-        doc = representative['document']
-        digest_row = digests.get(group_id, {})
-        digest_inputs = [{key: row['document'].get(key) for key in ('id', 'title', 'summary', 'published_at')} for row in sorted(active, key=lambda row: row['id'])]
-        digest = json.loads(digest_row['payload']) if digest_row.get('input_hash') == fingerprint(digest_inputs) else {}
+        progress[kind]['candidate_topics'] += 1
+        participants = _participants(rows, now) if kind == 'industry' else {}
+        progress[kind]['largest_topic_documents'] = max(progress[kind]['largest_topic_documents'], len(rows))
+        progress[kind]['largest_topic_sources'] = max(progress[kind]['largest_topic_sources'], len(participants))
+        if len(rows) < 2 or (kind == 'industry' and len(participants) < 2):
+            continue
+        if topic['input_hash'] != member_key(rows, RULE_VERSION) or not topic['analysis']:
+            progress[kind]['failed_topics' if topic['error'] else 'analyzing_topics'] += 1
+            old = previous.get(topic['id'], {})
+            if (not old.get('analysis') or old.get('document_hashes') != {r['id']: r['content_hash'] for r in rows}):
+                continue
+        analysis = topic['analysis']
+        institutions = sorted({str(i) for r in rows for i in r['document'].get('openalex_institutions', []) if i}) if kind == 'academic' else []
+        score = (_heat(participants, now) if kind == 'industry' else
+                 sum(0.5 ** ((now - timestamp(r['document']['published_at'])).total_seconds() / (15 * 86400)) for r in rows))
         evidence = []
-        for row in sorted(active, key=lambda row: row['document'].get('published_at', ''), reverse=True):
-            item = row['document']
-            audit = audits.get(audit_key(item), {})
-            evidence.append({key: item.get(key) for key in ('id', 'title', 'display_title', 'source_type', 'source_name', 'published_at', 'summary')}
-                            | {'url': audit.get('final_url') or item.get('url', '') if audit.get('status') == 'verified' else '',
-                               'link_status': audit.get('status', 'unverified'),
-                               'observations': [{'source_name': o.get('source_name'), 'published_at': o.get('published_at'), 'owner_id': o.get('owner_id')} for o in observations(item)]})
-        exact_times = [timestamp(o.get('published_at')) for row in active for o in observations(row['document']) if o.get('time_precision') == 'time']
-        first_times = [timestamp(row['document'].get('published_at')) for row in rows]
-        first = min((value for value in first_times if value), default=now)
-        entry = {
-            'id': group_id, 'kind': kind, 'title': group['title'], 'score': round(score, 6),
-            'paper_count': len(active) if kind == 'academic' else 0, 'source_count': source_count,
-            'institution_count': len(institutions), 'institutions': institutions, 'report_count': len(active),
-            'summary': digest.get('summary') or doc.get('summary', ''), 'summary_kind': 'digest' if digest else 'representative',
-            'trend': trend, 'trend_pct': change,
-            'is_new': kind == 'industry' and first in exact_times and timedelta(0) <= now - first < timedelta(hours=6),
-            'coverage': coverage, 'latest_at': max(row['document'].get('published_at', '') for row in active),
-            'document_ids': [row['id'] for row in active],
-            'document_hashes': {row['id']: row['content_hash'] for row in active},
-            'selection_score': sum(float(row['editorial'].get('score', 0)) for row in active) / len(active),
-        }
-        details[group_id] = {**entry, 'evidence': evidence, 'timeline': evidence, 'series': [],
-                             'background_documents': list({ref['id']: ref for row in active for ref in row['document'].get('related_documents', []) if ref.get('id') and (ref.get('source_type') == 'paper') != (kind == 'academic')}.values())}
-        if count >= 2:
-            entries[kind].append(entry)
-    for board in entries:
-        entries[board].sort(key=lambda entry: (-entry['score'], -entry['institution_count'], -entry['selection_score'], entry['id']))
-        entries[board] = [{**entry, 'rank': rank} for rank, entry in enumerate(entries[board][:10], 1)]
-    previous = store.rows('SELECT hour,payload FROM snapshots WHERE hour>=? ORDER BY hour', ((now - timedelta(days=30)).isoformat(),))
-    for row in previous:
-        if timestamp(row['hour']) >= now.replace(minute=0, second=0, microsecond=0):
-            continue
-        for group_id, detail in json.loads(row['payload']).get('details', {}).items():
-            if group_id in details:
-                details[group_id]['series'].append({'at': row['hour'], 'score': detail['score'] if detail['coverage']['complete'] else None})
-    for detail in details.values():
-        detail['series'].append({'at': now.isoformat(), 'score': detail['score'] if detail['coverage']['complete'] else None})
-        detail['series'] = detail['series'][-168:]
-    payload = {'computed_at': now.isoformat(), 'rule_version': 'energy-hotspots-v1', 'boards': entries, 'details': details}
+        for row in sorted(rows, key=lambda r: r['document'].get('published_at', ''), reverse=True):
+            doc = row['document']; audit = audits.get(audit_key(doc), {})
+            evidence.append({k: doc.get(k) for k in ('id', 'title', 'display_title', 'source_type', 'source_name', 'published_at', 'summary')}
+                            | {'url': (audit.get('final_url') or doc.get('url', '')) if audit.get('status') == 'verified' else '',
+                               'link_status': audit.get('status', 'unverified'), 'event': row['profile'].get('event', {}),
+                               'doi': doc.get('doi', ''), 'original_text': doc.get('abstract') or doc.get('raw_text') or '',
+                               'observations': observations(doc)})
+        entry = {'id': topic['id'], 'kind': kind, 'analysis_type': 'research_problem' if kind == 'academic' else 'industry_issue',
+                 'analysis_status': 'complete',
+                 'title': analysis.get('title') or topic['definition']['title'], 'summary': analysis['summary'], 'summary_kind': 'analysis',
+                 'analysis': analysis, 'score': round(score, 6), 'paper_count': len(rows) if kind == 'academic' else 0,
+                 'source_count': len(participants), 'report_count': len(rows), 'institution_count': len(institutions),
+                 'institutions': institutions, 'document_ids': [r['id'] for r in rows],
+                 'document_hashes': {r['id']: r['content_hash'] for r in rows}, 'is_new': False,
+                 'selection_score': sum(float(selected.get(r['id'], {}).get('score', 0)) for r in rows) / len(rows),
+                 'latest_at': max(r['document']['published_at'] for r in rows), 'trend': 'unknown', 'trend_pct': None,
+                 'coverage': {'complete': False, 'reason': '仅覆盖本地准入资料；缺乏完整可比采集历史，不宣称全领域热度或增长'}}
+        months = {}
+        for row in rows:
+            month = row['document']['published_at'][:7]
+            months[month] = months.get(month, 0) + 1
+        details[topic['id']] = {**entry, 'evidence': evidence, 'timeline': evidence, 'series': [],
+                                'publication_distribution': [{'month': m, 'count': n} for m, n in sorted(months.items())],
+                                'background_documents': []}
+        boards[kind].append(entry)
+    for kind in boards:
+        boards[kind].sort(key=lambda e: (-e['score'], -e['institution_count'], -e['selection_score'], e['id']))
+        boards[kind] = [{**e, 'rank': i} for i, e in enumerate(boards[kind][:10], 1)]
+    payload = {'computed_at': now.isoformat(), 'rule_version': RULE_VERSION, 'boards': boards,
+               'details': details, 'processing': progress}
     with store.connect() as db:
-        db.execute('INSERT OR REPLACE INTO snapshots VALUES (?,?)', (now.replace(minute=0, second=0, microsecond=0).isoformat(), json.dumps(payload, ensure_ascii=False)))
+        db.execute('INSERT OR REPLACE INTO snapshots VALUES (?,?)',
+                   (now.replace(minute=0, second=0, microsecond=0).isoformat(), json.dumps(payload, ensure_ascii=False)))
         db.execute('DELETE FROM snapshots WHERE hour<?', ((now - timedelta(days=30)).isoformat(),))
     return payload

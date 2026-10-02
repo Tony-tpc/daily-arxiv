@@ -25,6 +25,14 @@ class HotspotStore:
                     CREATE TABLE IF NOT EXISTS snapshots (
                         hour TEXT PRIMARY KEY, payload TEXT NOT NULL);
                     CREATE TABLE IF NOT EXISTS audits (key TEXT PRIMARY KEY, payload TEXT NOT NULL);
+                    CREATE TABLE IF NOT EXISTS analysis_profiles (
+                        id TEXT PRIMARY KEY, content_hash TEXT NOT NULL, version TEXT NOT NULL,
+                        document TEXT NOT NULL, profile TEXT NOT NULL, status TEXT NOT NULL,
+                        topic_id TEXT, error TEXT NOT NULL DEFAULT '');
+                    CREATE TABLE IF NOT EXISTS analysis_topics (
+                        id TEXT PRIMARY KEY, kind TEXT NOT NULL, definition TEXT NOT NULL,
+                        input_hash TEXT NOT NULL DEFAULT '', analysis TEXT NOT NULL DEFAULT '{}',
+                        error TEXT NOT NULL DEFAULT '');
                     CREATE TABLE IF NOT EXISTS digests (id TEXT PRIMARY KEY, input_hash TEXT NOT NULL, payload TEXT NOT NULL);
                 ''')
 

@@ -15,7 +15,8 @@ def run(context):
     now = datetime.now(timezone.utc)
     if context.config.get('verification', {}).get('evidence_links', {}).get('enabled', True):
         cached = {row['key'] for row in store.rows('SELECT key FROM audits')}
-        documents = [row['document'] for row in store.documents() if row['editorial'].get('status') == 'complete']
+        from src.hotspots.topics import profiles
+        documents = [row['document'] for row in profiles(store) if row['status'] == 'complete']
         index = {audit_key(doc): {**doc, 'document_id': doc['id']} for doc in documents
                  if allowed(doc, context.config) and recent(doc, now) and audit_key(doc) not in cached}
         if index:

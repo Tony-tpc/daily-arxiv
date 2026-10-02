@@ -5,8 +5,8 @@
     const text = (zh, en) => LANG === 'zh' ? zh : en;
     const esc = value => escapeHtml(String(value ?? ''));
     const node = id => document.getElementById(id);
-    const number = value => Number.isFinite(Number(value)) ? Number(value).toFixed(1) : '—';
-    const title = board => board === 'industry' ? text('行业事件', 'Industry events') : text('学术研究', 'Research topics');
+    const number = value => !Number.isFinite(Number(value)) ? '—' : Number(value) > 0 && Number(value) < 1 ? Number(value).toPrecision(2) : Number(value).toFixed(1);
+    const title = board => board === 'industry' ? text('行业议题', 'Industry issues') : text('学术研究', 'Research topics');
     const dateTime = value => value ? esc(String(value).replace('T', ' ').replace(/\.\d+/, '').slice(0, 16)) + ' UTC' : '—';
 
     function trend(entry) {
@@ -27,7 +27,7 @@
         return `<article class="${compact ? 'hot-mini-row' : 'hot-event-card'} ${!compact && rank === 1 ? 'hot-lead' : ''}">
             <span class="hot-rank rank-${Math.min(rank, 4)}" aria-label="${text('排名', 'Rank')} ${rank}">${String(rank).padStart(2, '0')}</span>
             <div class="hot-event-copy"><h${compact ? '3' : '2'}><a href="#hotspot/${encodeURIComponent(entry.id)}">${esc(entry.title)}</a></h${compact ? '3' : '2'}>
-            ${!compact ? `<p class="hot-summary">${esc(entry.summary)}</p>` : ''}
+            <p class="hot-summary ${compact ? 'clamp-two' : ''}">${esc(entry.summary)}</p>
             <div class="hot-meta"><span>${esc(support(entry))}</span>${trend(entry)}</div></div>
             <div class="hot-value"><strong>${number(entry.score)}</strong><small>${entry.kind === 'academic' ? text('活跃度', 'Activity') : text('热度', 'Heat')}</small></div>
         </article>`;
@@ -35,7 +35,11 @@
 
     function empty(payload, board) {
         const message = payload.reason || payload.empty_reason || text('暂时没有足够证据形成热点。', 'Not enough evidence for a ranking yet.');
-        return `<div class="hot-empty"><span class="empty-orbit" aria-hidden="true">○</span><p>${esc(message)}</p><small>${board === 'industry' ? text('持续关注国内能源事件；重复转载不会增加独立来源。', 'Following domestic energy events; repeat reports do not add publishers.') : text('等待更多通过准入审核的近期论文。', 'Waiting for more recent admitted papers.')}</small></div>`;
+        const status = payload.processing || {};
+        const counts = text(`有效画像 ${Number(status.ready_documents || 0)} / 候选资料 ${Number(status.eligible_documents || 0)} · 待处理 ${Number(status.pending_documents || 0)} · 待补全文 ${Number(status.awaiting_content || 0)}`, `Ready ${Number(status.ready_documents || 0)} / Candidates ${Number(status.eligible_documents || 0)} · Pending ${Number(status.pending_documents || 0)} · Missing text ${Number(status.awaiting_content || 0)}`);
+        const sources = board === 'industry' ? text(`独立来源机构共 ${Number(status.source_count || 0)} 个 · 单个议题最多 ${Number(status.largest_topic_documents || 0)} 份资料 / ${Number(status.largest_topic_sources || 0)} 个机构；发布需同一议题至少两份资料、两个机构。`, `Publishers ${Number(status.source_count || 0)} · Largest issue ${Number(status.largest_topic_documents || 0)} records / ${Number(status.largest_topic_sources || 0)} publishers; two of each required.`) : text('至少两篇不同论文支持同一研究问题，并通过综合分析核验后发布。', 'Two distinct papers and a verified synthesis are required per research problem.');
+        const failed = (status.failed_sources || []).map(item => esc(item.name)).join('、');
+        return `<div class="hot-empty"><p>${esc(message)}</p><small>${esc(counts)}</small><small>${esc(sources)}</small>${status.failed_topics ? `<small>${text('分析复核失败', 'Analysis review failed')} ${Number(status.failed_topics)}</small>` : ''}${failed ? `<small>${text('采集异常：', 'Source failures: ')}${failed}</small>` : ''}</div>`;
     }
 
     function renderBoard(board, payload) {
@@ -90,12 +94,18 @@
     function renderDetail(detail) {
         const board = detail.kind === 'academic' ? 'academic' : 'industry';
         const evidence = detail.evidence || [];
-        const timeline = evidence.map(item => `<li><time>${esc(String(item.published_at || '').slice(0, 16).replace('T', ' '))}</time><div><span class="timeline-source">${esc(item.source_name)}</span><h3>${item.url && item.link_status === 'verified' ? sourceLink(item.url, item.display_title || item.title, '') : esc(item.display_title || item.title)}</h3><p>${esc(item.summary)}</p>${item.link_status !== 'verified' ? `<small>${text('原文链接尚未通过核验', 'Original link has not passed verification')}</small>` : ''}${(item.observations || []).length > 1 ? `<details><summary>${text('查看其他来源', 'Other sources')}</summary>${item.observations.map(observation => `<p>${esc(observation.source_name)} · ${esc(observation.published_at)}</p>`).join('')}</details>` : ''}</div></li>`).join('');
+        const timeline = evidence.map(item => `<li id="evidence-${esc(item.id)}" tabindex="-1"><time>${esc(String(item.published_at || '').slice(0, 16).replace('T', ' '))}</time><div><span class="timeline-source">${esc(item.source_name)}</span><h3>${item.url && item.link_status === 'verified' ? sourceLink(item.url, item.display_title || item.title, '') : esc(item.display_title || item.title)}</h3><p>${esc(item.summary)}</p>${item.doi ? `<p>DOI: ${esc(item.doi)}</p>` : ''}${item.original_text ? `<details><summary>${text('原始摘要 / 正文', 'Original abstract / text')}</summary><p>${esc(item.original_text)}</p></details>` : ''}${item.link_status !== 'verified' ? `<small>${text('原文链接尚未通过核验', 'Original link has not passed verification')}</small>` : ''}${(item.observations || []).length > 1 ? `<details><summary>${text('查看其他来源', 'Other sources')}</summary>${item.observations.map(observation => `<p>${esc(observation.source_name)} · ${esc(observation.published_at)}</p>`).join('')}</details>` : ''}</div></li>`).join('');
+        const references = ids => (ids || []).map(id => {
+            const index = evidence.findIndex(item => item.id === id);
+            return index < 0 ? '' : `<button type="button" class="narrative-citation" data-hot-evidence="${esc(id)}" aria-label="${text('查看证据', 'View evidence')} ${index + 1}">[${index + 1}]</button>`;
+        }).join(' ');
+        const analysis = (detail.analysis?.sections || []).map(section => `<section class="topic-analysis-section"><h2>${esc(section.title)} <small>${section.kind === 'inference' ? text('分析判断', 'Inference') : section.kind === 'question' ? text('研究建议 / 观察点', 'Question / watchpoint') : text('证据事实', 'Evidence')}</small></h2><p>${esc(section.text)}</p><div>${references(section.evidence_ids)}</div></section>`).join('');
         return `<a href="#hot-${board}" data-section="hot-${board}" class="hot-back">← ${title(board)}</a>
-            <header class="hot-detail-header"><p class="page-kicker">${board === 'academic' ? 'RESEARCH TOPIC' : 'ENERGY EVENT'}</p><h1 tabindex="-1">${esc(detail.title)}</h1><div class="hot-meta"><span>${esc(support(detail))}</span>${trend(detail)}<span>${text('更新于', 'Updated')} ${dateTime(detail.computed_at)}</span></div></header>
-            <div class="hot-detail-grid"><article class="hot-digest"><h2>${detail.summary_kind === 'digest' ? text('事件与研究综述', 'Evidence synthesis') : text('代表资料摘要', 'Representative summary')}</h2><p>${esc(detail.summary)}</p><p class="scope-note">${esc(detail.coverage?.reason || text('以下资料提供原始证据，请结合原文判断。', 'The records below provide the original evidence.'))}</p></article><aside class="hot-measure"><span>${board === 'academic' ? text('30天研究活跃度', '30-day activity') : text('48小时事件热度', '48-hour heat')}</span><strong>${number(detail.score)}</strong><small>${board === 'academic' ? text('去重论文 · 15天半衰期', 'Distinct papers · 15-day half-life') : text('独立机构 · 24小时半衰期', 'Independent publishers · 24-hour half-life')}</small></aside></div>
+            <header class="hot-detail-header"><p class="page-kicker">${board === 'academic' ? 'RESEARCH PROBLEM' : 'INDUSTRY ISSUE'}</p><h1 tabindex="-1">${esc(detail.title)}</h1><div class="hot-meta"><span>${esc(support(detail))}</span>${trend(detail)}<span>${text('更新于', 'Updated')} ${dateTime(detail.computed_at)}</span></div></header>
+            <div class="hot-detail-grid"><article class="hot-digest"><h2>${text('综合结论', 'Synthesis')}</h2><p>${esc(detail.summary)}</p><div>${references(detail.analysis?.evidence_ids)}</div><p class="scope-note">${esc(detail.coverage?.reason || text('以下资料提供原始证据，请结合原文判断。', 'The records below provide the original evidence.'))}</p></article><aside class="hot-measure"><span>${board === 'academic' ? text('180天研究活跃度', '180-day activity') : text('7天议题热度', '7-day issue heat')}</span><strong>${number(detail.score)}</strong><small>${board === 'academic' ? text('去重论文 · 15天半衰期', 'Distinct papers · 15-day half-life') : text('独立机构 · 24小时半衰期', 'Independent publishers · 24-hour half-life')}</small></aside></div>
+            <div class="topic-analysis">${analysis}</div>
             <section class="hot-history"><h2>${text('热度记录', 'Recorded activity')}</h2>${sparkline(detail.series || [])}</section>
-            <section class="hot-evidence"><h2>${text('证据与进展', 'Evidence and developments')}</h2><ol class="hot-timeline">${timeline}</ol></section>
+            <section class="hot-evidence"><h2>${text('证据与进展', 'Evidence and developments')}</h2><details><summary>${text(`查看 ${evidence.length} 份支撑资料与独立事件`, `View ${evidence.length} supporting records`)}</summary><ol class="hot-timeline">${timeline}</ol></details></section>
             ${(detail.background_documents || []).length ? `<section class="hot-background"><h2>${text('相关背景资料', 'Related background')}</h2>${detail.background_documents.map(item => `<p>${esc(item.title)}</p>`).join('')}<small>${text('背景关联不计为事件报道。', 'Background references do not count as event reports.')}</small></section>` : ''}`;
     }
 
@@ -143,6 +153,11 @@
         loadBoard('industry');
         loadBoard('academic');
         document.addEventListener('click', event => {
+            const citation = event.target.closest('[data-hot-evidence]');
+            if (citation) {
+                const target = node(`evidence-${citation.dataset.hotEvidence}`);
+                if (target) { target.closest('details').open = true; target.scrollIntoView({block: 'center'}); target.focus({preventScroll: true}); }
+            }
             const refresh = event.target.closest('[data-refresh-hot]');
             if (refresh) loadBoard(refresh.dataset.refreshHot, true);
             const retry = event.target.closest('[data-retry-detail]');
