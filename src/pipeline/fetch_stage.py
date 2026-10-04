@@ -42,6 +42,12 @@ def run(context: PipelineContext) -> PipelineContext:
             else:
                 records = adapter.fetch()
 
+            if source_name == 'rss' and source_config.get('recent_backfill', {}).get('enabled'):
+                from src.sources.recent_news import refresh_recent
+                from src.storage.base import build_storage
+                records = list(records or []) + refresh_recent(
+                    adapter, build_storage(context.config).load_latest().get('documents', []))
+
             source_records = [dict(record) for record in (records or [])]
             context.source_records[source_name] = source_records
             coverage = getattr(adapter, 'last_fetch_result', None)

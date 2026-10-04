@@ -12,7 +12,7 @@ from src.sources.policy_adapter import is_policy_in_scope
 from src.sources.rss_adapter import is_news_in_scope
 
 LOCAL_TZ = timezone(timedelta(hours=8))
-INDUSTRY_WINDOW_DAYS = 7
+INDUSTRY_WINDOW_DAYS = 30
 ACADEMIC_WINDOW_DAYS = 180
 
 

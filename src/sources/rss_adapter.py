@@ -69,6 +69,7 @@ class RSSSourceAdapter(BaseSourceAdapter):
         self.state.setdefault("feeds", {})
         self.state.setdefault("seen", {})
         self.client = httpx.Client(timeout=self.timeout, follow_redirects=True)
+        self.detail_metadata: dict[str, dict] = {}
 
     @property
     def source_config(self) -> Dict[str, Any]:
@@ -106,15 +107,17 @@ class RSSSourceAdapter(BaseSourceAdapter):
                 "Accept": "application/atom+xml, application/rss+xml, application/xml, text/xml;q=0.9",
                 "User-Agent": self.source_config.get("user_agent", "daily-arxiv/1.0"),
             }
-            if feed_state.get("etag"):
+            # Legacy clocks need one full read to initialize publication freshness.
+            if feed_state.get("etag") and 'latest_published_at' in feed_state:
                 headers["If-None-Match"] = feed_state["etag"]
-            if feed_state.get("last_modified"):
+            if feed_state.get("last_modified") and 'latest_published_at' in feed_state:
                 headers["If-Modified-Since"] = feed_state["last_modified"]
 
             try:
                 response = self.client.get(feed_url, headers=headers)
                 if response.status_code == 304:
                     feed_state.update(checked_at=now, last_success_at=now, last_error='')
+                    self._update_freshness(feed_state, feed_config, now)
                     continue
                 response.raise_for_status()
             except httpx.HTTPError as exc:
@@ -147,6 +150,12 @@ class RSSSourceAdapter(BaseSourceAdapter):
                 }
             )
             feed_title = str(parsed.get("feed", {}).get("title", ""))
+            dates = [self._entry_datetime(entry) for entry in parsed.get('entries', [])]
+            from src.hotspots.domain import timestamp
+            valid_dates = [timestamp(value) for value in dates if timestamp(value)]
+            feed_state['latest_published_at'] = max(valid_dates).isoformat() if valid_dates else None
+            feed_state['entry_count'] = len(parsed.get('entries', []))
+            self._update_freshness(feed_state, feed_config, now)
             for entry in parsed.get("entries", [])[: self.max_entries_per_feed]:
                 record = self._raw_entry(entry, feed_config, feed_url, feed_title, now)
                 if not record["title"]:
@@ -154,32 +163,37 @@ class RSSSourceAdapter(BaseSourceAdapter):
                     continue
                 if not self._matches_content_filters(record, feed_config):
                     continue
-                if feed_config.get('max_age_days'):
+                max_age = feed_config.get('max_age_days', self.source_config.get('max_age_days'))
+                if max_age:
                     from src.hotspots.domain import timestamp
                     published = timestamp(record.get('published_at'))
-                    cutoff = datetime.now(timezone.utc) - timedelta(days=int(feed_config['max_age_days']))
+                    cutoff = timestamp(now) - timedelta(days=int(max_age))
                     if published is not None and published <= cutoff:
                         continue
                 dedup_key = record["dedup_key"]
                 if dedup_key in self.state["seen"]:
                     continue
-                if feed_config.get('fetch_detail') and not record['content']:
+                if feed_config.get('fetch_detail'):
                     try:
-                        from bs4 import BeautifulSoup
-                        detail = self.client.get(record['url'])
-                        detail.raise_for_status()
-                        soup = BeautifulSoup(detail.content, 'html.parser')
-                        body = soup.select_one(feed_config.get('detail_content_selector', 'article'))
-                        if body is not None:
-                            record['content'] = body.get_text(' ', strip=True)
-                            record['summary'] = record['content'][:1000]
+                        content = self._fetch_detail_text(record['url'], feed_config)
+                        if not content:
+                            raise ValueError('Article body unavailable')
+                        record['content'] = content
+                        record['summary'] = content[:1000]
+                        record['detail_fetched'] = True
+                        record.update(self.detail_metadata.get(record['url'], {}))
                     except httpx.HTTPError as exc:
                         self.logger.warning('Listing detail failed for %s: %s', record['url'], exc)
-                    if not record['content']:
+                        content = ''
+                    except ValueError:
+                        content = ''
+                    if not content:
                         # Keep the item retryable and do not conditionally skip its listing.
                         feed_state.update(etag='', last_modified='', last_error='Article body unavailable')
+                        self.state.setdefault('pending_details', {})[dedup_key] = record
                         continue
                 self.state["seen"][dedup_key] = now
+                self.state.setdefault('pending_details', {}).pop(dedup_key, None)
                 records.append(record)
 
         self._prune_seen()
@@ -190,6 +204,38 @@ class RSSSourceAdapter(BaseSourceAdapter):
         if kwargs.get("persist_state", True):
             save_json(self.state, self.state_path)
         return records
+
+    def _fetch_detail_text(self, url: str, settings: dict) -> str:
+        """Extract article content without treating an RSS description as the body."""
+        from bs4 import BeautifulSoup
+        response = self.client.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+        if settings.get('detail_source_selector'):
+            credit = soup.select_one(settings['detail_source_selector'])
+            label = credit.get_text(' ', strip=True) if credit else ''
+            known = {'中国新闻网': 'chinanews.com.cn', '国家能源局': 'nea.gov.cn',
+                     '人民网': 'people.com.cn', '人民日报': 'people.com.cn',
+                     '证券日报': 'zqrb.cn', '经济日报': 'ce.cn', '新华社': 'xinhua.cn'}
+            metadata = {'original_source_credit': label, 'attribution_verified': label in known}
+            if label in known and known[label] != 'chinanews.com.cn':
+                metadata['origin_owner_id'] = known[label]
+            self.detail_metadata[url] = metadata
+        body = soup.select_one(settings.get('detail_content_selector', 'article'))
+        if body is None:
+            return ''
+        for node in body.select('script, style, nav'):
+            node.decompose()
+        return body.get_text(' ', strip=True)
+
+    def _update_freshness(self, state: dict, settings: dict, now: str) -> None:
+        from src.hotspots.domain import timestamp
+        latest = timestamp(state.get('latest_published_at'))
+        window = int(settings.get('max_age_days', self.source_config.get('max_age_days', 30)))
+        state['freshness_warning'] = (
+            '无法确认来源最新发布日期' if latest is None else
+            f'来源最新内容早于 {window} 天窗口：{latest.date()}'
+            if latest < timestamp(now) - timedelta(days=window) else '')
 
     def _configured_feeds(self) -> List[Dict[str, Any]]:
         """Return feed-like sources handled by this transport."""
@@ -225,11 +271,26 @@ class RSSSourceAdapter(BaseSourceAdapter):
                     "metadata": {
                         "dedup_key": record["dedup_key"],
                         "source_category": record.get("source_category", ""),
+                        "detail_fetched": bool(record.get('detail_fetched')),
+                        "origin_owner_id": self._original_owner(record),
+                        "original_source_credit": record.get('original_source_credit', ''),
+                        "attribution_verified": record.get('attribution_verified', True),
                     },
                 },
             )
             documents.append(document.to_dict())
         return documents
+
+    @staticmethod
+    def _original_owner(record: dict) -> str:
+        if record.get('origin_owner_id'):
+            return record['origin_owner_id']
+        content = record.get('content', '')
+        if (len(content) < 1200 and '交易电量' in content
+                and any(term in content[:160] for term in ('据中国国家能源局', '据国家能源局'))
+                and not any(term in content for term in ('采访', '访谈', '调研'))):
+            return 'nea.gov.cn'
+        return ''
 
     def save_raw_snapshot(self, records: List[Dict[str, Any]]) -> None:
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

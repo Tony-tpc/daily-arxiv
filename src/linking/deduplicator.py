@@ -178,10 +178,13 @@ class Deduplicator:
 
     def _merge_group(self, group: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Formal publisher metadata wins over repository/preprint descriptions.
+        news_only = all(item.get('source_type') == 'news' for item in group)
         def authority(item):
             provider = item.get("source_record_provider", "")
             return (item.get("publication_type") in {"article", "journal-article"},
-                    provider == "crossref", self._quality(item))
+                    provider == "crossref",
+                    bool(news_only and item.get('provenance', {}).get('metadata', {}).get('detail_fetched')),
+                    self._quality(item))
         ordered = sorted(group, key=authority, reverse=True)
         merged = copy.deepcopy(ordered[0])
         for candidate in ordered[1:]:

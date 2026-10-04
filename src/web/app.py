@@ -884,6 +884,12 @@ def get_research_information():
         view = str(request.args.get('view', '')).strip()
         if view not in {'', 'selected', 'all'}:
             return jsonify({'error': 'view 必须是 selected 或 all'}), 400
+        library_source_counts = {}
+        for document in documents:
+            key = str(document.get('source_type') or 'unknown')
+            library_source_counts[key] = library_source_counts.get(key, 0) + 1
+        from src.hotspots.publication import selection_progress
+        progress = selection_progress(config, documents)
         if view == 'selected':
             from src.hotspots.publication import selected_documents
             documents = selected_documents(config, documents)
@@ -897,6 +903,8 @@ def get_research_information():
             'documents': documents[start:start + per_page],
             'total': total,
             'source_counts': source_counts,
+            'library_source_counts': library_source_counts,
+            'selection_progress': progress,
             'page': page,
             'per_page': per_page,
             'total_pages': (total + per_page - 1) // per_page,

@@ -95,7 +95,7 @@ class EditorialEngine:
         self.store = HotspotStore(config)
         self.client = CachedClient(config, self.store, client)
         from src.summarizer.document_summarizer import SYSTEM_PROMPT
-        self.version = fingerprint([SYSTEM_PROMPT, [(p.name, p.read_text(encoding='utf-8')) for p in sorted(PROMPTS.glob('*.md')) if not p.name.startswith('analysis_')],
+        self.version = fingerprint([SYSTEM_PROMPT, [(name, (PROMPTS / name).read_text(encoding='utf-8')) for name in ('prefilter.md', 'score.md')],
                                     self.client.route, self.client.model, config.get('hotspots', {}).get('thresholds', {})])
 
     def process(self, documents: list[dict]) -> list[dict]:

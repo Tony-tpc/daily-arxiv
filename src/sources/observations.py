@@ -37,6 +37,13 @@ def attach_observations(document: dict, config: dict) -> dict:
         return document
     provenance = document.setdefault('provenance', {})
     metadata = provenance.setdefault('metadata', {})
+    # Visible wire-service credit also applies to copies on government websites.
+    wire_credit = bool(re.match(r'^新华社.{0,25}电\s', str(document.get('raw_text') or '').lstrip()))
+    if wire_credit:
+        metadata['origin_owner_id'] = 'xinhua.cn'
+        for observation in metadata.get('observations', []):
+            if observation.get('url') == document.get('url'):
+                observation.update(origin_owner_id='xinhua.cn', attribution_verified=True)
     if metadata.get('observations'):
         return document
     feed_url = provenance.get('fetch_url', '')
@@ -55,6 +62,7 @@ def attach_observations(document: dict, config: dict) -> dict:
     metadata['observations'] = [{
         **identity, 'document_id': str(document.get('id', '')),
         'origin_owner_id': metadata.get('origin_owner_id') or settings.get('origin_owner_id', ''),
+        'attribution_verified': metadata.get('attribution_verified', True),
         'source_name': document.get('source_name', ''), 'url': document.get('url', ''),
         'published_at': published, 'collected_at': document.get('collected_at', ''),
         'time_precision': 'time' if 'T' in published or ' ' in published else 'day' if len(published) == 10 else 'unknown',

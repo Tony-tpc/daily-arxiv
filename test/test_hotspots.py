@@ -12,7 +12,7 @@ import httpx
 from src.hotspots.domain import content_key, recent, timestamp
 from src.hotspots.editorial import EditorialEngine, CachedClient
 from src.hotspots.topics import TopicEngine, SECTION_KEYS, RULE_VERSION, member_key, unique_members, profiles
-from src.hotspots.publication import publication, selected_documents
+from src.hotspots.publication import publication, selected_documents, selection_progress
 from src.hotspots.ranking import recompute
 from src.hotspots.store import HotspotStore
 from src.linking.deduplicator import Deduplicator
@@ -68,6 +68,41 @@ class HotspotTests(unittest.TestCase):
         self.addCleanup(gate.stop)
         self.client = FakeLLM()
 
+    def test_selection_progress_distinguishes_unprocessed_changed_and_old_records(self):
+        docs = [document('ready'), document('new'), document('changed'), document('old', hours=800)]
+        store = HotspotStore(self.config)
+        for doc in (docs[0], docs[2]):
+            store.save_document(doc, content_key(doc), {'status': 'complete', 'selected': True}, NOW.isoformat())
+        docs[2]['raw_text'] += ' Changed body'
+        progress = selection_progress(self.config, docs, now=NOW)
+        self.assertEqual(progress['eligible'], 3)
+        self.assertEqual(progress['complete'], 1)
+        self.assertEqual(progress['pending'], 2)
+        self.assertEqual(progress['updated_at'], NOW.isoformat())
+
+    def test_industry_refresh_runs_selection_with_the_topic_budget(self):
+        from src.hotspots import refresh_industry as refresh
+        docs = [document()]
+        with patch.object(refresh, 'build_storage') as storage, \
+                patch.object(refresh, 'RSSSourceAdapter') as adapter, \
+                patch.object(refresh, 'refresh_recent', return_value=[]), \
+                patch.object(refresh, 'Deduplicator') as dedup, \
+                patch.object(refresh, 'EditorialEngine') as editorial, \
+                patch.object(refresh, 'TopicEngine') as topics_engine, \
+                patch.object(refresh, 'HotspotStore') as store, \
+                patch.object(refresh, 'record_source_health'), \
+                patch.object(refresh.hotspot_stage, 'run'), \
+                patch.object(refresh, 'setup_logging'):
+            storage.return_value.load_latest.return_value = {'documents': docs}
+            adapter.return_value.fetch.return_value = []
+            adapter.return_value.normalize.return_value = []
+            dedup.return_value.process.return_value = {'documents': docs}
+            store.return_value.latest.return_value = {'boards': {}, 'processing': {}}
+            refresh.run(self.config)
+            topics_engine.assert_called_once_with(self.config, editorial.return_value.client)
+            topics_engine.return_value.process.assert_called_once_with(docs)
+            editorial.return_value.process.assert_called_once_with(docs)
+
     def seed(self, docs, group='industry-test'):
         store = HotspotStore(self.config)
         kind = 'academic' if docs[0]['source_type'] == 'paper' else 'industry'
@@ -120,6 +155,16 @@ class HotspotTests(unittest.TestCase):
             EditorialEngine(self.config, client=self.client, now=NOW).process([document()])
         self.assertEqual(len(self.client.requests) - before, 2)
 
+    def test_industry_analysis_prompt_does_not_invalidate_selection(self):
+        baseline = EditorialEngine(self.config, client=self.client, now=NOW).version
+        original = Path.read_text
+        def changed(path, *args, **kwargs):
+            text = original(path, *args, **kwargs)
+            return text + '\n修订行业议题定义' if path.name == 'industry_profile.md' else text
+        with patch.object(Path, 'read_text', changed):
+            updated = EditorialEngine(self.config, client=self.client, now=NOW).version
+        self.assertEqual(baseline, updated)
+
     def test_invalid_score_is_not_cached_forever(self):
         self.client.score = 101
         engine = EditorialEngine(self.config, client=self.client, now=NOW)
@@ -139,18 +184,18 @@ class HotspotTests(unittest.TestCase):
 
     def test_old_and_future_documents_do_not_call_model(self):
         engine = EditorialEngine(self.config, client=self.client, now=NOW)
-        engine.process([document(hours=169), document('future', hours=-1)])
+        engine.process([document(hours=721), document('future', hours=-1)])
         self.assertFalse(self.client.requests)
 
     def test_window_boundaries_use_original_publication_time(self):
-        for kind, days in [('news', 7), ('paper', 180)]:
+        for kind, days in [('news', 30), ('paper', 180)]:
             with self.subTest(kind=kind):
                 self.assertTrue(recent(document(kind=kind, hours=days * 24 - 1), NOW))
                 self.assertFalse(recent(document(kind=kind, hours=days * 24), NOW))
                 self.assertFalse(recent(document(kind=kind, hours=-1), NOW))
 
     def test_expanded_windows_are_shared_by_selection_grouping_and_publication(self):
-        for kind, days, board in [('news', 6, 'industry'), ('paper', 179, 'academic')]:
+        for kind, days, board in [('news', 29, 'industry'), ('paper', 179, 'academic')]:
             with self.subTest(kind=kind):
                 docs = [document(kind + 'a', hours=days * 24, kind=kind),
                         document(kind + 'b', 'two.example', hours=days * 24, kind=kind)]
@@ -268,7 +313,7 @@ class HotspotTests(unittest.TestCase):
         with patch.dict(web.config, self.config), patch.object(web, '_load_intelligence_documents', return_value=[]):
             client = web.app.test_client()
             self.assertEqual(client.get('/api/hotspots').get_json()['entries'], [])
-            self.assertEqual(client.get('/api/hotspots').get_json()['window_hours'], 168)
+            self.assertEqual(client.get('/api/hotspots').get_json()['window_hours'], 720)
             self.assertEqual(client.get('/api/hotspots?board=academic').get_json()['window_hours'], 4320)
             self.assertEqual(client.get('/api/hotspots?board=invalid').status_code, 400)
             self.assertEqual(client.get('/api/hotspots/missing').status_code, 404)

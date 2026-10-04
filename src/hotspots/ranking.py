@@ -14,20 +14,34 @@ from .store import HotspotStore
 def record_source_health(store: HotspotStore, config: dict, now: datetime) -> None:
     """Read durable collector clocks, not scheduler success, including individual failures."""
     previous = {row['id']: json.loads(row['payload']) for row in store.rows('SELECT * FROM sources')}
+    active_ids = set()
     for name, settings in config.get('sources', {}).items():
         if not isinstance(settings, dict) or not settings.get('enabled', False):
             continue
         state = load_json(settings.get('state_path', f'data/state/{name}.json')) or {}
         hours = {'rss': 8, 'policy': 24, 'industry_report': 168}.get(name, 168)
-        for feed in settings.get('feeds', []):
+        feeds = {f['url']: f for f in reversed([*settings.get('feeds', []), *settings.get('backfill_feeds', [])])}
+        for feed in feeds.values():
             if not feed.get('enabled', True):
                 continue
             identity = source_identity(feed)
+            active_ids.add(identity['source_id'])
             old = previous.get(identity['source_id'], {})
             clock = state.get('feeds', {}).get(feed.get('url'), {})
+            archive = state.get('recent_archives', {}).get(feed.get('url'), {})
+            latest = timestamp(clock.get('latest_published_at'))
+            warning = clock.get('freshness_warning', '')
+            if latest and latest < now - timedelta(days=INDUSTRY_WINDOW_DAYS):
+                warning = f'来源最新内容早于 {INDUSTRY_WINDOW_DAYS} 天窗口：{latest.date()}'
             value = {**identity, 'since': old.get('since', now.isoformat()), 'name': feed.get('name', ''),
-                     'last_success_at': clock.get('last_success_at'), 'error': clock.get('last_error', ''), 'interval_hours': hours}
+                     'last_success_at': clock.get('last_success_at') or archive.get('last_success_at'),
+                     'error': clock.get('last_error') or archive.get('error') or warning,
+                     'latest_published_at': clock.get('latest_published_at'),
+                     'pending_details': sum(r.get('feed_url') == feed['url'] for r in state.get('pending_details', {}).values()),
+                     'archive_complete': archive.get('complete', False), 'interval_hours': hours}
             store.execute('INSERT OR REPLACE INTO sources VALUES (?,?)', (identity['source_id'], json.dumps(value, ensure_ascii=False)))
+    for source_id in set(previous) - active_ids:
+        store.execute('DELETE FROM sources WHERE id=?', (source_id,))
 
 
 def _participants(rows: list[dict], at: datetime) -> dict:
@@ -45,6 +59,8 @@ def _participants(rows: list[dict], at: datetime) -> dict:
         # independent report. Keep all observations for audit, count the actual body.
         own = [o for o in observations(doc) if o.get('url') == doc.get('url')]
         for observation in (own or observations(doc)[:1]):
+            if observation.get('attribution_verified') is False:
+                continue
             published = timestamp(observation.get('published_at'))
             owner = observation.get('origin_owner_id') or observation.get('owner_id')
             verified = (observation.get('origin_owner_id') or observation.get('owner_verified') or
@@ -99,6 +115,7 @@ def recompute(config: dict, *, now: datetime | None = None, store: HotspotStore 
                 owners.update(_participants([row], now))
     progress['industry']['source_count'] = len(owners)
     source_rows = [json.loads(r['payload']) for r in store.rows('SELECT payload FROM sources')]
+    progress['industry']['pending_collection'] = sum(r.get('pending_details', 0) for r in source_rows)
     progress['industry']['failed_sources'] = [{'name': r.get('name', ''), 'error': r['error']}
                                             for r in source_rows if r.get('error')]
     audits = {r['key']: json.loads(r['payload']) for r in store.rows('SELECT * FROM audits')}
@@ -136,7 +153,7 @@ def recompute(config: dict, *, now: datetime | None = None, store: HotspotStore 
         entry = {'id': topic['id'], 'kind': kind, 'analysis_type': 'research_problem' if kind == 'academic' else 'industry_issue',
                  'analysis_status': 'complete',
                  'title': analysis.get('title') or topic['definition']['title'], 'summary': analysis['summary'], 'summary_kind': 'analysis',
-                 'analysis': analysis, 'score': round(score, 6), 'paper_count': len(rows) if kind == 'academic' else 0,
+                 'analysis': analysis, 'score': float(f'{score:.8g}'), 'paper_count': len(rows) if kind == 'academic' else 0,
                  'source_count': len(participants), 'report_count': len(rows), 'institution_count': len(institutions),
                  'institutions': institutions, 'document_ids': [r['id'] for r in rows],
                  'document_hashes': {r['id']: r['content_hash'] for r in rows}, 'is_new': False,

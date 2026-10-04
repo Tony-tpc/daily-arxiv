@@ -107,8 +107,8 @@ or non-array results fail the source independently. See [hotspots.md](hotspots.m
 for selection, caching, ranking windows and publication rules.
 
 Incremental HTML/RSS feeds can set `max_age_days` to skip old dated entries before
-fetching details (NEA market news uses 7 days). Missing dates are never invented.
-Historical backfill remains a separate task. TLS verification remains enabled;
+fetching details (NEA market news uses 30 days). Missing dates are never invented.
+Long-range historical backfill remains a separate task. TLS verification remains enabled;
 certificate/hostname failures are recorded and shown as failed sources.
 
 `origin_owner_id` may identify the explicitly verified original institution for a
@@ -117,3 +117,29 @@ It must come from visible source credit, never a model guess. The host transport
 a repost does not count as another institution. Configure `owner_id` only after
 verifying ownership; unrecognized bare hostnames are not treated as confirmed
 independent institutions for industry publication.
+
+News jobs also support `sources.rss.recent_backfill`: `enabled`, `pages_per_feed`
+(default 2) and `details_per_run` (default 20). They traverse configured
+`backfill_feeds` within the source-level `max_age_days` window, reuse the archive
+parser, and persist page cursors and pending article bodies in the RSS state.
+Incomplete scans resume across days; completed scans restart the next day. A scan
+of configured pages is not a claim of complete coverage of all news in the window.
+Each archive feed needs a verified `detail_content_selector`. Daily archives may
+use a strftime `date_url_template` and `article_path_prefixes` to restrict article
+sections. The China News daily archive uses domestic/finance paths; original dates
+come from article URLs rather than the collection clock. Failed pages retain
+their cursor, and failed article requests rotate behind the rest of the queue.
+
+`fetch_detail: true` always fetches the article body, even when RSS contains a
+description. Existing recent news without `provenance.metadata.detail_fetched`
+is enriched once independently of the seen-item hash. Body replacements preserve
+the original publication time and are preferred over older descriptions during
+deduplication. Short dispatches explicitly attributing electricity trading data
+to NEA credit NEA as the original institution, not another independent report.
+
+Source health distinguishes transport success from fresh dated content, including
+HTTP 304. Stale feeds, unknown dates and archive errors are exposed on the industry
+board even when it has published results. TLS verification is never bypassed.
+`detail_source_selector` extracts visible original-publisher credit. Known credited
+institutions are retained in provenance; unknown/missing credit is marked
+`attribution_verified: false` and cannot add an independent institution to a board.

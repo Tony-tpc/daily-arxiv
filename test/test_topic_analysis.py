@@ -104,6 +104,62 @@ class TopicAnalysisTests(unittest.TestCase):
         self.engine().process(docs)
         self.assertEqual(recompute(self.config, now=NOW)['boards']['industry'], [])
 
+    def test_fixed_issue_is_reviewed_before_legacy_narrow_topics(self):
+        engine = self.engine()
+        seed = document('statistics')
+        profile = {'title': '交易电量统计', 'system': '电力市场', 'problem': '交易规模', 'definition': '交易统计'}
+        engine.store.execute('INSERT INTO analysis_topics (id,kind,definition) VALUES (?,?,?)',
+                             ('legacy-statistics', 'industry', json.dumps(profile)))
+        engine.save(seed, profile, 'complete', 'legacy-statistics')
+        match = {'topic_id': 'industry-issue-electricity-market', 'confidence': .9}
+        with patch.object(engine.client, 'ask', return_value=match) as ask:
+            topic_id = engine.assign({**document('interview'), 'raw_text': '电力市场改革访谈'}, {**profile, 'problem': '市场改革运行堵点'}, 'industry')
+        self.assertEqual(topic_id, 'industry-issue-electricity-market')
+        self.assertEqual(ask.call_count, 2)
+        self.assertEqual(ask.call_args_list[0].args[1], ask.call_args_list[1].args[1])
+        self.assertNotIn('legacy-statistics', {c['id'] for c in ask.call_args.args[1]['candidates']})
+        self.assertEqual(ask.call_args_list[1].args[2], 'analysis_match:review')
+
+    def test_fixed_issue_disagreement_does_not_fall_back_to_legacy_match(self):
+        engine = self.engine()
+        profile = {'title': '交易电量', 'system': '电力市场', 'problem': '交易规模', 'definition': '统计'}
+        with patch.object(engine.client, 'ask', side_effect=[
+                {'topic_id': 'industry-issue-electricity-market', 'confidence': .9},
+                {'topic_id': None, 'confidence': .9}]) as ask:
+            topic_id = engine.assign({**document('statistics'), 'raw_text': '电力市场交易规模'}, profile, 'industry')
+        self.assertNotEqual(topic_id, 'industry-issue-electricity-market')
+        self.assertEqual(ask.call_count, 2)
+
+    def test_energy_forecast_without_market_evidence_is_not_recalled_as_market_issue(self):
+        from src.hotspots.industry_issues import eligible_definitions
+        doc = {'title': '研究预计2035年中国能源消费总量', 'raw_text': '非化石能源替代与消费增速预测，新能源制氢。'}
+        self.assertNotIn('industry-issue-electricity-market', {r['id'] for r in eligible_definitions(doc)})
+
+    def test_industry_prompt_update_does_not_reprocess_academic_profiles(self):
+        engine = self.engine(); engine.process(self.papers())
+        calls = len(self.model.requests)
+        original = Path.read_text
+        def revised(path, *args, **kwargs):
+            value = original(path, *args, **kwargs)
+            return value + '\n国内范围审核' if path.name == 'industry_profile.md' else value
+        with patch.object(Path, 'read_text', revised):
+            self.engine(self.model).process(self.papers())
+        self.assertEqual(len(self.model.requests), calls)
+
+    def test_policy_metadata_without_attachment_body_is_not_analysis_evidence(self):
+        doc = document('metadata')
+        doc['raw_text'] = '目录项的基本信息 公开事项名称：电力安全监管典型执法案例 ' + '索引号与附件信息 ' * 15
+        engine = self.engine(); engine.process([doc])
+        self.assertEqual(profiles(engine.store)[0]['status'], 'awaiting_content')
+        self.assertEqual(self.model.requests, [])
+
+    def test_old_but_in_window_industry_evidence_retains_nonzero_heat(self):
+        docs = [document('a', hours=29 * 24), document('b', 'two.example', hours=29 * 24)]
+        self.engine().process(docs)
+        score = recompute(self.config, now=NOW)['boards']['industry'][0]['score']
+        self.assertGreater(score, 0)
+        self.assertLess(score, .000001)
+
     def test_invalid_citations_retry_and_rejected_review_does_not_publish(self):
         model = AnalysisModel(); model.invalid_refs = True
         engine = self.engine(model); engine.process(self.papers())

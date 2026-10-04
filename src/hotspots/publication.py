@@ -36,6 +36,25 @@ def publication(config: dict, documents: list[dict], *, now: datetime | None = N
             'reason': '' if computed else '尚未生成热点；等待采集与综合分析完成'}
 
 
+def selection_progress(config: dict, documents: list[dict], *, now: datetime | None = None) -> dict:
+    """Report eligible work separately from library counts; missing/changed rows are pending."""
+    now = now or datetime.now(timezone.utc)
+    rows = {row['id']: row for row in HotspotStore(config, readonly=True).documents()}
+    result = dict(eligible=0, pending=0, complete=0, blocked=0, awaiting_content=0, updated_at=None)
+    for doc in documents:
+        if not allowed(doc, config) or not recent(doc, now):
+            continue
+        result['eligible'] += 1
+        row = rows.get(doc['id'])
+        status = 'pending'
+        if row and row['content_hash'] == content_key(doc):
+            status = row['editorial'].get('status', 'pending')
+            if row.get('updated_at'):
+                result['updated_at'] = max(result['updated_at'] or '', row['updated_at'])
+        result[status if status in {'complete', 'blocked', 'awaiting_content'} else 'pending'] += 1
+    return result
+
+
 def selected_documents(config: dict, documents: list[dict], *, now: datetime | None = None) -> list[dict]:
     now = now or datetime.now(timezone.utc)
     if not config.get('hotspots', {}).get('enabled', False):

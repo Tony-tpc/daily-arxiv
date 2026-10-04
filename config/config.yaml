@@ -331,6 +331,11 @@ sources:
 
   rss:
     enabled: true
+    max_age_days: 30
+    recent_backfill:
+      enabled: true
+      pages_per_feed: 7
+      details_per_run: 20
     # 排除企业上市、融资、业绩、产品发布等公司动态，保留系统级国内能源新闻。
     exclude_enterprise_updates: true
     enterprise_entity_keywords:
@@ -392,6 +397,9 @@ sources:
         region: "CN"
       - name: "中国新闻网财经"
         url: "https://www.chinanews.com.cn/rss/finance.xml"
+        fetch_detail: true
+        detail_content_selector: ".left_zw"
+        detail_source_selector: "#source_baidu a"
         source_category: "news_media"
         region: "CN"
       - name: "经济观察网产业"
@@ -400,11 +408,14 @@ sources:
         region: "CN"
       - name: "中国新闻网时政"
         url: "https://www.chinanews.com.cn/rss/china.xml"
+        fetch_detail: true
+        detail_content_selector: ".left_zw"
+        detail_source_selector: "#source_baidu a"
         source_category: "policy_news"
         region: "CN"
       - name: "国家能源局市场监管动态"
         source_id: nea-market-news
-        max_age_days: 7
+        max_age_days: 30
         owner_id: nea.gov.cn
         tier: T1
         first_party: true
@@ -432,6 +443,7 @@ sources:
     backfill_feeds:
       - name: "国家能源局市场监管动态"
         url: "https://www.nea.gov.cn/sjzz/jgs/"
+        detail_content_selector: ".article-content"
         item_selector: "li.clearfix"
         link_selector: "h3 a[href]"
         date_selector: "span.time"
@@ -439,6 +451,7 @@ sources:
         region: "CN"
       - name: "人民网能源频道"
         url: "https://energy.people.com.cn/"
+        detail_content_selector: ".rm_txt_con, .box_con"
         page_url_template: "https://energy.people.com.cn/GB/71890/index{page}.html"
         page_start: 1
         max_pages: 80
@@ -447,18 +460,20 @@ sources:
         date_selector: "span"
         source_category: "news_media"
         region: "CN"
-      - name: "中国新闻网财经"
-        url: "https://www.chinanews.com.cn/cj/"
-        page_url_template: "https://www.chinanews.com.cn/cj/index_{page}.shtml"
-        page_start: 2
-        max_pages: 80
-        item_selector: "li"
-        link_selector: "a[href]"
-        date_selector: ".dd_time, .time, span"
+      - name: "中国新闻网国内财经日归档"
+        url: "https://www.chinanews.com.cn/scroll-news/"
+        date_url_template: "https://www.chinanews.com.cn/scroll-news/%Y/%m%d/news.shtml"
+        article_path_prefixes: ["/cj/", "/gn/"]
+        detail_content_selector: ".left_zw"
+        detail_source_selector: "#source_baidu a"
+        item_selector: "li:has(.dd_bt)"
+        link_selector: ".dd_bt a[href]"
+        date_selector: ".dd_time"
         source_category: "news_media"
         region: "CN"
       - name: "经济观察网产业"
         url: "https://www.eeo.com.cn/industry/"
+        detail_content_selector: ".xd-article-content, .article-content, article"
         page_url_template: "https://www.eeo.com.cn/industry/index_{page}.shtml"
         page_start: 2
         max_pages: 80

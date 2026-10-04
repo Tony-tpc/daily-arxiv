@@ -10,6 +10,7 @@ from pathlib import Path
 from src.sources.observations import attach_observations
 from .domain import allowed, content_key, fingerprint, lexical_similarity, recent, strong_identity
 from .store import HotspotStore
+from .industry_issues import ANCHORS, definitions as industry_definitions, eligible_definitions
 
 RULE_VERSION = 'energy-topic-analysis-v2'
 SECTION_KEYS = {
@@ -87,18 +88,28 @@ def source_text(doc: dict) -> str:
     return str(doc.get('abstract') or doc.get('raw_text') or '').strip()
 
 
+def has_substantive_content(doc: dict) -> bool:
+    text = source_text(doc)
+    return len(text) >= 100 and not (text.startswith('目录项的基本信息') and len(text) < 300)
+
+
 class TopicEngine:
     def __init__(self, config: dict, client, *, now: datetime | None = None):
         self.config, self.client = config, client
         self.now = now or datetime.now(timezone.utc)
         self.store = HotspotStore(config)
         prompt_dir = Path(__file__).with_name('prompts')
-        self.version = fingerprint([RULE_VERSION, client.route, client.model,
+        self.version = fingerprint([RULE_VERSION, 'fixed-issue-priority-v1', client.route, client.model, industry_definitions(),
                                    [(p.name, p.read_text(encoding='utf-8')) for p in sorted(prompt_dir.glob('analysis_*.md'))]])
+        self.industry_version = fingerprint([self.version, 'direct-issue-evidence-v1', ANCHORS,
+                                             (prompt_dir / 'industry_profile.md').read_text(encoding='utf-8')])
+
+    def version_for(self, doc: dict) -> str:
+        return self.version if doc.get('source_type') == 'paper' else self.industry_version
 
     def save(self, doc, profile, status, topic_id=None, error=''):
         self.store.execute('INSERT OR REPLACE INTO analysis_profiles VALUES (?,?,?,?,?,?,?,?)',
-                           (doc['id'], content_key(doc), self.version, json.dumps(doc, ensure_ascii=False),
+                           (doc['id'], content_key(doc), self.version_for(doc), json.dumps(doc, ensure_ascii=False),
                             json.dumps(profile, ensure_ascii=False), status, topic_id, error))
 
     def process(self, documents: list[dict]) -> None:
@@ -120,12 +131,12 @@ class TopicEngine:
                 continue
             seen.add(identity)
             old = indexed.get(doc['id'])
-            unchanged = old and old['content_hash'] == content_key(doc) and old['version'] == self.version
+            unchanged = old and old['content_hash'] == content_key(doc) and old['version'] == self.version_for(doc)
+            if not has_substantive_content(doc):
+                self.save(doc, {}, 'awaiting_content')
+                continue
             if unchanged and old['status'] in {'complete', 'blocked', 'awaiting_content'}:
                 self.save(doc, old['profile'], old['status'], old['topic_id'])
-                continue
-            if len(source_text(doc)) < 100:
-                self.save(doc, {}, 'awaiting_content')
                 continue
             if not self.client.claim_document(doc['id']) or self.client.calls >= self.client.limit:
                 if old and old['status'] == 'complete' and old['content_hash'] == content_key(doc):
@@ -137,7 +148,7 @@ class TopicEngine:
                 kind = 'academic' if doc['source_type'] == 'paper' else 'industry'
                 material = {k: doc.get(k) for k in ('id', 'title', 'source_type', 'published_at', 'doi')}
                 material.update(kind=kind, text=source_text(doc)[:14000])
-                profile = self.client.ask('analysis_profile', material, 'analysis_profile')
+                profile = self.client.ask('analysis_profile' if kind == 'academic' else 'industry_profile', material, 'analysis_profile')
                 if profile['decision'] != 'PASS':
                     self.save(doc, profile, 'blocked' if profile['decision'] == 'BLOCK' else 'awaiting_content')
                     continue
@@ -164,15 +175,26 @@ class TopicEngine:
         candidates.sort(key=lambda r: (-lexical_similarity(text, json.dumps(r['definition'], ensure_ascii=False)), r['id']))
         candidates = [{'id': r['id'], 'definition': {k: r['definition'].get(k, '')
                       for k in ('title', 'system', 'problem', 'definition')}} for r in candidates[:10]]
+        batches = [candidates]
+        if kind == 'industry':
+            fixed = eligible_definitions(doc)
+            fixed_ids = {row['id'] for row in industry_definitions()}
+            batches = [fixed, [row for row in candidates if row['id'] not in fixed_ids][:10 - len(fixed)]]
         # A retry of the same seed preserves its original ID without accumulating orphan groups.
         topic_id = kind + '-' + fingerprint([RULE_VERSION, kind, doc['id']])[:20]
-        if candidates:
+        for candidates in batches:
+            if not candidates:
+                continue
             payload = {'kind': kind, 'profile': {k: profile.get(k, '') for k in ('title', 'system', 'problem', 'definition')}, 'candidates': candidates}
             first = self.client.ask('analysis_match', payload, 'analysis_match:primary')
             if first.get('topic_id') and first['confidence'] >= 0.8:
                 second = self.client.ask('analysis_match', payload, 'analysis_match:review')
                 if second.get('topic_id') == first['topic_id'] and second['confidence'] >= 0.8:
+                    chosen = next(c for c in candidates if c['id'] == first['topic_id'])
+                    self.store.execute('INSERT OR IGNORE INTO analysis_topics (id,kind,definition) VALUES (?,?,?)',
+                                       (chosen['id'], kind, json.dumps(chosen['definition'], ensure_ascii=False)))
                     return first['topic_id']
+                break  # Disagreement cannot be bypassed by a narrower old topic.
         self.store.execute('INSERT OR IGNORE INTO analysis_topics (id,kind,definition) VALUES (?,?,?)',
                            (topic_id, kind, json.dumps(profile, ensure_ascii=False)))
         return topic_id
@@ -181,7 +203,7 @@ class TopicEngine:
         from .ranking import _participants
         grouped = {}
         for row in profiles(self.store):
-            if (row['status'] == 'complete' and row['version'] == self.version and row['topic_id']
+            if (row['status'] == 'complete' and row['version'] == self.version_for(row['document']) and row['topic_id']
                     and allowed(row['document'], self.config) and recent(row['document'], self.now)):
                 grouped.setdefault(row['topic_id'], []).append(row)
         for topic in topics(self.store):
