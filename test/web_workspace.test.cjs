@@ -259,9 +259,11 @@ test('home source counts and result feedback use only the newest filtered respon
     const recent = app.run('loadIntelligenceHome()');
     const query = new URLSearchParams(requests[1].url.split('?')[1]);
     for (const [key,value] of Object.entries({source_type:'news',topic:'电力',priority:'high',date_from:'2026-09-01',date_to:'2026-09-22',per_page:'8',sort:'date',view:'selected'})) assert.equal(query.get(key),value);
-    requests[1].resolve({ok:true,json:async()=>({documents:[{id:'news'}],total:1,source_counts:{news:1}})}); await recent;
+    requests[1].resolve({ok:true,json:async()=>({documents:[{id:'news'}],total:1,source_counts:{news:1},library_source_counts:{news:17},selection_progress:{pending:6,awaiting_content:2,updated_at:'2026-10-02T10:00:00+00:00'}})}); await recent;
     requests[0].resolve({ok:true,json:async()=>({documents:[],total:33,source_counts:{policy:27}})}); await old;
-    assert.equal(app.window.counts.news,1);
+    assert.equal(app.window.counts.news,17);
+    assert.match(app.get('home-selection-status').textContent,/待处理 6 · 待补全文 2/);
+    assert.match(app.get('workspace-data-date').textContent,/精选处理截至/);
     assert.match(app.get('intelligence-result-count').textContent,/匹配 1 条 · 展示 1 条/);
 });
 

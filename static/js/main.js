@@ -621,7 +621,6 @@ async function loadAnalysis() {
         state.analysis = analysis;
         const dataDate = analysis.generated_at || analysis.date || '';
         const dateLabel = dataDate ? formatReportTime(dataDate) : (LANG === 'zh' ? '未记录' : 'Not recorded');
-        updateElement('workspace-data-date', (analysis.generated_at ? (LANG === 'zh' ? '分析生成时间：' : 'Analysis generated: ') : (LANG === 'zh' ? '分析产物日期：' : 'Analysis date: ')) + dateLabel);
         updateElement('last-update-time', dateLabel);
         document.getElementById('statistics-error').hidden = true;
         
@@ -638,7 +637,6 @@ async function loadAnalysis() {
     } catch (error) {
         if (state.requestVersions.analysis !== version) return;
         console.error('加载分析数据失败:', error);
-        updateElement('workspace-data-date', LANG === 'zh' ? '分析数据暂不可用' : 'Analysis unavailable');
         document.getElementById('statistics-error').hidden = false;
         showError('statistics-error', t('loadAnalysisFailed'));
     }
@@ -1074,12 +1072,23 @@ async function loadIntelligenceHome(page = 1) {
         updateElement('home-applied-filters', filterDescription(filters));
         renderTodayRecommendations(payload.documents || []);
         window.EnergyHotspots?.renderFeedPagination(payload);
-        renderSourceSnapshot(payload.source_counts || {});
+        renderSourceSnapshot(payload.library_source_counts || {});
+        const progress = payload.selection_progress || {};
+        updateElement('workspace-data-date', progress.updated_at
+            ? (LANG === 'zh' ? '精选处理截至：' : 'Selection processed: ') + formatReportTime(progress.updated_at)
+            : (LANG === 'zh' ? '精选尚未处理' : 'Selection not processed yet'));
+        updateElement('home-feed-title', state.homeView === 'all'
+            ? (LANG === 'zh' ? '全部资料' : 'All documents') : (LANG === 'zh' ? '最新精选' : 'Latest selected'));
+        updateElement('home-selection-status', LANG === 'zh'
+            ? `近期精选审核：待处理 ${progress.pending || 0} · 待补全文 ${progress.awaiting_content || 0}。上方为已收录数量，精选列表只展示审核入选资料。`
+            : `Recent selection: ${progress.pending || 0} pending · ${progress.awaiting_content || 0} awaiting content. Counts above include all collected records; selected feed shows approved records only.`);
     } catch (error) {
         if (state.requestVersions.home !== version) return;
         console.error('加载科研信息首页失败:', error);
         showError('today-recommendations', LANG === 'zh' ? '资料列表加载失败' : 'Failed to load documents');
         updateElement('intelligence-result-count', '—');
+        updateElement('workspace-data-date', LANG === 'zh' ? '资料状态暂不可用' : 'Document status unavailable');
+        updateElement('home-selection-status', '');
         document.getElementById('source-snapshot').innerHTML = emptyState(LANG === 'zh' ? '来源数量暂不可用' : 'Source counts unavailable');
     }
 }

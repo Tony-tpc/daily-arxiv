@@ -22,6 +22,20 @@ function workspace() {
 }
 const entry = title => ({id:'industry-test',kind:'industry',title,rank:1,score:12,source_count:2,report_count:3});
 
+test('published boards still expose stale source warnings safely', async () => {
+    const {api,get,requests}=workspace();
+    const pending=api.loadBoard('industry');
+    requests[0].resolve({ok:true,json:async()=>({entries:[entry('有效议题')],processing:{
+        pending_collection:2,failed_sources:[{name:'过期来源',error:'<script>stale</script>'}]
+    }})});
+    await pending;
+    assert.match(get('hot-industry-meta').innerHTML,/采集覆盖不完整/);
+    assert.match(get('hot-industry-meta').innerHTML,/待补采 2/);
+    assert.match(get('hot-industry-meta').innerHTML,/&lt;script&gt;stale/);
+    assert.doesNotMatch(get('hot-industry-meta').innerHTML,/<script>/);
+    assert.match(get('home-hot-industry').innerHTML,/有效议题/);
+});
+
 test('board refresh rejects a late response and escapes external titles', async () => {
     const {api,get,requests}=workspace();
     const old=api.loadBoard('industry'), current=api.loadBoard('industry',true);

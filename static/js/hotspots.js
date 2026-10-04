@@ -7,7 +7,11 @@
     const node = id => document.getElementById(id);
     const number = value => !Number.isFinite(Number(value)) ? '—' : Number(value) > 0 && Number(value) < 1 ? Number(value).toPrecision(2) : Number(value).toFixed(1);
     const title = board => board === 'industry' ? text('行业议题', 'Industry issues') : text('学术研究', 'Research topics');
-    const dateTime = value => value ? esc(String(value).replace('T', ' ').replace(/\.\d+/, '').slice(0, 16)) + ' UTC' : '—';
+    const dateTime = value => {
+        const at = new Date(value);
+        return value && Number.isFinite(at.getTime())
+            ? esc(at.toLocaleString('zh-CN', {timeZone:'Asia/Shanghai',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})) + ' UTC+8' : '—';
+    };
 
     function trend(entry) {
         if (entry.kind === 'academic') return `<span class="hot-trend quiet">${text('论文活跃度', 'Paper activity')}</span>`;
@@ -50,6 +54,11 @@
         if (full) full.innerHTML = entries.length ? entries.slice(0, 10).map(entry => row(entry)).join('') : empty(payload, board);
         const meta = node(`hot-${board}-meta`);
         if (meta) meta.innerHTML = `<span>${esc(payload.metric || '')}</span><span>${text('更新于', 'Updated')} ${dateTime(payload.computed_at)}${payload.stale ? ` · <strong>${text('数据待更新', 'Update pending')}</strong>` : ''}</span>`;
+        if (meta && board === 'industry') {
+            const failures = payload.processing?.failed_sources || [];
+            const pending = Number(payload.processing?.pending_collection || 0);
+            if (failures.length || pending) meta.innerHTML += `<details class="hot-source-health"><summary>${text('采集覆盖不完整', 'Incomplete source coverage')} · ${text('待补采', 'Pending collection')} ${pending}</summary>${failures.map(item => `<p>${esc(item.name)}：${esc(item.error)}</p>`).join('')}</details>`;
+        }
         if (payload.stale && compact) compact.insertAdjacentHTML('beforeend', `<p class="hot-stale">${text('当前为上次生成结果，等待更新。', 'Showing the previous snapshot; awaiting refresh.')}</p>`);
     }
 
@@ -102,7 +111,7 @@
         const analysis = (detail.analysis?.sections || []).map(section => `<section class="topic-analysis-section"><h2>${esc(section.title)} <small>${section.kind === 'inference' ? text('分析判断', 'Inference') : section.kind === 'question' ? text('研究建议 / 观察点', 'Question / watchpoint') : text('证据事实', 'Evidence')}</small></h2><p>${esc(section.text)}</p><div>${references(section.evidence_ids)}</div></section>`).join('');
         return `<a href="#hot-${board}" data-section="hot-${board}" class="hot-back">← ${title(board)}</a>
             <header class="hot-detail-header"><p class="page-kicker">${board === 'academic' ? 'RESEARCH PROBLEM' : 'INDUSTRY ISSUE'}</p><h1 tabindex="-1">${esc(detail.title)}</h1><div class="hot-meta"><span>${esc(support(detail))}</span>${trend(detail)}<span>${text('更新于', 'Updated')} ${dateTime(detail.computed_at)}</span></div></header>
-            <div class="hot-detail-grid"><article class="hot-digest"><h2>${text('综合结论', 'Synthesis')}</h2><p>${esc(detail.summary)}</p><div>${references(detail.analysis?.evidence_ids)}</div><p class="scope-note">${esc(detail.coverage?.reason || text('以下资料提供原始证据，请结合原文判断。', 'The records below provide the original evidence.'))}</p></article><aside class="hot-measure"><span>${board === 'academic' ? text('180天研究活跃度', '180-day activity') : text('7天议题热度', '7-day issue heat')}</span><strong>${number(detail.score)}</strong><small>${board === 'academic' ? text('去重论文 · 15天半衰期', 'Distinct papers · 15-day half-life') : text('独立机构 · 24小时半衰期', 'Independent publishers · 24-hour half-life')}</small></aside></div>
+            <div class="hot-detail-grid"><article class="hot-digest"><h2>${text('综合结论', 'Synthesis')}</h2><p>${esc(detail.summary)}</p><div>${references(detail.analysis?.evidence_ids)}</div><p class="scope-note">${esc(detail.coverage?.reason || text('以下资料提供原始证据，请结合原文判断。', 'The records below provide the original evidence.'))}</p></article><aside class="hot-measure"><span>${board === 'academic' ? text('180天研究活跃度', '180-day activity') : text('30天议题热度', '30-day issue heat')}</span><strong>${number(detail.score)}</strong><small>${board === 'academic' ? text('去重论文 · 15天半衰期', 'Distinct papers · 15-day half-life') : text('独立机构 · 24小时半衰期', 'Independent publishers · 24-hour half-life')}</small></aside></div>
             <div class="topic-analysis">${analysis}</div>
             <section class="hot-history"><h2>${text('热度记录', 'Recorded activity')}</h2>${sparkline(detail.series || [])}</section>
             <section class="hot-evidence"><h2>${text('证据与进展', 'Evidence and developments')}</h2><details><summary>${text(`查看 ${evidence.length} 份支撑资料与独立事件`, `View ${evidence.length} supporting records`)}</summary><ol class="hot-timeline">${timeline}</ol></details></section>

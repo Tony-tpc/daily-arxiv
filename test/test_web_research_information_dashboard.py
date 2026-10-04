@@ -26,7 +26,7 @@ class WebResearchInformationDashboardTests(unittest.TestCase):
         self.assertIn('最新精选', html)
         self.assertIn('id="hot-industry-section"', html)
         self.assertIn('id="hot-academic-section"', html)
-        self.assertIn('资料数量', html)
+        self.assertIn('已收录资料', html)
 
     def test_unified_api_filters_source_topic_priority_and_date(self):
         documents = [
@@ -69,6 +69,17 @@ class WebResearchInformationDashboardTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()['documents'], [])
+
+    def test_selected_feed_keeps_library_counts_separate(self):
+        documents = [{'id': 'p', 'source_type': 'paper'}, {'id': 'n', 'source_type': 'news'}]
+        with patch.object(web_app, '_query_intelligence_documents', return_value=documents), \
+                patch('src.hotspots.publication.selected_documents', return_value=documents[:1]), \
+                patch('src.hotspots.publication.selection_progress', return_value={'pending': 1}):
+            payload = self.client.get('/api/intelligence?view=selected').get_json()
+        self.assertEqual(payload['source_counts'], {'paper': 1})
+        self.assertEqual(payload['library_source_counts'], {'paper': 1, 'news': 1})
+        self.assertEqual(payload['selection_progress'], {'pending': 1})
+        self.assertEqual(payload['total'], 1)
 
     def test_directory_api_supports_topic_and_date_range(self):
         documents = [

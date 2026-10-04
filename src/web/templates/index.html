@@ -57,25 +57,26 @@
                     <a href="#reports" data-section="reports" class="btn-paper btn-primary"><i class="ui-icon icon-book-open" aria-hidden="true"></i>{{ '查看汇总报告' if language == 'zh' else 'View collected report' }}</a>
                 </div>
                 <div class="hot-home-grid" aria-label="{{ '当前热点' if language == 'zh' else 'Current hotspots' }}">
-                    {% for board, label_zh, label_en, window in [('industry', '行业议题', 'Industry issues', '7d'), ('academic', '学术研究', 'Research topics', '180d')] %}
+                    {% for board, label_zh, label_en, window in [('industry', '行业议题', 'Industry issues', '30d'), ('academic', '学术研究', 'Research topics', '180d')] %}
                     <section class="hot-strip" aria-labelledby="home-hot-{{ board }}-heading">
                         <header><h2 id="home-hot-{{ board }}-heading"><span class="hot-dot" aria-hidden="true"></span>{{ label_zh if language == 'zh' else label_en }} <small>{{ window }}</small></h2><a href="#hot-{{ board }}" data-section="hot-{{ board }}">{{ '完整榜单' if language == 'zh' else 'Full ranking' }} →</a></header>
                         <div id="home-hot-{{ board }}" aria-live="polite"><p class="hot-placeholder">{{ '正在读取热点…' if language == 'zh' else 'Loading hotspots…' }}</p></div>
                     </section>
                     {% endfor %}
                 </div>
-                <div class="overview-scope"><span>{{ '资料数量' if language == 'zh' else 'Document counts' }} <span class="scope-note">{{ '· 当前筛选结果' if language == 'zh' else '· Current filters' }}</span></span><span id="workspace-data-date">{{ '分析生成时间：读取中' if language == 'zh' else 'Analysis generated: loading' }}</span></div>
+                <div class="overview-scope"><span>{{ '已收录资料' if language == 'zh' else 'Collected documents' }} <span class="scope-note">{{ '· 按当前筛选条件统计' if language == 'zh' else '· With current filters' }}</span></span><span id="workspace-data-date">{{ '精选状态：读取中' if language == 'zh' else 'Selection status: loading' }}</span></div>
                 <div class="source-snapshot" id="source-snapshot" aria-live="polite"></div>
 
                 <!-- 研究信息首页 -->
                 <div class="intelligence-home-grid">
                     <div class="content-card group intelligence-reading-card"><span class="block-handle" aria-hidden="true">⋮⋮</span>
                         <div class="card-header">
-                            <div class="header-left"><h2>{{ '最新精选' if language == 'zh' else 'Latest selected' }}</h2></div>
+                            <div class="header-left"><h2 id="home-feed-title">{{ '最新精选' if language == 'zh' else 'Latest selected' }}</h2></div>
                             <span class="update-time" id="intelligence-result-count">0 {{ '条' if language == 'zh' else 'items' }}</span>
                         </div>
                         <div class="card-body">
                             <div class="feed-tabs" role="group" aria-label="{{ '资料视图' if language == 'zh' else 'Feed view' }}"><button type="button" data-feed-view="selected" aria-pressed="true">{{ '精选' if language == 'zh' else 'Selected' }}</button><button type="button" data-feed-view="all" aria-pressed="false">{{ '全部资料' if language == 'zh' else 'All documents' }}</button></div>
+                            <p id="home-selection-status" class="trend-note" role="status"></p>
                             <div class="intelligence-filter-grid" aria-label="{{ '资料筛选' if language == 'zh' else 'Document filters' }}">
                                 <label class="filter-label"><span>{{ '来源类型' if language == 'zh' else 'Source type' }}</span><select id="home-source-filter" class="filter-select" aria-label="{{ '来源类型' if language == 'zh' else 'Source type' }}">
                                     <option value="all">{{ '全部来源' if language == 'zh' else 'All sources' }}</option>
@@ -145,8 +146,8 @@
 
             {% for board, label_zh, label_en in [('industry', '行业议题热点', 'Industry events'), ('academic', '学术研究热点', 'Research activity')] %}
             <section id="hot-{{ board }}-section" class="content-section" aria-labelledby="hot-{{ board }}-title">
-                <div class="section-header"><div><p class="page-kicker">ENERGY INTELLIGENCE</p><h1 id="hot-{{ board }}-title">{{ label_zh if language == 'zh' else label_en }}</h1><p class="section-desc">{{ ('近7天的能源行业议题，整合独立来源，比较事件进展与影响。' if board == 'industry' else '近180天的具体研究问题，以去重论文衡量活跃度。') if language == 'zh' else ('Energy issues over 7 days, comparing independently sourced events and impacts.' if board == 'industry' else 'Specific research questions supported by distinct papers over 180 days.') }}</p></div><button type="button" class="btn-paper btn-secondary" data-refresh-hot="{{ board }}">{{ '刷新' if language == 'zh' else 'Refresh' }}</button></div>
-                <p class="hot-board-meta" id="hot-{{ board }}-meta" aria-live="polite"></p>
+                <div class="section-header"><div><p class="page-kicker">ENERGY INTELLIGENCE</p><h1 id="hot-{{ board }}-title">{{ label_zh if language == 'zh' else label_en }}</h1><p class="section-desc">{{ ('近30天的能源行业议题，整合独立来源，比较事件进展与影响。' if board == 'industry' else '近180天的具体研究问题，以去重论文衡量活跃度。') if language == 'zh' else ('Energy issues over 30 days, comparing independently sourced events and impacts.' if board == 'industry' else 'Specific research questions supported by distinct papers over 180 days.') }}</p></div><button type="button" class="btn-paper btn-secondary" data-refresh-hot="{{ board }}">{{ '刷新' if language == 'zh' else 'Refresh' }}</button></div>
+                <div class="hot-board-meta" id="hot-{{ board }}-meta" aria-live="polite"></div>
                 <div id="hot-{{ board }}-list" class="hot-board-list" aria-live="polite"></div>
                 <details class="hot-method"><summary>{{ '如何计算' if language == 'zh' else 'How this ranking works' }}</summary><p>{{ ('同一机构只计算一次，24小时半衰期，至少两个独立来源才上榜。来源采集不完整或缺乏可比历史时不显示涨跌。' if board == 'industry' else '至少两篇不同论文，15天半衰期。同分时参考有证据的机构多样性与精选均分；数据库收录数量不计为独立论文。统计仅覆盖本地准入资料。') if language == 'zh' else ('One contribution per publisher, a 24-hour half-life, and at least two independent publishers. Incomplete coverage has no growth estimate.' if board == 'industry' else 'At least two distinct papers, with a 15-day half-life. Verified institution diversity and editorial scores break ties. Coverage is limited to the admitted local corpus.') }}</p></details>
             </section>
